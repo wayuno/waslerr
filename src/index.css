@@ -2046,6 +2046,17 @@ a {
 }
 .wf-coupon-applied button:hover { color: #eef0f4; }
 
+.wf-user-tag {
+  flex: none;
+  font-family: var(--wf-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: #0d0b07;
+  background: var(--wf-grad);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
 /* ---------- admin support conversations ---------- */
 .wf-support-grid {
   display: grid;

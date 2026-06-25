@@ -381,6 +381,26 @@ const server = http.createServer(async (req, res) => {
     if (!(await requireAdmin(req, res))) return
     return sendJson(res, 200, { conversations: await getConversations() })
   }
+
+  // list all signed-up users (admin only)
+  if (url === '/api/admin/users' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    try {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+      })
+      const data = r.ok ? await r.json() : {}
+      const users = (data.users || []).map((u) => ({
+        id: u.id,
+        email: u.email,
+        name: (u.user_metadata && u.user_metadata.name) || '',
+        created_at: u.created_at,
+      }))
+      return sendJson(res, 200, { users })
+    } catch {
+      return sendJson(res, 502, { error: 'list_failed' })
+    }
+  }
   if (url === '/api/admin/chat/reply' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
     const b = await readBody(req)

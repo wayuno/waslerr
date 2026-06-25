@@ -10,6 +10,7 @@ const TABS = [
   { id: 'stats', label: 'Stats' },
   { id: 'fields', label: 'Fields' },
   { id: 'coupons', label: 'Coupons' },
+  { id: 'users', label: 'Users' },
   { id: 'support', label: 'Support' },
 ]
 const CAT_LABEL = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
@@ -47,6 +48,9 @@ export default function Admin() {
   const [cErr, setCErr] = useState('')
   const [cBusy, setCBusy] = useState(false)
 
+  // users
+  const [users, setUsers] = useState([])
+
   // support
   const [conversations, setConversations] = useState([])
   const [activeConv, setActiveConv] = useState(null)
@@ -73,6 +77,15 @@ export default function Admin() {
     ;(async () => {
       const r = await authedFetch('/api/admin/coupons')
       if (r.ok) setCoupons((await r.json()).coupons || [])
+    })()
+  }, [isAdmin, adminTab, authedFetch])
+
+  // load users when on the users tab
+  useEffect(() => {
+    if (!isAdmin || adminTab !== 'users') return
+    ;(async () => {
+      const r = await authedFetch('/api/admin/users')
+      if (r.ok) setUsers((await r.json()).users || [])
     })()
   }, [isAdmin, adminTab, authedFetch])
 
@@ -367,6 +380,30 @@ export default function Admin() {
                 {cBusy ? 'Creating…' : (<><PlusIcon /> Create coupon</>)}
               </button>
             </form>
+          </div>
+        )}
+
+        {adminTab === 'users' && (
+          <div data-reveal>
+            <div className="wf-field-label" style={{ marginBottom: 14 }}>
+              Signed-up users · {users.length}
+            </div>
+            <div className="wf-admin-list">
+              {users.length === 0 && <p className="wf-detail-desc">No users yet.</p>}
+              {users.map((u) => (
+                <div className="wf-admin-row" key={u.id}>
+                  <span className="wf-admin-ico wf-card-ph-akashic">{(u.name || u.email || '?').charAt(0).toUpperCase()}</span>
+                  <div className="wf-admin-row-text">
+                    <span className="wf-admin-row-title">{u.name || u.email}</span>
+                    <span className="wf-admin-row-meta">
+                      {u.email}
+                      {u.created_at ? ` · joined ${new Date(u.created_at).toLocaleDateString()}` : ''}
+                    </span>
+                  </div>
+                  {u.email === user && <span className="wf-user-tag">ADMIN</span>}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
