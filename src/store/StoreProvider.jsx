@@ -205,10 +205,14 @@ export function StoreProvider({ children }) {
   )
 
   const signUp = useCallback(
-    async (email, password) => {
+    async (email, password, name) => {
       const supabase = supabaseRef.current
       if (!supabase) return { error: 'Sign-up is not available yet — Supabase isn’t configured.' }
-      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { name: (name || '').trim() } },
+      })
       if (error) return { error: error.message }
       if (!data.session) return { ok: true, needsConfirm: true }
       navigate('home')

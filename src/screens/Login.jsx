@@ -28,7 +28,7 @@ export default function Login() {
       return
     }
     setBusy(true)
-    const res = signup ? await signUp(email, pass) : await signIn(email, pass)
+    const res = signup ? await signUp(email, pass, name) : await signIn(email, pass)
     setBusy(false)
     if (res?.error) {
       setError(res.error)
