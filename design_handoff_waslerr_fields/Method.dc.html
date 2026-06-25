@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wf-bg:#060709;
+  --wf-gold:#d4af37; --wf-gold-2:#f6e7b4; --wf-gold-3:#b8862b;
+  --wf-grad:linear-gradient(135deg,#f6e7b4 0%,#d4af37 48%,#b8862b 100%);
+  --wf-silver:#c9cdd6; --wf-mute:#7e8492;
+  --wf-rule:rgba(255,255,255,.09);
+  --wf-glass:rgba(255,255,255,.035); --wf-glass-2:rgba(255,255,255,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--wf-bg);color:var(--wf-silver);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+::selection{background:rgba(212,175,55,.25);color:#fff}
+@keyframes wf-trail{from{opacity:.65;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+</style>
+</helmet>
+
+<div id="wf" style="position:relative;width:100%;min-height:100vh;overflow:hidden;background:
+  radial-gradient(1000px 700px at 82% -8%,rgba(40,58,110,.24),transparent 60%),
+  radial-gradient(900px 700px at 4% 14%,rgba(74,14,14,.13),transparent 55%),
+  #060709;">
+
+  <div id="wf-glow" style="position:fixed;top:0;left:0;width:560px;height:560px;margin:-280px 0 0 -280px;z-index:1;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.10),rgba(60,90,170,.05) 40%,transparent 68%);mix-blend-mode:screen;will-change:transform;"></div>
+  <div id="wf-trail" style="position:fixed;inset:0;z-index:59;pointer-events:none;"></div>
+  <div id="wf-cursor" style="position:fixed;top:0;left:0;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;z-index:60;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(246,231,180,.95),rgba(212,175,55,.5) 60%,transparent);box-shadow:0 0 14px rgba(212,175,55,.7);mix-blend-mode:screen;will-change:transform;"></div>
+
+  <nav style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,10,16,.72);backdrop-filter:blur(14px) saturate(1.3);border-bottom:1px solid var(--wf-rule);">
+    <div style="width:100%;max-width:1180px;display:flex;align-items:center;justify-content:space-between;padding:16px 28px;">
+      <a href="Waslerr%20Fields.dc.html" style="display:flex;align-items:center;gap:13px;text-decoration:none;">
+        <span style="width:36px;height:36px;border-radius:9px;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#15110a;box-shadow:0 0 24px rgba(212,175,55,.35);">W</span>
+        <span style="font-family:'Geist',sans-serif;font-weight:500;font-size:14px;letter-spacing:.28em;color:#eef0f4;">WASLERR&nbsp;FIELDS</span>
+      </a>
+      <div style="display:flex;align-items:center;gap:28px;">
+        <a href="Waslerr%20Fields.dc.html" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Home</a>
+        <a href="Fields.dc.html" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Fields</a>
+        <a href="#" style="font-size:13.5px;color:#eef0f4;text-decoration:none;">Method</a>
+        <a href="Waslerr%20Fields.dc.html#wf-custom" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Custom</a>
+        <a href="Fields.dc.html" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.04em;color:#0d0b07;background:var(--wf-grad);padding:10px 20px;border-radius:7px;text-decoration:none;font-weight:500;box-shadow:0 0 0 1px rgba(212,175,55,.4),0 8px 24px rgba(212,175,55,.18);transition:transform .3s,box-shadow .3s;">Begin</a>
+      </div>
+    </div>
+  </nav>
+
+  <section style="position:relative;z-index:2;max-width:760px;margin:0 auto;padding:90px 28px 40px;text-align:center;">
+    <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">The method</div>
+    <h1 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(40px,6vw,72px);line-height:1.02;letter-spacing:-.02em;color:#f3f4f7;margin:0;text-wrap:balance;">How subliminals rewire the mind.</h1>
+    <p data-reveal style="font-size:16.5px;line-height:1.6;color:#8c92a0;font-weight:300;margin:20px auto 0;max-width:520px;">Four quiet steps from first listen to a changed default. No effort, no forcing — just repetition beneath the conscious filter.</p>
+  </section>
+
+  <section style="position:relative;z-index:2;max-width:760px;margin:0 auto;padding:30px 28px 90px;">
+    <div style="position:relative;padding-left:8px;">
+      <div style="position:absolute;left:23px;top:14px;bottom:14px;width:1px;background:linear-gradient(var(--wf-gold-2),var(--wf-gold-3),transparent);opacity:.5;"></div>
+
+      <div data-reveal style="position:relative;display:flex;gap:30px;padding:0 0 46px 0;">
+        <span style="position:relative;z-index:1;flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:#0a0d16;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:13px;color:var(--wf-gold);">01</span>
+        <div style="padding-top:6px;"><h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:25px;color:#eef0f4;margin:0 0 8px;">Choose your field</h3><p style="font-size:15px;line-height:1.6;color:#9298a6;font-weight:300;margin:0;">Select the outcome you're engineering — wealth, confidence, magnetism. Each field targets a specific belief system.</p></div>
+      </div>
+
+      <div data-reveal style="position:relative;display:flex;gap:30px;padding:0 0 46px 0;">
+        <span style="position:relative;z-index:1;flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:#0a0d16;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:13px;color:var(--wf-gold);">02</span>
+        <div style="padding-top:6px;"><h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:25px;color:#eef0f4;margin:0 0 8px;">Listen daily</h3><p style="font-size:15px;line-height:1.6;color:#9298a6;font-weight:300;margin:0;">Headphones, low volume, 30–60 minutes. The masked affirmations sit just beneath conscious hearing.</p></div>
+      </div>
+
+      <div data-reveal style="position:relative;display:flex;gap:30px;padding:0 0 46px 0;">
+        <span style="position:relative;z-index:1;flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:#0a0d16;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:13px;color:var(--wf-gold);">03</span>
+        <div style="padding-top:6px;"><h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:25px;color:#eef0f4;margin:0 0 8px;">The subconscious absorbs</h3><p style="font-size:15px;line-height:1.6;color:#9298a6;font-weight:300;margin:0;">Bypassing the critical filter, repeated suggestions begin overwriting limiting beliefs at the source.</p></div>
+      </div>
+
+      <div data-reveal style="position:relative;display:flex;gap:30px;padding:0;">
+        <span style="position:relative;z-index:1;flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:13px;color:#0d0b07;box-shadow:0 0 24px rgba(212,175,55,.4);">04</span>
+        <div style="padding-top:6px;"><h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:25px;color:#eef0f4;margin:0 0 8px;">Behaviour shifts. Reality follows.</h3><p style="font-size:15px;line-height:1.6;color:#9298a6;font-weight:300;margin:0;">New defaults take hold — decisions, posture, presence. The external change is the echo of the internal one.</p></div>
+      </div>
+    </div>
+
+    <div data-reveal style="display:flex;justify-content:center;gap:14px;margin-top:60px;flex-wrap:wrap;">
+      <a href="Fields.dc.html" class="wf-mag" style="display:inline-flex;align-items:center;gap:9px;font-family:'Geist',sans-serif;font-size:15px;font-weight:500;color:#0d0b07;background:var(--wf-grad);padding:14px 28px;border-radius:8px;text-decoration:none;box-shadow:0 10px 36px rgba(212,175,55,.22);transition:transform .3s,box-shadow .3s;">Explore the fields <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a href="Waslerr%20Fields.dc.html#wf-free" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:15px;font-weight:400;color:#e7e9ee;background:var(--wf-glass);border:1px solid var(--wf-rule);padding:14px 28px;border-radius:8px;text-decoration:none;transition:background .3s,border-color .3s,transform .3s;" style-hover="background:var(--wf-glass-2);border-color:rgba(212,175,55,.4)">Try a field free</a>
+    </div>
+  </section>
+
+  <footer style="position:relative;z-index:2;border-top:1px solid var(--wf-rule);">
+    <div style="max-width:1180px;margin:0 auto;padding:30px 28px 40px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+      <a href="Waslerr%20Fields.dc.html" style="font-size:12.5px;color:var(--wf-mute);text-decoration:none;" style-hover="color:#eef0f4">← Back to home</a>
+      <span style="font-size:12px;color:#5a5f6b;">Audio supports mindset & self-improvement. Not medical treatment. Individual results vary.</span>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this.cleanup = [];
+    this.initReveal();
+    this.initGlow();
+  }
+  componentWillUnmount() { (this.cleanup || []).forEach(fn => { try { fn(); } catch (e) {} }); }
+  $(s) { return document.getElementById('wf').querySelector(s); }
+  $$(s) { return Array.from(document.getElementById('wf').querySelectorAll(s)); }
+
+  initReveal() {
+    const items = this.$$('[data-reveal]');
+    items.forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(26px)'; el.style.transition = 'opacity .8s cubic-bezier(.22,1,.36,1), transform .8s cubic-bezier(.22,1,.36,1)'; });
+    if (!('IntersectionObserver' in window)) { items.forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; }); return; }
+    const io = new IntersectionObserver(es => es.forEach((e, i) => {
+      if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'none'; io.unobserve(e.target); }
+    }), { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    items.forEach(el => io.observe(el));
+    this.cleanup.push(() => io.disconnect());
+  }
+
+  initGlow() {
+    const glow = this.$('#wf-glow'), dot = this.$('#wf-cursor'), trail = this.$('#wf-trail');
+    if (!glow) return;
+    let tx = innerWidth / 2, ty = innerHeight / 2, cx = tx, cy = ty, raf, last = 0;
+    const onMove = e => {
+      tx = e.clientX; ty = e.clientY;
+      if (dot) dot.style.transform = `translate(${tx}px,${ty}px)`;
+      const now = performance.now();
+      if (trail && now - last > 42) { last = now; const s = document.createElement('span'); s.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,rgba(246,231,180,.85),transparent 72%);transform:translate(-50%,-50%);animation:wf-trail .72s ease-out forwards;`; trail.appendChild(s); setTimeout(() => s.remove(), 740); }
+    };
+    const loop = () => { cx += (tx - cx) * 0.08; cy += (ty - cy) * 0.08; glow.style.transform = `translate(${cx}px,${cy}px)`; raf = requestAnimationFrame(loop); };
+    window.addEventListener('mousemove', onMove); loop();
+    this.cleanup.push(() => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf); });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<template id="__bundler_thumbnail" data-bg-color="#060709">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f6e7b4"/>
+        <stop offset="0.5" stop-color="#d4af37"/>
+        <stop offset="1" stop-color="#b8862b"/>
+      </linearGradient>
+      <radialGradient id="p" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#8e2a0c" stop-opacity="0.5"/>
+        <stop offset="1" stop-color="#060709" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1200" height="800" fill="#060709"/>
+    <circle cx="600" cy="400" r="320" fill="url(#p)"/>
+    <rect x="516" y="316" width="168" height="168" rx="34" fill="url(#g)"/>
+    <text x="600" y="462" font-family="Georgia, serif" font-size="150" font-weight="600" text-anchor="middle" fill="#15110a">W</text>
+  </svg>
+</template>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wf-bg:#060709;
+  --wf-gold:#d4af37; --wf-gold-2:#f6e7b4; --wf-gold-3:#b8862b;
+  --wf-grad:linear-gradient(135deg,#f6e7b4 0%,#d4af37 48%,#b8862b 100%);
+  --wf-silver:#c9cdd6; --wf-mute:#7e8492;
+  --wf-rule:rgba(255,255,255,.09);
+  --wf-glass:rgba(255,255,255,.035); --wf-glass-2:rgba(255,255,255,.06);
+  --wf-crimson:#c8412b; --wf-oxblood:#8e2a0c;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--wf-bg); color:var(--wf-silver);
+  font-family:'Geist',system-ui,sans-serif; font-weight:400;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+::selection{background:rgba(212,175,55,.25);color:#fff}
+@keyframes wf-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-22px)}}
+@keyframes wf-spin{to{transform:rotate(360deg)}}
+@keyframes wf-cue{0%{transform:translateY(0);opacity:0}30%{opacity:1}100%{transform:translateY(12px);opacity:0}}
+@keyframes wf-marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes wf-marqr{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+@keyframes wf-rise{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:translateY(0)}}
+@keyframes wf-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes wf-ember{0%{transform:translateY(0) translateX(0) scale(1);opacity:0}14%{opacity:.85}100%{transform:translateY(-360px) translateX(var(--dx,16px)) scale(.3);opacity:0}}
+@keyframes wf-bgpulse{0%,100%{transform:scale(.9);opacity:.5}50%{transform:scale(1.12);opacity:.95}}
+@keyframes wf-gridmove{from{background-position:0 0,0 0}to{background-position:0 44px,0 44px}}
+@keyframes wf-trail{from{opacity:.65;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+@keyframes wf-ripple{0%{transform:scale(.45);opacity:.85}100%{transform:scale(1.95);opacity:0}}
+@keyframes wf-orbit{from{transform:rotateX(72deg) rotateZ(0)}to{transform:rotateX(72deg) rotateZ(360deg)}}
+@keyframes wf-bars{0%,100%{height:16%}50%{height:92%}}
+@keyframes wf-intrologo{0%{opacity:0;transform:scale(.8) translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes wf-introtext{from{opacity:0;letter-spacing:.18em}to{opacity:1;letter-spacing:.42em}}
+@keyframes wf-introbar{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes wf-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+@keyframes wf-floatpulse{0%,100%{box-shadow:0 10px 30px rgba(212,175,55,.28),0 0 0 1px rgba(246,231,180,.4)}50%{box-shadow:0 10px 40px rgba(212,175,55,.5),0 0 0 1px rgba(246,231,180,.6)}}
+.wf-marq-track:hover{animation-play-state:paused}
+#wf input::placeholder,#wf textarea::placeholder{color:#5f6573}
+#wf select:invalid{color:#5f6573}
+@keyframes wf-resonance{0%{transform:translate(-50%,-50%) scale(.22);opacity:0}18%{opacity:.55}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@media (max-width:860px){
+  .wf-nav-desktop{display:none !important;}
+  .wf-burger{display:flex !important;}
+}
+@media (max-width:560px){
+  #wf section{padding-top:62px !important;padding-bottom:62px !important;}
+}
+@keyframes wf-menu-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes wf-fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div id="wf" style="position:relative;width:100%;overflow:hidden;background:
+  radial-gradient(1200px 700px at 78% -8%,rgba(40,58,110,.28),transparent 60%),
+  radial-gradient(1100px 800px at 8% 18%,rgba(20,30,64,.30),transparent 55%),
+  radial-gradient(900px 900px at 50% 120%,rgba(60,48,18,.18),transparent 60%),
+  #060709;">
+
+  <canvas id="wf-particles" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+  <div id="wf-resonance" aria-hidden="true" style="position:fixed;top:46%;left:50%;width:0;height:0;z-index:0;pointer-events:none;">
+    <span style="position:absolute;left:0;top:0;width:1500px;height:1500px;border-radius:50%;border:1px solid rgba(212,175,55,.14);transform:translate(-50%,-50%) scale(.22);animation:wf-resonance 11s ease-out infinite;"></span>
+    <span style="position:absolute;left:0;top:0;width:1500px;height:1500px;border-radius:50%;border:1px solid rgba(120,150,210,.10);transform:translate(-50%,-50%) scale(.22);animation:wf-resonance 11s ease-out 3.6s infinite;"></span>
+    <span style="position:absolute;left:0;top:0;width:1500px;height:1500px;border-radius:50%;border:1px solid rgba(212,175,55,.10);transform:translate(-50%,-50%) scale(.22);animation:wf-resonance 11s ease-out 7.2s infinite;"></span>
+    <span style="position:absolute;left:0;top:0;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.05),transparent 68%);transform:translate(-50%,-50%);"></span>
+  </div>
+  <div id="wf-glow" style="position:fixed;top:0;left:0;width:620px;height:620px;margin:-310px 0 0 -310px;z-index:1;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.10),rgba(60,90,170,.06) 40%,transparent 68%);mix-blend-mode:screen;will-change:transform;transition:opacity .6s;"></div>
+  <div id="wf-trail" style="position:fixed;inset:0;z-index:59;pointer-events:none;"></div>
+  <div id="wf-cursor" style="position:fixed;top:0;left:0;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;z-index:60;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(246,231,180,.95),rgba(212,175,55,.5) 60%,transparent);box-shadow:0 0 14px rgba(212,175,55,.7);mix-blend-mode:screen;will-change:transform;"></div>
+  <div id="wf-progress" aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:6px;z-index:61;display:flex;align-items:flex-end;gap:1px;padding:0 2px;pointer-events:none;background:linear-gradient(rgba(6,7,9,.55),transparent);"></div>
+  <div id="wf-intro" style="position:fixed;inset:0;z-index:999;background:#060709;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;will-change:transform;">
+    <span style="width:56px;height:56px;border-radius:13px;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:33px;color:#15110a;box-shadow:0 0 44px rgba(212,175,55,.5);animation:wf-intrologo 1s cubic-bezier(.22,1,.36,1) both;">W</span>
+    <span style="font-family:'Geist',sans-serif;font-weight:500;font-size:13px;letter-spacing:.42em;color:#eef0f4;animation:wf-introtext .9s ease .45s both;">WASLERR&nbsp;FIELDS</span>
+    <span style="position:absolute;bottom:84px;width:130px;height:1px;background:rgba(255,255,255,.1);overflow:hidden;border-radius:1px;"><span style="position:absolute;left:0;top:0;height:1px;width:100%;background:var(--wf-grad);transform:translateX(-100%);animation:wf-introbar 1.5s cubic-bezier(.22,1,.36,1) .3s forwards;"></span></span>
+  </div>
+
+  <!-- ============ NAV ============ -->
+  <nav id="wf-nav" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:center;transition:background .5s,backdrop-filter .5s,border-color .5s;border-bottom:1px solid transparent;">
+    <div style="width:100%;max-width:1180px;display:flex;align-items:center;justify-content:space-between;padding:22px 28px;transition:padding .4s;">
+      <a href="#wf-hero" style="display:flex;align-items:center;gap:13px;text-decoration:none;">
+        <span style="width:38px;height:38px;border-radius:9px;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#15110a;box-shadow:0 0 24px rgba(212,175,55,.35);">W</span>
+        <span style="font-family:'Geist',sans-serif;font-weight:500;font-size:15px;letter-spacing:.28em;color:#eef0f4;">WASLERR&nbsp;FIELDS</span>
+      </a>
+      <div class="wf-nav-desktop" style="display:flex;align-items:center;gap:38px;">
+        <div class="wf-navlinks" style="display:flex;gap:34px;">
+          <a href="Fields.dc.html" style="font-size:13.5px;letter-spacing:.02em;color:var(--wf-mute);text-decoration:none;transition:color .3s;">Fields</a>
+          <a href="Method.dc.html" style="font-size:13.5px;letter-spacing:.02em;color:var(--wf-mute);text-decoration:none;transition:color .3s;">Method</a>
+          <a href="#wf-reviews" style="font-size:13.5px;letter-spacing:.02em;color:var(--wf-mute);text-decoration:none;transition:color .3s;">Reviews</a>
+          <a href="#wf-custom" style="font-size:13.5px;letter-spacing:.02em;color:var(--wf-mute);text-decoration:none;transition:color .3s;">Custom</a>
+          <a href="#wf-join" style="font-size:13.5px;letter-spacing:.02em;color:var(--wf-mute);text-decoration:none;transition:color .3s;">Community</a>
+          <a href="#wf-faq" style="font-size:13.5px;letter-spacing:.02em;color:var(--wf-mute);text-decoration:none;transition:color .3s;">FAQ</a>
+        </div>
+        <a href="#wf-collection" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.04em;color:#0d0b07;background:var(--wf-grad);padding:10px 20px;border-radius:7px;text-decoration:none;font-weight:500;box-shadow:0 0 0 1px rgba(212,175,55,.4),0 8px 24px rgba(212,175,55,.18);transition:transform .3s,box-shadow .3s;">Begin</a>
+      </div>
+      <button class="wf-burger" aria-label="Menu" style="display:none;width:42px;height:42px;border-radius:9px;border:1px solid var(--wf-rule);background:var(--wf-glass);color:#eef0f4;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:5px;padding:0;"><span class="wf-burger-l" style="display:block;width:18px;height:1.5px;background:currentColor;transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .3s;"></span><span class="wf-burger-l" style="display:block;width:18px;height:1.5px;background:currentColor;transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .3s;"></span><span class="wf-burger-l" style="display:block;width:18px;height:1.5px;background:currentColor;transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .3s;"></span></button>
+    </div>
+    <div class="wf-mobile-menu" style="display:none;flex-direction:column;padding:6px 24px 20px;background:rgba(8,10,16,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--wf-rule);">
+      <a href="Fields.dc.html" class="wf-mlink" style="padding:13px 2px;font-size:15px;color:var(--wf-silver);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.05);">Fields</a>
+      <a href="Method.dc.html" class="wf-mlink" style="padding:13px 2px;font-size:15px;color:var(--wf-silver);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.05);">Method</a>
+      <a href="#wf-reviews" class="wf-mlink" style="padding:13px 2px;font-size:15px;color:var(--wf-silver);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.05);">Reviews</a>
+      <a href="#wf-custom" class="wf-mlink" style="padding:13px 2px;font-size:15px;color:var(--wf-silver);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.05);">Custom</a>
+      <a href="#wf-join" class="wf-mlink" style="padding:13px 2px;font-size:15px;color:var(--wf-silver);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.05);">Community</a>
+      <a href="#wf-faq" class="wf-mlink" style="padding:13px 2px;font-size:15px;color:var(--wf-silver);text-decoration:none;">FAQ</a>
+      <a href="#wf-collection" class="wf-mlink" style="margin-top:14px;text-align:center;font-size:15px;font-weight:500;color:#0d0b07;background:var(--wf-grad);padding:13px;border-radius:8px;text-decoration:none;">Begin</a>
+    </div>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <section id="wf-hero" style="position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 28px 60px;">
+    <div id="wf-orbit-wrap" aria-hidden="true" style="position:absolute;top:50%;left:50%;width:0;height:0;z-index:-1;pointer-events:none;will-change:transform;">
+      <div style="position:absolute;left:50%;top:50%;width:940px;height:940px;margin:-470px 0 0 -470px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(212,175,55,.075) 0deg .55deg,transparent .55deg 7.2deg);-webkit-mask-image:radial-gradient(circle,transparent 31%,#000 43%,#000 57%,transparent 73%);mask-image:radial-gradient(circle,transparent 31%,#000 43%,#000 57%,transparent 73%);animation:wf-spin 80s linear infinite;opacity:.65;"></div>
+      <div style="position:absolute;left:50%;top:50%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;background:radial-gradient(circle,rgba(70,100,180,.10),transparent 64%);filter:blur(12px);"></div>
+      <div style="position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;border:1px solid rgba(212,175,55,.45);animation:wf-ripple 5.4s ease-out infinite;"></div>
+      <div style="position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;border:1px solid rgba(212,175,55,.38);animation:wf-ripple 5.4s ease-out 1.8s infinite;"></div>
+      <div style="position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;border:1px solid rgba(200,65,43,.30);animation:wf-ripple 5.4s ease-out 3.6s infinite;"></div>
+      <div style="position:absolute;left:50%;top:50%;width:500px;height:500px;margin:-250px 0 0 -250px;border-radius:50%;border:1px dashed rgba(212,175,55,.16);animation:wf-spin 100s linear infinite;"></div>
+      <div style="position:absolute;left:50%;top:50%;width:430px;height:430px;margin:-215px 0 0 -215px;border-radius:50%;border:1px solid rgba(212,175,55,.12);box-shadow:inset 0 0 80px rgba(212,175,55,.05);"></div>
+      <div style="position:absolute;left:50%;top:50%;width:660px;height:660px;margin:-330px 0 0 -330px;border-radius:50%;border:1px solid rgba(201,205,214,.10);transform:rotateX(72deg);"></div>
+      <div style="position:absolute;left:50%;top:50%;width:660px;height:660px;margin:-330px 0 0 -330px;transform-style:preserve-3d;animation:wf-orbit 22s linear infinite;">
+        <span style="position:absolute;left:50%;top:0;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--wf-gold-2);box-shadow:0 0 18px 4px var(--wf-gold);"></span>
+      </div>
+    </div>
+    <div aria-hidden="true" style="position:absolute;top:50%;left:50%;width:760px;height:760px;margin:-380px 0 0 -380px;border-radius:50%;pointer-events:none;z-index:-1;background:radial-gradient(circle,rgba(142,42,12,.40) 0%,rgba(74,14,14,.26) 36%,transparent 64%);filter:blur(30px);animation:wf-bgpulse 4.8s ease-in-out infinite;"></div>
+    <div aria-hidden="true" style="position:absolute;top:50%;left:50%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;pointer-events:none;z-index:-1;background:radial-gradient(circle,rgba(212,175,55,.28),transparent 66%);filter:blur(18px);animation:wf-bgpulse 4.8s ease-in-out infinite;"></div>
+    <div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1;">
+      <span style="--dx:22px;position:absolute;left:13%;bottom:16%;width:3px;height:3px;border-radius:50%;background:#e0a93b;box-shadow:0 0 9px #e0a93b;animation:wf-ember 10s linear infinite;"></span>
+      <span style="--dx:-14px;position:absolute;left:24%;bottom:10%;width:4px;height:4px;border-radius:50%;background:#c8412b;box-shadow:0 0 11px #c8412b;animation:wf-ember 12s linear 1.4s infinite;"></span>
+      <span style="--dx:18px;position:absolute;left:33%;bottom:20%;width:2px;height:2px;border-radius:50%;background:#f6e7b4;box-shadow:0 0 7px #f6e7b4;animation:wf-ember 9s linear .6s infinite;"></span>
+      <span style="--dx:-20px;position:absolute;left:44%;bottom:8%;width:3px;height:3px;border-radius:50%;background:#e0a93b;box-shadow:0 0 9px #e0a93b;animation:wf-ember 11.5s linear 2.2s infinite;"></span>
+      <span style="--dx:14px;position:absolute;left:57%;bottom:14%;width:4px;height:4px;border-radius:50%;background:#c8412b;box-shadow:0 0 11px #c8412b;animation:wf-ember 10.5s linear .9s infinite;"></span>
+      <span style="--dx:-10px;position:absolute;left:67%;bottom:18%;width:2px;height:2px;border-radius:50%;background:#f6e7b4;box-shadow:0 0 7px #f6e7b4;animation:wf-ember 13s linear 1.8s infinite;"></span>
+      <span style="--dx:16px;position:absolute;left:76%;bottom:11%;width:3px;height:3px;border-radius:50%;background:#e0a93b;box-shadow:0 0 9px #e0a93b;animation:wf-ember 11s linear 3s infinite;"></span>
+      <span style="--dx:-18px;position:absolute;left:86%;bottom:17%;width:3px;height:3px;border-radius:50%;background:#c8412b;box-shadow:0 0 10px #c8412b;animation:wf-ember 12.5s linear 2.6s infinite;"></span>
+    </div>
+
+    <div data-anim style="opacity:0;">
+      <span style="display:inline-flex;align-items:center;gap:10px;font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--wf-mute);border:1px solid var(--wf-rule);background:var(--wf-glass);backdrop-filter:blur(12px);padding:9px 18px;border-radius:999px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 10px var(--wf-gold);"></span>
+        Subliminal audio · engineered for the subconscious
+      </span>
+    </div>
+
+    <h1 data-anim style="opacity:0;font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(46px,8.2vw,104px);line-height:1.02;letter-spacing:-.02em;margin:30px 0 0;color:#f3f4f7;text-wrap:balance;max-width:14ch;">
+      <span data-decrypt="Reprogram the mind." style="display:inline-block;">Reprogram the mind.</span><br>
+      <span data-decrypt="Reshape your reality." style="display:inline-block;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:italic;font-weight:500;">Reshape your reality.</span>
+    </h1>
+
+    <p data-anim style="opacity:0;max-width:560px;margin:30px auto 0;font-size:17.5px;line-height:1.62;color:#9aa0ad;font-weight:300;">
+      Cinematic frequency fields that encode confidence, wealth and magnetism directly into the subconscious — while the conscious mind simply listens.
+    </p>
+
+    <div data-anim style="opacity:0;display:flex;gap:16px;justify-content:center;margin-top:42px;flex-wrap:wrap;">
+      <a href="Fields.dc.html" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:15px;font-weight:500;letter-spacing:.02em;color:#0d0b07;background:var(--wf-grad);padding:15px 30px;border-radius:8px;text-decoration:none;box-shadow:0 10px 40px rgba(212,175,55,.24),0 0 0 1px rgba(246,231,180,.4);transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s;">Start your transformation</a>
+      <a href="#wf-free" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:15px;font-weight:400;letter-spacing:.02em;color:#e7e9ee;background:var(--wf-glass);backdrop-filter:blur(16px);border:1px solid var(--wf-rule);padding:15px 30px;border-radius:8px;text-decoration:none;transition:background .3s,border-color .3s,transform .35s cubic-bezier(.22,1,.36,1);">Try a field free</a>
+    </div>
+
+    <div data-anim style="opacity:0;display:flex;align-items:center;gap:22px;margin-top:46px;color:var(--wf-mute);font-size:13px;letter-spacing:.04em;">
+      <span style="color:var(--wf-gold);letter-spacing:.06em;">★★★★★</span>
+      <span style="width:1px;height:14px;background:var(--wf-rule);"></span>
+      <span>50,000+ listeners across 60 countries</span>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--wf-mute);text-transform:uppercase;">Scroll</span>
+      <span style="width:1px;height:34px;background:linear-gradient(var(--wf-gold),transparent);position:relative;overflow:hidden;"><span style="position:absolute;top:0;left:0;width:1px;height:10px;background:var(--wf-gold-2);animation:wf-cue 2.2s ease-in-out infinite;"></span></span>
+    </div>
+  </section>
+
+  <!-- ============ TICKER ============ -->
+  <div style="position:relative;z-index:2;border-top:1px solid var(--wf-rule);border-bottom:1px solid var(--wf-rule);overflow:hidden;background:rgba(255,255,255,.015);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);">
+    <div class="wf-marq-track" style="display:flex;width:max-content;animation:wf-marq 36s linear infinite;padding:15px 0;"><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>Lossless studio masters</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>Instant access</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>Headphone-optimized</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>50,000+ listeners</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>New fields monthly</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>30-day guarantee</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>Lossless studio masters</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>Instant access</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>Headphone-optimized</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>50,000+ listeners</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>New fields monthly</span><span style="display:inline-flex;align-items:center;gap:13px;padding:0 30px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--wf-mute);white-space:nowrap;"><span style="width:5px;height:5px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 8px var(--wf-gold);flex:none;"></span>30-day guarantee</span></div>
+  </div>
+
+  <!-- ============ COLLECTION ============ -->
+  <section id="wf-collection" style="position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:82px 28px;border-top:1px solid var(--wf-rule);">
+    <div style="text-align:center;max-width:680px;margin:0 auto;">
+      <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">01 · Top picks</div>
+      <h2 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.02em;color:#f1f2f6;margin:0;text-wrap:balance;">Top picks.</h2>
+      <p data-reveal style="font-size:16px;line-height:1.6;color:#8c92a0;font-weight:300;margin:18px auto 0;max-width:520px;">A glimpse of the library. Pick a line below to browse every field on the dedicated Fields page.</p>
+    </div>
+
+    <div data-reveal style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:44px 0 50px;">
+      <a href="Fields.dc.html" class="wf-fieldlink" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.03em;color:#0d0b07;background:var(--wf-grad);border:1px solid transparent;padding:9px 18px;border-radius:999px;text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);">All fields</a>
+      <a href="Fields.dc.html#desire" class="wf-fieldlink" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.03em;color:var(--wf-silver);background:var(--wf-glass);border:1px solid var(--wf-rule);padding:9px 18px;border-radius:999px;text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);" style-hover="color:#0d0b07;background:var(--wf-grad);border-color:transparent">Desire</a>
+      <a href="Fields.dc.html#akashic" class="wf-fieldlink" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.03em;color:var(--wf-silver);background:var(--wf-glass);border:1px solid var(--wf-rule);padding:9px 18px;border-radius:999px;text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);" style-hover="color:#0d0b07;background:var(--wf-grad);border-color:transparent">Akashic</a>
+    </div>
+
+    <div id="wf-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:22px;">
+      <article class="wf-card" data-cat="desire" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div class="wf-card-glow" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.16),transparent 65%);left:0;top:0;opacity:0;transition:opacity .4s;pointer-events:none;z-index:4;"></div>
+        <div style="position:relative;">
+          <img src="assets/products/valentine.jpg" alt="Valentine Ultimate Male Aura" style="display:block;width:100%;height:280px;object-fit:cover;object-position:center 12%;">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="196" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Valentine Ultimate Male Aura</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">An advanced, slightly-audible subliminal layering Desire Code and Akashic Field to build a magnetic masculine aura and an unshakable presence.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$151</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="desire" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div class="wf-card-glow" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.16),transparent 65%);left:0;top:0;opacity:0;transition:opacity .4s;pointer-events:none;z-index:4;"></div>
+        <div style="position:relative;">
+          <image-slot id="wf-prod-2" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="207" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Perfect Hairs</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">Two audios in one. Each blends subliminal affirmations, a Desire Code and a dedicated hair field to support thicker, healthier growth.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$320</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="akashic" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div class="wf-card-glow" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.16),transparent 65%);left:0;top:0;opacity:0;transition:opacity .4s;pointer-events:none;z-index:4;"></div>
+        <div style="position:relative;">
+          <image-slot id="wf-prod-3" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="185" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Porn-Addiction Freedom</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5fa8c9;margin-bottom:13px;">Akashic</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">A complex audio with audible affirmations, Akashic Field and Desire Code engineered to dissolve compulsive habits and restore self-control.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$95</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div data-reveal style="display:flex;justify-content:center;margin-top:46px;">
+      <a href="Fields.dc.html" class="wf-mag" style="display:inline-flex;align-items:center;gap:9px;font-family:'Geist',sans-serif;font-size:15px;font-weight:500;letter-spacing:.02em;color:#e7e9ee;background:var(--wf-glass);backdrop-filter:blur(16px);border:1px solid var(--wf-rule);padding:14px 30px;border-radius:8px;text-decoration:none;transition:background .3s,border-color .3s,transform .35s cubic-bezier(.22,1,.36,1);" style-hover="background:var(--wf-glass-2);border-color:rgba(212,175,55,.4)">Browse all fields <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+  </section>
+
+  <!-- ============ FREE FIELDS ============ -->
+  <section id="wf-free" data-screen-label="Free fields" style="position:relative;z-index:2;border-top:1px solid var(--wf-rule);background:linear-gradient(180deg,rgba(212,175,55,.04),transparent 60%);">
+    <div style="max-width:1180px;margin:0 auto;padding:78px 28px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:44px;">
+        <div style="max-width:560px;">
+          <div data-reveal style="display:inline-flex;align-items:center;gap:9px;font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:16px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--wf-gold);box-shadow:0 0 10px var(--wf-gold);"></span>On the house</div>
+          <h2 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(32px,4.6vw,52px);line-height:1.05;letter-spacing:-.02em;color:#f1f2f6;margin:0;text-wrap:balance;">Try a few fields, free.</h2>
+          <p data-reveal style="font-size:16px;line-height:1.6;color:#8c92a0;font-weight:300;margin:16px 0 0;">New to subliminals? Start here. These fields are free to keep — no card, no catch. Press play and feel the shift.</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:22px;">
+
+        <article class="wf-card" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+          <div class="wf-card-glow" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.16),transparent 65%);left:0;top:0;opacity:0;transition:opacity .4s;pointer-events:none;z-index:4;"></div>
+          <div style="position:relative;">
+            <image-slot id="wf-free-1" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:210px;"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+            <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--wf-gold);background:rgba(8,8,11,.5);backdrop-filter:blur(8px);border:1px solid rgba(212,175,55,.45);padding:5px 11px;border-radius:999px;">Free</span>
+            <button class="wf-play" data-freq="210" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+          </div>
+          <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+            <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Morning Ignition</h3>
+            <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+            <p style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;">A two-minute primer of confidence and clarity to start the day decisive.</p>
+            <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:24px;font-style:italic;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">Free</span>
+              <a href="#" class="wf-mag" style="font-size:12.5px;color:#0d0b07;background:var(--wf-grad);padding:9px 16px;border-radius:7px;text-decoration:none;letter-spacing:.02em;font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:transform .3s,box-shadow .3s;">Get it free <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="wf-card" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+          <div class="wf-card-glow" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.16),transparent 65%);left:0;top:0;opacity:0;transition:opacity .4s;pointer-events:none;z-index:4;"></div>
+          <div style="position:relative;">
+            <image-slot id="wf-free-2" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:210px;"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+            <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--wf-gold);background:rgba(8,8,11,.5);backdrop-filter:blur(8px);border:1px solid rgba(212,175,55,.45);padding:5px 11px;border-radius:999px;">Free</span>
+            <button class="wf-play" data-freq="180" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+          </div>
+          <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+            <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Calm Current</h3>
+            <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5fa8c9;margin-bottom:13px;">Akashic</span>
+            <p style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;">Grounding delta tones to release tension and return you to center.</p>
+            <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:24px;font-style:italic;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">Free</span>
+              <a href="#" class="wf-mag" style="font-size:12.5px;color:#0d0b07;background:var(--wf-grad);padding:9px 16px;border-radius:7px;text-decoration:none;letter-spacing:.02em;font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:transform .3s,box-shadow .3s;">Get it free <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="wf-card" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+          <div class="wf-card-glow" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.16),transparent 65%);left:0;top:0;opacity:0;transition:opacity .4s;pointer-events:none;z-index:4;"></div>
+          <div style="position:relative;">
+            <image-slot id="wf-free-3" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:210px;"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+            <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--wf-gold);background:rgba(8,8,11,.5);backdrop-filter:blur(8px);border:1px solid rgba(212,175,55,.45);padding:5px 11px;border-radius:999px;">Free</span>
+            <button class="wf-play" data-freq="233" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+          </div>
+          <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+            <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Abundance Spark</h3>
+            <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+            <p style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;">A taster of the wealth field — feel the shift in your money mindset before you commit.</p>
+            <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:24px;font-style:italic;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">Free</span>
+              <a href="#" class="wf-mag" style="font-size:12.5px;color:#0d0b07;background:var(--wf-grad);padding:9px 16px;border-radius:7px;text-decoration:none;letter-spacing:.02em;font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:transform .3s,box-shadow .3s;">Get it free <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></a>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CUSTOM CODE ============ -->
+  <section id="wf-custom" data-screen-label="Custom Code" style="position:relative;z-index:2;border-top:1px solid var(--wf-rule);background:linear-gradient(180deg,transparent,rgba(10,7,9,.5));">
+    <div style="max-width:1080px;margin:0 auto;padding:82px 28px;">
+      <div style="text-align:center;max-width:680px;margin:0 auto 52px;">
+        <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">02 · The three fields</div>
+        <h2 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.02em;color:#f1f2f6;margin:0;text-wrap:balance;">Three ways into the subconscious.</h2>
+        <p data-reveal style="font-size:16px;line-height:1.6;color:#8c92a0;font-weight:300;margin:18px auto 0;max-width:520px;">Every Waslerr field belongs to one of three lines — and the third is written from scratch, for you alone.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:72px;">
+        <div data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:30px 28px;">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-mute);margin-bottom:16px;">Line 01</div>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;color:#f1f2f6;margin:0 0 10px;">Desire Code</h3>
+          <p style="font-size:14px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 18px;">Outcome engineering — scripts that encode a precise external result: wealth, attraction, success.</p>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--wf-gold);letter-spacing:.06em;">48 fields</span>
+        </div>
+        <div data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:30px 28px;">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-mute);margin-bottom:16px;">Line 02</div>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;color:#f1f2f6;margin:0 0 10px;">Akashic Field</h3>
+          <p style="font-size:14px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 18px;">Inner alignment — deeper work on identity, intuition and self beneath the goals.</p>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--wf-gold);letter-spacing:.06em;">24 fields</span>
+        </div>
+        <div data-reveal style="position:relative;background:linear-gradient(165deg,rgba(212,175,55,.10),rgba(255,255,255,.035));border:1px solid rgba(212,175,55,.32);border-radius:16px;padding:30px 28px;box-shadow:0 0 50px rgba(212,175,55,.08);overflow:hidden;">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:16px;">Line 03</div>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;color:#f1f2f6;margin:0 0 10px;">Custom Code</h3>
+          <p style="font-size:14px;line-height:1.55;color:#b6bcc8;font-weight:300;margin:0 0 18px;">A bespoke field, written, voiced and tuned to your exact intention.</p>
+          <a href="#wf-custom-form-anchor" class="wf-custom-jump" style="display:inline-flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--wf-gold);letter-spacing:.06em;text-decoration:none;">Request below <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></a>
+        </div>
+      </div>
+
+      <div id="wf-custom-form-anchor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:40px;align-items:start;scroll-margin-top:90px;">
+        <div data-reveal>
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:16px;">Custom Code</div>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(30px,4vw,44px);line-height:1.06;letter-spacing:-.02em;color:#f1f2f6;margin:0 0 18px;text-wrap:balance;">A field built for you alone.</h3>
+          <p style="font-size:15.5px;line-height:1.62;color:#9298a6;font-weight:300;margin:0 0 28px;max-width:440px;">Tell us the life you're engineering. We write the affirmation architecture, choose your frequencies, master it for headphones, and deliver a field that exists nowhere else.</p>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:15px;">
+            <li style="display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:#c9cdd6;font-weight:300;"><span style="color:var(--wf-gold);flex:none;margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span>Bespoke affirmation script, written for your goal</li>
+            <li style="display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:#c9cdd6;font-weight:300;"><span style="color:var(--wf-gold);flex:none;margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span>Frequencies & brainwave band of your choice</li>
+            <li style="display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:#c9cdd6;font-weight:300;"><span style="color:var(--wf-gold);flex:none;margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span>Studio-mastered, headphone-optimized</li>
+            <li style="display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:#c9cdd6;font-weight:300;"><span style="color:var(--wf-gold);flex:none;margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span>Private revisions until it's right</li>
+            <li style="display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:#c9cdd6;font-weight:300;"><span style="color:var(--wf-gold);flex:none;margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span>Delivered within 7 days</li>
+          </ul>
+        </div>
+
+        <div data-reveal style="position:relative;">
+          <div id="wf-custom-card" style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:18px;padding:34px 32px;backdrop-filter:blur(20px);">
+            <form id="wf-custom-form" novalidate style="display:flex;flex-direction:column;gap:18px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--wf-mute);">Name</span><input name="name" type="text" placeholder="Your name" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--wf-rule);border-radius:8px;padding:12px 14px;color:#eef0f4;font-family:'Geist',sans-serif;font-size:14.5px;outline:none;transition:border-color .3s,background .3s;" style-focus="border-color:var(--wf-gold);background:rgba(255,255,255,.05)"></label>
+                <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--wf-mute);">Email *</span><input name="email" type="email" required placeholder="you@email.com" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--wf-rule);border-radius:8px;padding:12px 14px;color:#eef0f4;font-family:'Geist',sans-serif;font-size:14.5px;outline:none;transition:border-color .3s,background .3s;" style-focus="border-color:var(--wf-gold);background:rgba(255,255,255,.05)"></label>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--wf-mute);">Focus area</span>
+                <select name="focus" required style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--wf-rule);border-radius:8px;padding:12px 14px;color:#eef0f4;font-family:'Geist',sans-serif;font-size:14.5px;outline:none;transition:border-color .3s,background .3s;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 fill=%22none%22 stroke=%22%238a909c%22 stroke-width=%222%22><path d=%22M4 7l5 5 5-5%22/></svg>');background-repeat:no-repeat;background-position:right 14px center;" style-focus="border-color:var(--wf-gold);background-color:rgba(255,255,255,.05)">
+                  <option value="" disabled selected>Choose a focus…</option>
+                  <option value="wealth">Wealth & abundance</option>
+                  <option value="confidence">Confidence & self-worth</option>
+                  <option value="attraction">Attraction & magnetism</option>
+                  <option value="success">Success & performance</option>
+                  <option value="focus">Focus & productivity</option>
+                  <option value="sleep">Sleep & healing</option>
+                  <option value="akashic">Identity & inner alignment</option>
+                  <option value="other">Something else</option>
+                </select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--wf-mute);">Your intention</span><textarea name="intention" rows="4" required placeholder="Describe the outcome you want to engineer — be as specific as you like." style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--wf-rule);border-radius:8px;padding:12px 14px;color:#eef0f4;font-family:'Geist',sans-serif;font-size:14.5px;line-height:1.55;outline:none;resize:vertical;transition:border-color .3s,background .3s;" style-focus="border-color:var(--wf-gold);background:rgba(255,255,255,.05)"></textarea></label>
+              <button type="submit" class="wf-mag" style="margin-top:4px;font-family:'Geist',sans-serif;font-size:15px;font-weight:500;letter-spacing:.02em;color:#0d0b07;background:var(--wf-grad);padding:15px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 10px 36px rgba(212,175,55,.22);transition:transform .3s,box-shadow .3s;">Request your custom field</button>
+              <p style="font-size:12px;color:var(--wf-mute);text-align:center;margin:0;font-weight:300;">No payment now — we scope your field and send a quote.</p>
+            </form>
+          </div>
+          <div id="wf-custom-success" style="display:none;flex-direction:column;align-items:center;text-align:center;background:linear-gradient(165deg,rgba(212,175,55,.10),rgba(255,255,255,.035));border:1px solid rgba(212,175,55,.32);border-radius:18px;padding:48px 34px;backdrop-filter:blur(20px);box-shadow:0 0 60px rgba(212,175,55,.10);">
+            <span style="width:56px;height:56px;border-radius:50%;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;color:#0d0b07;margin-bottom:22px;box-shadow:0 0 30px rgba(212,175,55,.4);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:30px;color:#f1f2f6;margin:0 0 12px;">Request received<span data-name></span>.</h3>
+            <p style="font-size:15px;line-height:1.6;color:#9298a6;font-weight:300;margin:0 0 22px;max-width:360px;">We'll craft your field and email a scope within 7 days. Keep an eye on your inbox.</p>
+            <button id="wf-custom-reset" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:14px;font-weight:400;color:#e7e9ee;background:var(--wf-glass-2);border:1px solid var(--wf-rule);padding:11px 22px;border-radius:8px;cursor:pointer;transition:background .3s,transform .3s;">Send another request</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TESTIMONIALS ============ -->
+  <section id="wf-reviews" style="position:relative;z-index:2;padding:80px 0;border-top:1px solid var(--wf-rule);background:linear-gradient(180deg,rgba(8,11,20,.5),transparent);overflow:hidden;">
+    <div style="max-width:640px;margin:0 auto 56px;text-align:center;padding:0 28px;">
+      <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">03 · Reviews</div>
+      <h2 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.02em;color:#f1f2f6;margin:0;text-wrap:balance;">The quiet difference, felt loudly.</h2>
+    </div>
+
+    <div style="position:relative;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
+      <div class="wf-marq-track" style="display:flex;gap:22px;width:max-content;padding:0 11px;animation:wf-marq 46s linear infinite;">
+        <!-- set A -->
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Three weeks with Aurum and my relationship with money completely changed. I stopped flinching at big numbers."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">M</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Marcus T.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Founder</span></span></figcaption></figure>
+
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Sovereign rebuilt my confidence from the floor up. I walk into pitches like the room already belongs to me."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">L</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Lena R.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Consultant</span></span></figcaption></figure>
+
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Flowstate is unreal. Four-hour deep work blocks now feel effortless. The production quality is in another league."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">D</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Devon K.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Engineer</span></span></figcaption></figure>
+
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Magnetism is subtle but undeniable. People lean in differently now. I feel composed instead of anxious."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">S</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Sofia A.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Designer</span></span></figcaption></figure>
+
+        <!-- set B (duplicate) -->
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Three weeks with Aurum and my relationship with money completely changed. I stopped flinching at big numbers."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">M</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Marcus T.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Founder</span></span></figcaption></figure>
+
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Sovereign rebuilt my confidence from the floor up. I walk into pitches like the room already belongs to me."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">L</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Lena R.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Consultant</span></span></figcaption></figure>
+
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Flowstate is unreal. Four-hour deep work blocks now feel effortless. The production quality is in another league."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">D</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Devon K.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Engineer</span></span></figcaption></figure>
+
+        <figure style="flex:0 0 360px;width:360px;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;padding:28px 26px;backdrop-filter:blur(18px);margin:0;"><div style="color:var(--wf-gold);font-size:13px;letter-spacing:.1em;margin-bottom:14px;">★★★★★</div><blockquote style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#d7dae2;font-weight:300;">"Magnetism is subtle but undeniable. People lean in differently now. I feel composed instead of anxious."</blockquote><figcaption style="display:flex;align-items:center;gap:12px;"><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2a3550,#161c2c);border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--wf-gold);font-family:'Cormorant Garamond',serif;">S</span><span><span style="display:block;font-size:13.5px;color:#eef0f4;">Sofia A.</span><span style="display:block;font-size:11.5px;color:var(--wf-mute);">Designer</span></span></figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section id="wf-faq" style="position:relative;z-index:2;max-width:760px;margin:0 auto;padding:82px 28px;border-top:1px solid var(--wf-rule);">
+    <div style="text-align:center;margin-bottom:54px;">
+      <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">04 · Questions</div>
+      <h2 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.02em;color:#f1f2f6;margin:0;text-wrap:balance;">Everything you wondered.</h2>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="wf-faq" data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:14px;overflow:hidden;transition:border-color .3s,background .3s;">
+        <button class="wf-faq-q" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;background:none;border:none;cursor:pointer;padding:22px 26px;text-align:left;color:#eef0f4;font-family:'Geist',sans-serif;font-size:16.5px;font-weight:400;">How do subliminals actually work?<span class="wf-faq-ic" style="flex:none;width:22px;height:22px;position:relative;transition:transform .4s cubic-bezier(.22,1,.36,1);color:var(--wf-gold);font-size:22px;line-height:1;">+</span></button>
+        <div class="wf-faq-a" style="max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1);"><p style="margin:0;padding:0 26px 24px;font-size:15px;line-height:1.65;color:#9298a6;font-weight:300;">Affirmations are mixed beneath the threshold of conscious hearing. Your conscious mind hears ambient sound; your subconscious receives the suggestions directly, bypassing the critical filter that normally rejects new self-beliefs.</p></div>
+      </div>
+
+      <div class="wf-faq" data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:14px;overflow:hidden;transition:border-color .3s,background .3s;">
+        <button class="wf-faq-q" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;background:none;border:none;cursor:pointer;padding:22px 26px;text-align:left;color:#eef0f4;font-family:'Geist',sans-serif;font-size:16.5px;font-weight:400;">Will I be able to hear the affirmations?<span class="wf-faq-ic" style="flex:none;width:22px;height:22px;position:relative;transition:transform .4s cubic-bezier(.22,1,.36,1);color:var(--wf-gold);font-size:22px;line-height:1;">+</span></button>
+        <div class="wf-faq-a" style="max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1);"><p style="margin:0;padding:0 26px 24px;font-size:15px;line-height:1.65;color:#9298a6;font-weight:300;">No. By design they sit below conscious perception — you'll hear only the cinematic soundscape and carrier tones. That's exactly how they slip past resistance.</p></div>
+      </div>
+
+      <div class="wf-faq" data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:14px;overflow:hidden;transition:border-color .3s,background .3s;">
+        <button class="wf-faq-q" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;background:none;border:none;cursor:pointer;padding:22px 26px;text-align:left;color:#eef0f4;font-family:'Geist',sans-serif;font-size:16.5px;font-weight:400;">How often should I listen?<span class="wf-faq-ic" style="flex:none;width:22px;height:22px;position:relative;transition:transform .4s cubic-bezier(.22,1,.36,1);color:var(--wf-gold);font-size:22px;line-height:1;">+</span></button>
+        <div class="wf-faq-a" style="max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1);"><p style="margin:0;padding:0 26px 24px;font-size:15px;line-height:1.65;color:#9298a6;font-weight:300;">Daily, 30–60 minutes, with headphones. Consistency matters far more than volume or duration — the subconscious responds to repetition over time.</p></div>
+      </div>
+
+      <div class="wf-faq" data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:14px;overflow:hidden;transition:border-color .3s,background .3s;">
+        <button class="wf-faq-q" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;background:none;border:none;cursor:pointer;padding:22px 26px;text-align:left;color:#eef0f4;font-family:'Geist',sans-serif;font-size:16.5px;font-weight:400;">How long until I notice results?<span class="wf-faq-ic" style="flex:none;width:22px;height:22px;position:relative;transition:transform .4s cubic-bezier(.22,1,.36,1);color:var(--wf-gold);font-size:22px;line-height:1;">+</span></button>
+        <div class="wf-faq-a" style="max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1);"><p style="margin:0;padding:0 26px 24px;font-size:15px;line-height:1.65;color:#9298a6;font-weight:300;">Most listeners report subtle shifts in mood and self-talk within 1–2 weeks, with more noticeable behavioural change across 4–8 weeks. Results vary by individual and consistency.</p></div>
+      </div>
+
+      <div class="wf-faq" data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:14px;overflow:hidden;transition:border-color .3s,background .3s;">
+        <button class="wf-faq-q" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;background:none;border:none;cursor:pointer;padding:22px 26px;text-align:left;color:#eef0f4;font-family:'Geist',sans-serif;font-size:16.5px;font-weight:400;">Are subliminals safe?<span class="wf-faq-ic" style="flex:none;width:22px;height:22px;position:relative;transition:transform .4s cubic-bezier(.22,1,.36,1);color:var(--wf-gold);font-size:22px;line-height:1;">+</span></button>
+        <div class="wf-faq-a" style="max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1);"><p style="margin:0;padding:0 26px 24px;font-size:15px;line-height:1.65;color:#9298a6;font-weight:300;">Yes. Every affirmation is positive, ethically written, and reviewed. Nothing is coercive. Avoid listening while driving or operating machinery.</p></div>
+      </div>
+
+      <div class="wf-faq" data-reveal style="background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:14px;overflow:hidden;transition:border-color .3s,background .3s;">
+        <button class="wf-faq-q" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;background:none;border:none;cursor:pointer;padding:22px 26px;text-align:left;color:#eef0f4;font-family:'Geist',sans-serif;font-size:16.5px;font-weight:400;">Can I listen while sleeping?<span class="wf-faq-ic" style="flex:none;width:22px;height:22px;position:relative;transition:transform .4s cubic-bezier(.22,1,.36,1);color:var(--wf-gold);font-size:22px;line-height:1;">+</span></button>
+        <div class="wf-faq-a" style="max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1);"><p style="margin:0;padding:0 26px 24px;font-size:15px;line-height:1.65;color:#9298a6;font-weight:300;">Absolutely — the Delta-frequency fields like Lucid and Sovereign are built for it. The sleeping mind is unusually receptive, making overnight one of the most effective windows.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ JOIN ============ -->
+  <section id="wf-join" style="position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:90px 28px;border-top:1px solid var(--wf-rule);">
+    <div style="text-align:center;max-width:600px;margin:0 auto 50px;">
+      <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">Join the party</div>
+      <h2 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.02em;color:#f1f2f6;margin:0;text-wrap:balance;">Step inside the Waslerr circle.</h2>
+      <p data-reveal style="font-size:16px;line-height:1.6;color:#8c92a0;font-weight:300;margin:18px auto 0;max-width:480px;">Weekly drops, free fields, and direct access to the creator. Come build with us.</p>
+    </div>
+    <div data-reveal style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;">
+        <a href="https://youtube.com/@waslerrfields" target="_blank" rel="noopener" style="text-decoration:none;position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:18px;padding:32px 28px;backdrop-filter:blur(20px);transition:background .3s,border-color .3s,box-shadow .3s,transform .3s;" style-hover="border-color:rgba(212,175,55,.4);background:var(--wf-glass-2);box-shadow:0 20px 50px rgba(0,0,0,.4)">
+          <span style="width:48px;height:48px;border-radius:12px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25);display:flex;align-items:center;justify-content:center;color:var(--wf-gold);margin-bottom:20px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M22.5 7.2a2.7 2.7 0 0 0-1.9-1.9C18.9 4.8 12 4.8 12 4.8s-6.9 0-8.6.5A2.7 2.7 0 0 0 1.5 7.2 28 28 0 0 0 1 12a28 28 0 0 0 .5 4.8 2.7 2.7 0 0 0 1.9 1.9c1.7.5 8.6.5 8.6.5s6.9 0 8.6-.5a2.7 2.7 0 0 0 1.9-1.9A28 28 0 0 0 23 12a28 28 0 0 0-.5-4.8zM9.8 15.3V8.7l5.7 3.3-5.7 3.3z"/></svg></span>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:24px;color:#f1f2f6;margin:0 0 8px;">YouTube</h3>
+          <p style="font-size:14px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;flex:1;">New fields, breakdowns and free guided sessions every week.</p>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'Geist',sans-serif;font-size:13.5px;font-weight:500;color:var(--wf-gold);letter-spacing:.02em;">Subscribe <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+        <a href="https://discord.gg/waslerrfields" target="_blank" rel="noopener" style="text-decoration:none;position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:18px;padding:32px 28px;backdrop-filter:blur(20px);transition:background .3s,border-color .3s,box-shadow .3s,transform .3s;" style-hover="border-color:rgba(212,175,55,.4);background:var(--wf-glass-2);box-shadow:0 20px 50px rgba(0,0,0,.4)">
+          <span style="width:48px;height:48px;border-radius:12px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25);display:flex;align-items:center;justify-content:center;color:var(--wf-gold);margin-bottom:20px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.3 5.3A17 17 0 0 0 15 4l-.2.4a12.6 12.6 0 0 1 3.7 1.8 13.5 13.5 0 0 0-11.6 0A12.6 12.6 0 0 1 10.6 4.4L9.4 4A17 17 0 0 0 5 5.3C2.5 9 1.8 12.6 2.1 16.2A17 17 0 0 0 7.3 19l.7-1c-.6-.2-1.1-.5-1.6-.8l.4-.3a9.7 9.7 0 0 0 8.4 0l.4.3c-.5.3-1 .6-1.6.8l.7 1a17 17 0 0 0 5.2-2.8c.4-4.2-.6-7.8-2.6-10.9zM9.5 14.3c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7zm5 0c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7z"/></svg></span>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:24px;color:#f1f2f6;margin:0 0 8px;">Discord</h3>
+          <p style="font-size:14px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;flex:1;">Join the community — share results, get support and unlock early access.</p>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'Geist',sans-serif;font-size:13.5px;font-weight:500;color:var(--wf-gold);letter-spacing:.02em;">Join Discord <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+        <a href="mailto:hello@waslerrfields.com?subject=1%3A1%20with%20the%20creator" style="text-decoration:none;position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:18px;padding:32px 28px;backdrop-filter:blur(20px);transition:background .3s,border-color .3s,box-shadow .3s,transform .3s;" style-hover="border-color:rgba(212,175,55,.4);background:var(--wf-glass-2);box-shadow:0 20px 50px rgba(0,0,0,.4)">
+          <span style="width:48px;height:48px;border-radius:12px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25);display:flex;align-items:center;justify-content:center;color:var(--wf-gold);margin-bottom:20px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-11.7 7.7L3 21l1.8-6.3A8.4 8.4 0 1 1 21 11.5z"/></svg></span>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:24px;color:#f1f2f6;margin:0 0 8px;">1:1 with the creator</h3>
+          <p style="font-size:14px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;flex:1;">Book a private call to design your transformation, one to one.</p>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'Geist',sans-serif;font-size:13.5px;font-weight:500;color:var(--wf-gold);letter-spacing:.02em;">Book a session <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer style="position:relative;z-index:2;border-top:1px solid var(--wf-rule);background:linear-gradient(180deg,transparent,rgba(8,11,20,.6));">
+    <div style="max-width:1080px;margin:0 auto;padding:64px 28px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:40px;">
+      <div>
+        <a href="#wf-hero" style="display:flex;align-items:center;gap:12px;text-decoration:none;margin-bottom:18px;">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#15110a;">W</span>
+          <span style="font-family:'Geist',sans-serif;font-weight:500;font-size:13.5px;letter-spacing:.26em;color:#eef0f4;">WASLERR&nbsp;FIELDS</span>
+        </a>
+        <p style="font-size:13.5px;line-height:1.6;color:var(--wf-mute);font-weight:300;max-width:280px;margin:0 0 22px;">Cinematic subliminal audio, engineered for the subconscious. Reprogram the mind. Reshape your reality.</p>
+        <div style="display:flex;gap:12px;">
+          <a href="#wf-hero" aria-label="X" class="wf-soc" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;color:var(--wf-silver);text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-7.5 8.6L23 22h-6.8l-5.3-7-6.1 7H1.7l8-9.2L1 2h6.9l4.8 6.4L18.9 2zm-2.4 18h1.9L7.6 4H5.6l10.9 16z"/></svg></a>
+          <a href="#wf-hero" aria-label="Instagram" class="wf-soc" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;color:var(--wf-silver);text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg></a>
+          <a href="#wf-hero" aria-label="YouTube" class="wf-soc" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;color:var(--wf-silver);text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M22.5 7.2a2.7 2.7 0 0 0-1.9-1.9C18.9 4.8 12 4.8 12 4.8s-6.9 0-8.6.5A2.7 2.7 0 0 0 1.5 7.2 28 28 0 0 0 1 12a28 28 0 0 0 .5 4.8 2.7 2.7 0 0 0 1.9 1.9c1.7.5 8.6.5 8.6.5s6.9 0 8.6-.5a2.7 2.7 0 0 0 1.9-1.9A28 28 0 0 0 23 12a28 28 0 0 0-.5-4.8zM9.8 15.3V8.7l5.7 3.3-5.7 3.3z"/></svg></a>
+          <a href="#wf-hero" aria-label="TikTok" class="wf-soc" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--wf-rule);display:flex;align-items:center;justify-content:center;color:var(--wf-silver);text-decoration:none;transition:all .35s cubic-bezier(.22,1,.36,1);"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 2c.3 2.2 1.5 3.6 3.7 3.8v2.6c-1.3.1-2.5-.3-3.7-1v6.6c0 4-2.9 6.4-6.3 5.7-3-.6-4.6-3.6-3.7-6.5.8-2.5 3.2-3.8 5.7-3.4v2.8c-.4-.1-.8-.2-1.3-.1-1.2.1-2 1-1.9 2.2.1 1.2 1.1 2 2.4 1.8 1.1-.2 1.8-1.1 1.8-2.4V2h3.6z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-mute);margin-bottom:18px;">Collection</div>
+        <div style="display:flex;flex-direction:column;gap:12px;"><a href="#wf-collection" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Wealth</a><a href="#wf-collection" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Confidence</a><a href="#wf-collection" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Attraction</a><a href="#wf-collection" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Sleep</a></div>
+      </div>
+      <div>
+        <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-mute);margin-bottom:18px;">Company</div>
+        <div style="display:flex;flex-direction:column;gap:12px;"><a href="Fields.dc.html#desire" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Desire Code</a><a href="Fields.dc.html#akashic" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Akashic Field</a><a href="#wf-free" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Free fields</a><a href="#wf-custom" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Custom Code</a></div>
+      </div>
+      <div>
+        <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-mute);margin-bottom:18px;">Legal</div>
+        <div style="display:flex;flex-direction:column;gap:12px;"><a href="#wf-hero" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Privacy</a><a href="#wf-hero" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Terms</a><a href="#wf-hero" class="wf-flink" style="font-size:13.5px;color:var(--wf-silver);text-decoration:none;transition:color .3s;">Guarantee</a></div>
+      </div>
+    </div>
+    <div style="max-width:1080px;margin:0 auto;padding:24px 28px 40px;border-top:1px solid var(--wf-rule);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+      <span style="font-size:12px;color:var(--wf-mute);">© 2026 Waslerr Fields. All rights reserved.</span>
+      <span style="font-size:12px;color:#5a5f6b;max-width:560px;text-align:right;">Audio is designed to support mindset and self-improvement. It is not medical treatment. Individual results vary.</span>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Gold&quot;,&quot;Platinum&quot;,&quot;Emerald&quot;],&quot;default&quot;:&quot;Gold&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Cinematic&quot;,&quot;Calm&quot;],&quot;default&quot;:&quot;Cinematic&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() {
+    this.applyAccent(this.props.accent || 'Gold');
+    this.cleanup = [];
+    this.initGlow();
+    this.initParticles();
+    this.initReveal();
+    this.initNav();
+    this.initFilter();
+    this.initFaq();
+    this.initTilt();
+    this.initStats();
+    this.initMagnetic();
+    this.initDecrypt();
+    this.initHeroParallax();
+    this.initAudio();
+    this.initProgress();
+    this.initMethodPin();
+    this.initIntro();
+    this.initCustomForm();
+    this.initReadMore();
+    this.initCardMedia();
+    this.initMobileNav();
+  }
+
+  initMobileNav() {
+    const burger = this.$('.wf-burger');
+    const menu = this.$('.wf-mobile-menu');
+    if (!burger || !menu) return;
+    const lines = burger.querySelectorAll('.wf-burger-l');
+    let open = false;
+    const setBurger = o => {
+      if (o) { lines[0].style.transform = 'translateY(6.5px) rotate(45deg)'; lines[1].style.opacity = '0'; lines[2].style.transform = 'translateY(-6.5px) rotate(-45deg)'; }
+      else { lines[0].style.transform = ''; lines[1].style.opacity = '1'; lines[2].style.transform = ''; }
+    };
+    const openMenu = () => {
+      open = true;
+      menu.style.display = 'flex';
+      menu.style.animation = 'wf-menu-in .38s cubic-bezier(.22,1,.36,1) both';
+      menu.querySelectorAll('.wf-mlink').forEach((a, i) => { a.style.animation = `wf-fadeup .4s ease ${0.04 + i * 0.05}s both`; });
+      setBurger(true);
+    };
+    const closeMenu = () => { open = false; menu.style.display = 'none'; setBurger(false); };
+    burger.addEventListener('click', () => { open ? closeMenu() : openMenu(); });
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+  }
+
+  initCardMedia() {
+    this.$$('.wf-card').forEach(card => {
+      const media = card.querySelector('img, image-slot');
+      if (!media) return;
+      const wrap = media.parentElement;
+      if (wrap) wrap.style.overflow = 'hidden';
+      media.style.transition = 'transform .65s cubic-bezier(.22,1,.36,1)';
+      media.style.willChange = 'transform';
+      card.addEventListener('mouseenter', () => { media.style.transform = 'scale(1.07)'; });
+      card.addEventListener('mouseleave', () => { media.style.transform = 'scale(1)'; });
+    });
+  }
+
+  initReadMore() {
+    this.$$('.wf-readmore').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const card = link.closest('.wf-card');
+        const desc = card && card.querySelector('.wf-desc');
+        if (!desc) return;
+        const open = desc.dataset.open === '1';
+        if (open) {
+          desc.style.webkitLineClamp = '3'; desc.style.display = '-webkit-box'; desc.dataset.open = '0';
+          link.childNodes[0].nodeValue = 'Read more ';
+          link.style.transform = '';
+        } else {
+          desc.style.webkitLineClamp = 'unset'; desc.style.display = 'block'; desc.dataset.open = '1';
+          link.childNodes[0].nodeValue = 'Read less ';
+        }
+      });
+    });
+  }
+
+  initCustomForm() {
+    const form = this.$('#wf-custom-form');
+    const card = this.$('#wf-custom-card');
+    const success = this.$('#wf-custom-success');
+    if (!form || !card || !success) return;
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      const fd = new FormData(form);
+      const name = (fd.get('name') || '').toString().trim();
+      try {
+        const list = JSON.parse(localStorage.getItem('wf_custom_requests') || '[]');
+        list.push({ name, email: fd.get('email'), focus: fd.get('focus'), intention: fd.get('intention'), ts: Date.now() });
+        localStorage.setItem('wf_custom_requests', JSON.stringify(list));
+      } catch (err) {}
+      const nameSpan = success.querySelector('[data-name]');
+      if (nameSpan) nameSpan.textContent = name ? (', ' + name) : '';
+      card.style.display = 'none';
+      success.style.display = 'flex';
+    });
+    const reset = this.$('#wf-custom-reset');
+    if (reset) reset.addEventListener('click', () => {
+      form.reset();
+      success.style.display = 'none';
+      card.style.display = 'block';
+    });
+  }
+
+  initIntro() {
+    const intro = this.$('#wf-intro');
+    if (!intro) return;
+    const lift = () => {
+      intro.style.transition = 'transform .95s cubic-bezier(.76,0,.24,1)';
+      intro.style.transform = 'translateY(-110%)';
+      intro.style.pointerEvents = 'none';
+      setTimeout(() => { if (intro && intro.parentNode) intro.remove(); }, 1050);
+    };
+    setTimeout(lift, 2000);
+  }
+
+  initProgress() {
+    const bar = this.$('#wf-progress');
+    if (!bar) return;
+    const N = 84;
+    for (let i = 0; i < N; i++) {
+      const s = document.createElement('span');
+      s.style.cssText = 'flex:1;height:' + (32 + Math.round(Math.random() * 68)) + '%;border-radius:1px;background:rgba(255,255,255,.07);transition:background .15s;';
+      bar.appendChild(s);
+    }
+    const spans = bar.children;
+    const upd = () => {
+      const h = document.documentElement;
+      const p = h.scrollTop / ((h.scrollHeight - h.clientHeight) || 1);
+      const idx = Math.round(p * N);
+      for (let i = 0; i < N; i++) {
+        spans[i].style.background = i < idx ? (i > idx - 6 ? 'var(--wf-gold-2)' : 'var(--wf-gold)') : 'rgba(255,255,255,.07)';
+      }
+    };
+    upd();
+    window.addEventListener('scroll', upd, { passive: true });
+    window.addEventListener('resize', upd);
+    this.cleanup.push(() => { window.removeEventListener('scroll', upd); window.removeEventListener('resize', upd); });
+  }
+
+  initMethodPin() {
+    const track = this.$('#wf-method-track');
+    const pin = this.$('#wf-method-pin');
+    const fill = this.$('#wf-tl-fill');
+    const tl = this.$('#wf-timeline');
+    const steps = this.$$('#wf-timeline .wf-step');
+    if (!track || !pin) return;
+    if (fill) fill.style.transition = 'height .25s linear';
+    const update = () => {
+      const rect = track.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const total = track.offsetHeight - vh;
+      const passed = Math.min(Math.max(-rect.top, 0), total);
+      const p = total > 0 ? passed / total : 0;
+      if (rect.top <= 0 && -rect.top <= total) {
+        pin.style.position = 'fixed'; pin.style.top = '0'; pin.style.bottom = 'auto';
+      } else if (-rect.top > total) {
+        pin.style.position = 'absolute'; pin.style.top = 'auto'; pin.style.bottom = '0';
+      } else {
+        pin.style.position = 'absolute'; pin.style.top = '0'; pin.style.bottom = 'auto';
+      }
+      const n = steps.length;
+      steps.forEach((el, i) => {
+        const on = p * n > i - 0.1;
+        const lit = p * n > i + 0.45;
+        el.style.opacity = on ? '1' : '.25';
+        el.style.transform = on ? 'translateY(0)' : 'translateY(14px)';
+        const num = el.querySelector('.wf-step-num');
+        if (num) {
+          if (lit) { num.style.background = 'var(--wf-grad)'; num.style.color = '#0d0b07'; num.style.borderColor = 'transparent'; num.style.boxShadow = '0 0 24px rgba(212,175,55,.4)'; }
+          else { num.style.background = '#0a0d16'; num.style.color = 'var(--wf-gold)'; num.style.borderColor = 'var(--wf-rule)'; num.style.boxShadow = 'none'; }
+        }
+      });
+      if (fill && tl) fill.style.height = (p * (tl.clientHeight - 16)) + 'px';
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    this.cleanup.push(() => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update); });
+  }
+
+  initAudio() {
+    this._ps = { ctx: null, osc: null, gain: null, active: null, timer: null };
+    this._playSVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    this._pauseSVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+    this.$$('.wf-wave').forEach(w => {
+      if (w.children.length) return;
+      for (let i = 0; i < 20; i++) {
+        const b = document.createElement('span');
+        b.style.cssText = 'flex:1;min-width:2px;max-width:4px;height:' + (14 + Math.round(Math.random() * 22)) + '%;background:linear-gradient(var(--wf-gold-2),var(--wf-gold-3));border-radius:2px;opacity:.4;transition:opacity .3s;';
+        w.appendChild(b);
+      }
+    });
+    this.$$('.wf-play').forEach(btn => btn.addEventListener('click', () => this.togglePlay(btn)));
+    this.$$('.wf-card').forEach(card => {
+      const wave = card.querySelector('.wf-wave');
+      if (!wave) return;
+      const isActiveCard = () => this._ps.active && this._ps.active.closest('.wf-card') === card;
+      card.addEventListener('mouseenter', () => {
+        if (isActiveCard()) return;
+        wave.querySelectorAll('span').forEach((b, i) => { b.style.opacity = '.85'; b.style.animation = 'wf-bars ' + (0.95 + (i % 6) * 0.13) + 's ease-in-out ' + (i * 0.05) + 's infinite'; });
+      });
+      card.addEventListener('mouseleave', () => {
+        if (isActiveCard()) return;
+        wave.querySelectorAll('span').forEach(b => { b.style.animation = ''; b.style.opacity = '.4'; });
+      });
+    });
+    this.cleanup.push(() => this.stopPlay());
+  }
+
+  togglePlay(btn) {
+    const ps = this._ps;
+    if (ps.active === btn) { this.stopPlay(); return; }
+    this.stopPlay();
+    const card = btn.closest('.wf-card');
+    const wave = card ? card.querySelector('.wf-wave') : null;
+    const timeEl = card ? card.querySelector('.wf-time') : null;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      ps.ctx = ps.ctx || new Ctx();
+      if (ps.ctx.state === 'suspended') ps.ctx.resume();
+      const ctx = ps.ctx;
+      const g = ctx.createGain(); g.gain.value = 0; g.connect(ctx.destination);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 540; lp.Q.value = 0.6; lp.connect(g);
+      const base = parseFloat(btn.dataset.freq) || 210;
+      const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = base; o1.connect(lp);
+      const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = base + 4.5; o2.connect(lp);
+      o1.start(); o2.start();
+      g.gain.linearRampToValueAtTime(0.045, ctx.currentTime + 0.7);
+      ps.osc = [o1, o2]; ps.gain = g;
+    } catch (e) {}
+    ps.active = btn;
+    btn.innerHTML = this._pauseSVG;
+    btn.style.background = 'var(--wf-grad)'; btn.style.color = '#0d0b07'; btn.style.borderColor = 'transparent'; btn.style.boxShadow = '0 0 22px rgba(212,175,55,.55)';
+    if (wave) wave.querySelectorAll('span').forEach((b, i) => { b.style.opacity = '1'; b.style.animation = 'wf-bars ' + (0.6 + (i % 6) * 0.13) + 's ease-in-out ' + (i * 0.04) + 's infinite'; });
+    let sec = 0; if (timeEl) timeEl.textContent = '0:00';
+    ps.timer = setInterval(() => { sec++; if (timeEl) timeEl.textContent = '0:' + String(sec).padStart(2, '0'); if (sec >= 30) this.stopPlay(); }, 1000);
+  }
+
+  stopPlay() {
+    const ps = this._ps;
+    if (!ps) return;
+    if (ps.timer) { clearInterval(ps.timer); ps.timer = null; }
+    if (ps.gain && ps.ctx) { try { ps.gain.gain.linearRampToValueAtTime(0, ps.ctx.currentTime + 0.25); } catch (e) {} }
+    if (ps.osc) { const o = ps.osc; setTimeout(() => { try { o[0].stop(); o[1].stop(); } catch (e) {} }, 300); ps.osc = null; }
+    if (ps.active) {
+      const btn = ps.active, card = btn.closest('.wf-card');
+      btn.innerHTML = this._playSVG;
+      btn.style.background = 'rgba(8,8,10,.55)'; btn.style.color = '#fff'; btn.style.borderColor = 'rgba(255,255,255,.25)'; btn.style.boxShadow = 'none';
+      const w = card && card.querySelector('.wf-wave');
+      if (w) w.querySelectorAll('span').forEach(b => { b.style.animation = ''; b.style.opacity = '.4'; });
+    }
+    ps.active = null;
+  }
+
+  initHeroParallax() {
+    const wrap = this.$('#wf-orbit-wrap');
+    const hero = this.$('#wf-hero');
+    if (!wrap || !hero) return;
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf;
+    const onMove = e => {
+      const r = hero.getBoundingClientRect();
+      tx = (e.clientX - r.left) / r.width - 0.5;
+      ty = (e.clientY - r.top) / r.height - 0.5;
+    };
+    const onLeave = () => { tx = 0; ty = 0; };
+    const loop = () => {
+      cx += (tx - cx) * 0.06; cy += (ty - cy) * 0.06;
+      wrap.style.transform = `translate(${cx * 40}px,${cy * 40}px) rotate(${cx * 2.2}deg)`;
+      raf = requestAnimationFrame(loop);
+    };
+    hero.addEventListener('mousemove', onMove);
+    hero.addEventListener('mouseleave', onLeave);
+    loop();
+    this.cleanup.push(() => { hero.removeEventListener('mousemove', onMove); hero.removeEventListener('mouseleave', onLeave); cancelAnimationFrame(raf); });
+  }
+  componentDidUpdate(prev) {
+    if (prev.accent !== this.props.accent) this.applyAccent(this.props.accent || 'Gold');
+  }
+  componentWillUnmount() {
+    (this.cleanup || []).forEach(fn => { try { fn(); } catch (e) {} });
+    if (this._raf) cancelAnimationFrame(this._raf);
+  }
+  $(s) { return document.getElementById('wf').querySelector(s); }
+  $$(s) { return Array.from(document.getElementById('wf').querySelectorAll(s)); }
+
+  applyAccent(name) {
+    const map = {
+      Gold:     ['#d4af37', '#f6e7b4', '#b8862b'],
+      Platinum: ['#cdd2db', '#f2f4f8', '#9aa1ad'],
+      Emerald:  ['#54b48f', '#bfe6d4', '#2f7d62'],
+    };
+    const [g, g2, g3] = map[name] || map.Gold;
+    const r = document.getElementById('wf');
+    r.style.setProperty('--wf-gold', g);
+    r.style.setProperty('--wf-gold-2', g2);
+    r.style.setProperty('--wf-gold-3', g3);
+    r.style.setProperty('--wf-grad', `linear-gradient(135deg,${g2} 0%,${g} 48%,${g3} 100%)`);
+  }
+
+  initGlow() {
+    const glow = this.$('#wf-glow');
+    const dot = this.$('#wf-cursor');
+    const trail = this.$('#wf-trail');
+    if (!glow) return;
+    let tx = window.innerWidth / 2, ty = window.innerHeight / 2, cx = tx, cy = ty, raf, last = 0;
+    const onMove = e => {
+      tx = e.clientX; ty = e.clientY;
+      if (dot) dot.style.transform = `translate(${tx}px,${ty}px)`;
+      const now = performance.now();
+      if (trail && now - last > 42) {
+        last = now;
+        const s = document.createElement('span');
+        s.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,rgba(246,231,180,.85),rgba(212,175,55,.4) 60%,transparent 72%);transform:translate(-50%,-50%);animation:wf-trail .72s ease-out forwards;`;
+        trail.appendChild(s);
+        setTimeout(() => s.remove(), 740);
+      }
+    };
+    const loop = () => {
+      cx += (tx - cx) * 0.08; cy += (ty - cy) * 0.08;
+      glow.style.transform = `translate(${cx}px,${cy}px)`;
+      raf = requestAnimationFrame(loop);
+    };
+    window.addEventListener('mousemove', onMove);
+    loop();
+    this.cleanup.push(() => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf); });
+  }
+
+  initMagnetic() {
+    this.$$('.wf-mag').forEach(btn => {
+      const onMove = e => {
+        const r = btn.getBoundingClientRect();
+        const mx = e.clientX - (r.left + r.width / 2);
+        const my = e.clientY - (r.top + r.height / 2);
+        btn.style.transform = `translate(${mx * 0.28}px,${my * 0.4}px)`;
+      };
+      const onLeave = () => { btn.style.transform = ''; };
+      btn.addEventListener('mousemove', onMove);
+      btn.addEventListener('mouseleave', onLeave);
+    });
+  }
+
+  initDecrypt() {
+    const glyphs = 'abcdefghijklmnopqrstuvwxyz';
+    this.$$('[data-decrypt]').forEach((el, i) => {
+      const final = el.getAttribute('data-decrypt');
+      const start = performance.now() + 360 + i * 240;
+      const dur = 720;
+      const rand = () => glyphs[Math.floor(Math.random() * glyphs.length)];
+      const step = t => {
+        if (t < start) { requestAnimationFrame(step); return; }
+        const p = Math.min(1, (t - start) / dur);
+        const reveal = Math.floor(p * final.length);
+        let out = '';
+        for (let c = 0; c < final.length; c++) {
+          const ch = final[c];
+          if (c < reveal || ch === ' ' || ch === '.') out += ch;
+          else out += rand();
+        }
+        el.textContent = out;
+        if (p < 1) requestAnimationFrame(step); else el.textContent = final;
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  initParticles() {
+    const cv = this.$('#wf-particles');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const calm = (this.props.motion || 'Cinematic') === 'Calm';
+    let w, h, dots = [], dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const resize = () => {
+      w = cv.clientWidth; h = cv.clientHeight;
+      cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.round(Math.min(w, 1400) / (calm ? 26 : 16));
+      dots = Array.from({ length: count }, () => ({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: (Math.random() - 0.5) * (calm ? 0.12 : 0.22),
+        vy: (Math.random() - 0.5) * (calm ? 0.12 : 0.22),
+        r: Math.random() * 1.5 + 0.4, a: Math.random() * 0.5 + 0.2,
+      }));
+    };
+    resize();
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < dots.length; i++) {
+        const p = dots[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 6.283);
+        ctx.fillStyle = `rgba(212,175,55,${p.a * 0.55})`;
+        ctx.fill();
+        for (let j = i + 1; j < dots.length; j++) {
+          const q = dots[j], dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy);
+          if (d < 130) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `rgba(150,170,210,${(1 - d / 130) * 0.06})`;
+            ctx.lineWidth = 0.5; ctx.stroke();
+          }
+        }
+      }
+      this._raf = requestAnimationFrame(draw);
+    };
+    draw();
+    window.addEventListener('resize', resize);
+    this.cleanup.push(() => window.removeEventListener('resize', resize));
+  }
+
+  initReveal() {
+    const items = this.$$('[data-reveal]');
+    items.forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(32px)';
+      el.style.transition = 'opacity .9s cubic-bezier(.22,1,.36,1), transform .9s cubic-bezier(.22,1,.36,1)';
+      el.style.willChange = 'opacity, transform';
+    });
+    if (!('IntersectionObserver' in window)) { items.forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; }); return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const el = e.target;
+          const sibs = Array.from(el.parentElement ? el.parentElement.children : [el]).filter(c => c.hasAttribute('data-reveal'));
+          const idx = Math.max(0, sibs.indexOf(el));
+          el.style.transitionDelay = (idx * 0.07) + 's';
+          el.style.opacity = '1'; el.style.transform = 'none';
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    items.forEach(el => io.observe(el));
+    this.cleanup.push(() => io.disconnect());
+
+    // hero entrance (transition-based so it persists even if animations are throttled)
+    const hero = this.$$('#wf-hero [data-anim]');
+    hero.forEach((el, i) => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(34px)';
+      el.style.transition = 'opacity 1.05s cubic-bezier(.22,1,.36,1), transform 1.05s cubic-bezier(.22,1,.36,1)';
+      el.style.transitionDelay = (0.12 + i * 0.13) + 's';
+      el.style.willChange = 'opacity, transform';
+    });
+    const showHero = () => hero.forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; });
+    requestAnimationFrame(() => requestAnimationFrame(showHero));
+    setTimeout(showHero, 80);
+  }
+
+  initNav() {
+    const nav = this.$('#wf-nav');
+    const inner = nav.firstElementChild;
+    const onScroll = () => {
+      if (window.scrollY > 8) {
+        nav.style.background = 'rgba(8,10,16,.72)';
+        nav.style.backdropFilter = 'blur(14px) saturate(1.3)';
+        nav.style.webkitBackdropFilter = 'blur(14px) saturate(1.3)';
+        nav.style.borderBottomColor = 'var(--wf-rule)';
+        inner.style.padding = '14px 28px';
+      } else {
+        nav.style.background = 'transparent';
+        nav.style.backdropFilter = 'none';
+        nav.style.borderBottomColor = 'transparent';
+        inner.style.padding = '22px 28px';
+      }
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    this.cleanup.push(() => window.removeEventListener('scroll', onScroll));
+
+    this.$$('.wf-navlinks a').forEach(a => {
+      a.addEventListener('mouseenter', () => a.style.color = '#eef0f4');
+      a.addEventListener('mouseleave', () => a.style.color = 'var(--wf-mute)');
+    });
+  }
+
+  initFilter() {
+    const chips = this.$$('#wf-collection .wf-chip');
+    const cards = this.$$('#wf-collection .wf-card');
+    this._filterTok = 0;
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.cat;
+        const tok = ++this._filterTok;
+        chips.forEach(c => {
+          const on = c === chip;
+          c.style.background = on ? 'var(--wf-grad)' : 'var(--wf-glass)';
+          c.style.color = on ? '#0d0b07' : 'var(--wf-silver)';
+          c.style.borderColor = on ? 'transparent' : 'var(--wf-rule)';
+        });
+        cards.forEach(card => {
+          const show = cat === 'all' || card.dataset.cat === cat;
+          if (show) {
+            card.style.display = '';
+            requestAnimationFrame(() => { if (this._filterTok === tok) { card.style.opacity = '1'; card.style.transform = 'none'; } });
+          } else {
+            card.style.opacity = '0';
+            card.style.transform = 'scale(.96)';
+            setTimeout(() => { if (this._filterTok === tok && cat !== 'all' && card.dataset.cat !== cat) card.style.display = 'none'; }, 300);
+          }
+        });
+      });
+    });
+  }
+
+  initFaq() {
+    this.$$('.wf-faq').forEach(faq => {
+      const btn = faq.querySelector('.wf-faq-q');
+      const ans = faq.querySelector('.wf-faq-a');
+      const ic = faq.querySelector('.wf-faq-ic');
+      btn.addEventListener('click', () => {
+        const open = ans.style.maxHeight && ans.style.maxHeight !== '0px';
+        this.$$('.wf-faq').forEach(o => {
+          o.querySelector('.wf-faq-a').style.maxHeight = '0px';
+          o.querySelector('.wf-faq-ic').style.transform = 'rotate(0deg)';
+          o.style.borderColor = 'var(--wf-rule)';
+          o.style.background = 'var(--wf-glass)';
+        });
+        if (!open) {
+          ans.style.maxHeight = ans.scrollHeight + 40 + 'px';
+          ic.style.transform = 'rotate(135deg)';
+          faq.style.borderColor = 'rgba(212,175,55,.3)';
+          faq.style.background = 'var(--wf-glass-2)';
+        }
+      });
+    });
+  }
+
+  initTilt() {
+    const calm = (this.props.motion || 'Cinematic') === 'Calm';
+    this.$$('.wf-card').forEach(card => {
+      const glow = card.querySelector('.wf-card-glow');
+      card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width;
+        const py = (e.clientY - r.top) / r.height;
+        if (!calm) {
+          const rx = (0.5 - py) * 7, ry = (px - 0.5) * 7;
+          card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-6px)`;
+        } else {
+          card.style.transform = 'translateY(-6px)';
+        }
+        card.style.boxShadow = '0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(212,175,55,.25)';
+        card.style.borderColor = 'rgba(212,175,55,.35)';
+        if (glow) { glow.style.opacity = '1'; glow.style.left = (px * 100) + '%'; glow.style.top = (py * 100) + '%'; glow.style.transform = 'translate(-50%,-50%)'; }
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+        card.style.boxShadow = '';
+        card.style.borderColor = 'var(--wf-rule)';
+        if (glow) glow.style.opacity = '0';
+      });
+    });
+  }
+
+  initStats() {
+    const stats = this.$$('.wf-stat');
+    if (!('IntersectionObserver' in window)) { stats.forEach(s => this.runCount(s)); return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { this.runCount(e.target); io.unobserve(e.target); } });
+    }, { threshold: 0.4 });
+    stats.forEach(s => io.observe(s));
+    this.cleanup.push(() => io.disconnect());
+  }
+  runCount(el) {
+    const target = parseFloat(el.dataset.target);
+    const dec = parseInt(el.dataset.dec || '0', 10);
+    const suffix = el.dataset.suffix || '';
+    const dur = 1700, t0 = performance.now();
+    const fmt = v => {
+      if (dec > 0) return v.toFixed(dec);
+      if (target >= 10000) return Math.round(v).toLocaleString('en-US');
+      return Math.round(v).toString();
+    };
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * e) + (p === 1 ? suffix : '');
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = fmt(target) + suffix;
+    };
+    requestAnimationFrame(tick);
+  }
+
+  initTimeline() {
+    const fill = this.$('#wf-tl-fill');
+    const tl = this.$('#wf-timeline');
+    if (!fill || !tl || !('IntersectionObserver' in window)) { if (fill) fill.style.height = '100%'; return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const h = tl.querySelector('div:last-child');
+          fill.style.height = (tl.clientHeight - 16) + 'px';
+          io.unobserve(tl);
+        }
+      });
+    }, { threshold: 0.2 });
+    io.observe(tl);
+    this.cleanup.push(() => io.disconnect());
+  }
+}
+</script>
+</body>
+</html>

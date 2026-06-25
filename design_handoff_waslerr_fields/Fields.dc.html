@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wf-bg:#060709;
+  --wf-gold:#d4af37; --wf-gold-2:#f6e7b4; --wf-gold-3:#b8862b;
+  --wf-grad:linear-gradient(135deg,#f6e7b4 0%,#d4af37 48%,#b8862b 100%);
+  --wf-silver:#c9cdd6; --wf-mute:#7e8492;
+  --wf-rule:rgba(255,255,255,.09);
+  --wf-glass:rgba(255,255,255,.035); --wf-glass-2:rgba(255,255,255,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--wf-bg);color:var(--wf-silver);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+::selection{background:rgba(212,175,55,.25);color:#fff}
+@keyframes wf-bars{0%,100%{height:16%}50%{height:92%}}
+@keyframes wf-trail{from{opacity:.65;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+@keyframes wf-resonance{0%{transform:translate(-50%,-50%) scale(.22);opacity:0}18%{opacity:.55}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div id="wf" style="position:relative;width:100%;min-height:100vh;overflow:hidden;background:
+  radial-gradient(1100px 700px at 80% -8%,rgba(40,58,110,.26),transparent 60%),
+  radial-gradient(900px 700px at 6% 12%,rgba(74,14,14,.14),transparent 55%),
+  #060709;">
+
+  <div id="wf-glow" style="position:fixed;top:0;left:0;width:560px;height:560px;margin:-280px 0 0 -280px;z-index:1;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.10),rgba(60,90,170,.05) 40%,transparent 68%);mix-blend-mode:screen;will-change:transform;"></div>
+  <div id="wf-resonance" aria-hidden="true" style="position:fixed;top:48%;left:50%;width:0;height:0;z-index:0;pointer-events:none;">
+    <span style="position:absolute;left:0;top:0;width:1500px;height:1500px;border-radius:50%;border:1px solid rgba(212,175,55,.14);transform:translate(-50%,-50%) scale(.22);animation:wf-resonance 11s ease-out infinite;"></span>
+    <span style="position:absolute;left:0;top:0;width:1500px;height:1500px;border-radius:50%;border:1px solid rgba(120,150,210,.10);transform:translate(-50%,-50%) scale(.22);animation:wf-resonance 11s ease-out 3.6s infinite;"></span>
+    <span style="position:absolute;left:0;top:0;width:1500px;height:1500px;border-radius:50%;border:1px solid rgba(212,175,55,.10);transform:translate(-50%,-50%) scale(.22);animation:wf-resonance 11s ease-out 7.2s infinite;"></span>
+    <span style="position:absolute;left:0;top:0;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.05),transparent 68%);transform:translate(-50%,-50%);"></span>
+  </div>
+  <div id="wf-trail" style="position:fixed;inset:0;z-index:59;pointer-events:none;"></div>
+  <div id="wf-cursor" style="position:fixed;top:0;left:0;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;z-index:60;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(246,231,180,.95),rgba(212,175,55,.5) 60%,transparent);box-shadow:0 0 14px rgba(212,175,55,.7);mix-blend-mode:screen;will-change:transform;"></div>
+
+  <!-- NAV -->
+  <nav style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,10,16,.72);backdrop-filter:blur(14px) saturate(1.3);border-bottom:1px solid var(--wf-rule);">
+    <div style="width:100%;max-width:1180px;display:flex;align-items:center;justify-content:space-between;padding:16px 28px;">
+      <a href="Waslerr%20Fields.dc.html" style="display:flex;align-items:center;gap:13px;text-decoration:none;">
+        <span style="width:36px;height:36px;border-radius:9px;background:var(--wf-grad);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#15110a;box-shadow:0 0 24px rgba(212,175,55,.35);">W</span>
+        <span style="font-family:'Geist',sans-serif;font-weight:500;font-size:14px;letter-spacing:.28em;color:#eef0f4;">WASLERR&nbsp;FIELDS</span>
+      </a>
+      <div style="display:flex;align-items:center;gap:30px;">
+        <a href="Waslerr%20Fields.dc.html" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Home</a>
+        <a href="#" style="font-size:13.5px;color:#eef0f4;text-decoration:none;">Fields</a>
+        <a href="Method.dc.html" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Method</a>
+        <a href="Waslerr%20Fields.dc.html#wf-custom" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Custom</a>
+        <a href="Waslerr%20Fields.dc.html#wf-join" style="font-size:13.5px;color:var(--wf-mute);text-decoration:none;transition:color .3s;" style-hover="color:#eef0f4">Community</a>
+        <a href="Waslerr%20Fields.dc.html" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.04em;color:#0d0b07;background:var(--wf-grad);padding:10px 20px;border-radius:7px;text-decoration:none;font-weight:500;box-shadow:0 0 0 1px rgba(212,175,55,.4),0 8px 24px rgba(212,175,55,.18);transition:transform .3s,box-shadow .3s;">Begin</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <section style="position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:80px 28px 0;">
+    <div style="text-align:center;max-width:680px;margin:0 auto;">
+      <div data-reveal style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:18px;">The fields</div>
+      <h1 data-reveal style="font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(40px,6vw,72px);line-height:1.02;letter-spacing:-.02em;color:#f3f4f7;margin:0;text-wrap:balance;">Every field, one place.</h1>
+      <p data-reveal style="font-size:16.5px;line-height:1.6;color:#8c92a0;font-weight:300;margin:20px auto 0;max-width:520px;">Browse the full library. Filter by line, preview any field, and take what moves you.</p>
+    </div>
+
+    <div data-reveal style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:42px 0 16px;">
+      <button class="wf-chip" data-cat="all" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.03em;color:#0d0b07;background:var(--wf-grad);border:1px solid transparent;padding:9px 18px;border-radius:999px;cursor:pointer;transition:all .35s cubic-bezier(.22,1,.36,1);">All fields</button>
+      <button class="wf-chip" data-cat="desire" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.03em;color:var(--wf-silver);background:var(--wf-glass);border:1px solid var(--wf-rule);padding:9px 18px;border-radius:999px;cursor:pointer;transition:all .35s cubic-bezier(.22,1,.36,1);">Desire Code</button>
+      <button class="wf-chip" data-cat="akashic" style="font-family:'Geist',sans-serif;font-size:13px;letter-spacing:.03em;color:var(--wf-silver);background:var(--wf-glass);border:1px solid var(--wf-rule);padding:9px 18px;border-radius:999px;cursor:pointer;transition:all .35s cubic-bezier(.22,1,.36,1);">Akashic Field</button>
+    </div>
+    <div data-reveal style="text-align:center;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--wf-mute);margin-bottom:8px;"><span id="wf-count"></span></div>
+  </section>
+
+  <!-- GRID -->
+  <section style="position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:28px 28px 100px;">
+    <div id="wf-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:22px;">
+      <article class="wf-card" data-cat="desire" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div style="position:relative;">
+          <img src="assets/products/valentine.jpg" alt="Valentine Ultimate Male Aura" style="display:block;width:100%;height:280px;object-fit:cover;object-position:center 12%;">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="196" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Valentine Ultimate Male Aura</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">An advanced, slightly-audible subliminal layering Desire Code and Akashic Field to build a magnetic masculine aura and an unshakable presence.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$151</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="desire" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div style="position:relative;">
+          <image-slot id="wf-f2" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="207" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Perfect Hairs</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">Two audios in one. Each blends subliminal affirmations, a Desire Code and a dedicated hair field to support thicker, healthier growth.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$320</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="akashic" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div style="position:relative;">
+          <image-slot id="wf-f3" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="185" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Porn-Addiction Freedom</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5fa8c9;margin-bottom:13px;">Akashic</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">A complex audio with audible affirmations, Akashic Field and Desire Code engineered to dissolve compulsive habits and restore self-control.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$95</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="desire" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div style="position:relative;">
+          <image-slot id="wf-f4" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="220" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Harem Paradise</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">A premium Desire Code built to manifest a life of abundance, magnetism and devotion — entirely on your own terms.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$795</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="desire" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div style="position:relative;">
+          <image-slot id="wf-f5" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="233" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Limitless Wealth</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wf-gold);margin-bottom:13px;">Desire</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">Reprogram your money setpoint. Desire Code and Akashic Field align identity, action and opportunity around lasting wealth.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$199</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="wf-card" data-cat="akashic" data-reveal style="position:relative;display:flex;flex-direction:column;background:var(--wf-glass);border:1px solid var(--wf-rule);border-radius:16px;overflow:hidden;backdrop-filter:blur(20px);transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;cursor:pointer;">
+        <div style="position:relative;">
+          <image-slot id="wf-f6" shape="rect" fit="cover" placeholder="Drop artwork" style="display:block;width:100%;height:280px;"></image-slot>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(8,8,11,.5));pointer-events:none;"></div>
+          <span style="position:absolute;top:14px;left:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0d0b07;background:var(--wf-grad);padding:5px 11px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35);">New release</span>
+          <button class="wf-play" data-freq="178" aria-label="Preview audio" style="position:absolute;bottom:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(8,8,10,.55);backdrop-filter:blur(8px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .3s,color .3s,transform .2s,box-shadow .3s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
+        <div style="position:relative;padding:22px 24px 24px;display:flex;flex-direction:column;flex:1;">
+          <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:23px;letter-spacing:-.01em;color:#f1f2f6;margin:0 0 6px;line-height:1.15;">Deep Akashic Healing</h3>
+          <span style="font-size:13px;color:var(--wf-mute);margin-bottom:7px;">Waslerr</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5fa8c9;margin-bottom:13px;">Akashic</span>
+          <p class="wf-desc" data-open="0" style="font-size:13.5px;line-height:1.55;color:#9298a6;font-weight:300;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">Return to the deeper record of self — release inherited blocks and restore intuition, calm and alignment from the source.</p>
+          <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:27px;background:var(--wf-grad);-webkit-background-clip:text;background-clip:text;color:transparent;">$249</span>
+            <a href="#" class="wf-readmore" style="font-size:12.5px;color:var(--wf-gold);text-decoration:none;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;">Read more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="position:relative;z-index:2;border-top:1px solid var(--wf-rule);">
+    <div style="max-width:1180px;margin:0 auto;padding:56px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+      <div>
+        <h3 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:26px;color:#f1f2f6;margin:0 0 6px;">Can't find your exact field?</h3>
+        <p style="font-size:14.5px;color:var(--wf-mute);font-weight:300;margin:0;">Have a Custom Code written, voiced and tuned to your intention.</p>
+      </div>
+      <a href="Waslerr%20Fields.dc.html#wf-custom" class="wf-mag" style="font-family:'Geist',sans-serif;font-size:15px;font-weight:500;color:#0d0b07;background:var(--wf-grad);padding:14px 28px;border-radius:8px;text-decoration:none;box-shadow:0 10px 36px rgba(212,175,55,.22);transition:transform .3s,box-shadow .3s;white-space:nowrap;">Request a Custom Code</a>
+    </div>
+    <div style="max-width:1180px;margin:0 auto;padding:4px 28px 30px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--wf-mute);">Join the party</span>
+      <a href="https://youtube.com/@waslerrfields" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--wf-silver);text-decoration:none;transition:color .3s;" style-hover="color:var(--wf-gold)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.5 7.2a2.7 2.7 0 0 0-1.9-1.9C18.9 4.8 12 4.8 12 4.8s-6.9 0-8.6.5A2.7 2.7 0 0 0 1.5 7.2 28 28 0 0 0 1 12a28 28 0 0 0 .5 4.8 2.7 2.7 0 0 0 1.9 1.9c1.7.5 8.6.5 8.6.5s6.9 0 8.6-.5a2.7 2.7 0 0 0 1.9-1.9A28 28 0 0 0 23 12a28 28 0 0 0-.5-4.8zM9.8 15.3V8.7l5.7 3.3-5.7 3.3z"/></svg>YouTube</a>
+      <a href="https://discord.gg/waslerrfields" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--wf-silver);text-decoration:none;transition:color .3s;" style-hover="color:var(--wf-gold)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.3 5.3A17 17 0 0 0 15 4l-.2.4a12.6 12.6 0 0 1 3.7 1.8 13.5 13.5 0 0 0-11.6 0A12.6 12.6 0 0 1 10.6 4.4L9.4 4A17 17 0 0 0 5 5.3C2.5 9 1.8 12.6 2.1 16.2A17 17 0 0 0 7.3 19l.7-1c-.6-.2-1.1-.5-1.6-.8l.4-.3a9.7 9.7 0 0 0 8.4 0l.4.3c-.5.3-1 .6-1.6.8l.7 1a17 17 0 0 0 5.2-2.8c.4-4.2-.6-7.8-2.6-10.9zM9.5 14.3c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7zm5 0c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7z"/></svg>Discord</a>
+      <a href="mailto:hello@waslerrfields.com?subject=1%3A1%20with%20the%20creator" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--wf-silver);text-decoration:none;transition:color .3s;" style-hover="color:var(--wf-gold)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-11.7 7.7L3 21l1.8-6.3A8.4 8.4 0 1 1 21 11.5z"/></svg>1:1 with the creator</a>
+    </div>
+    <div style="max-width:1180px;margin:0 auto;padding:0 28px 40px;border-top:1px solid var(--wf-rule);">
+      <div style="padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <a href="Waslerr%20Fields.dc.html" style="font-size:12.5px;color:var(--wf-mute);text-decoration:none;" style-hover="color:#eef0f4">← Back to home</a>
+        <span style="font-size:12px;color:var(--wf-mute);">© 2026 Waslerr Fields. Individual results vary.</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this.cleanup = [];
+    this.initReveal();
+    this.initFilter();
+    this.initAudio();
+    this.initReadMore();
+    this.initCardMedia();
+    this.initGlow();
+  }
+  componentWillUnmount() {
+    (this.cleanup || []).forEach(fn => { try { fn(); } catch (e) {} });
+  }
+  $(s) { return document.getElementById('wf').querySelector(s); }
+  $$(s) { return Array.from(document.getElementById('wf').querySelectorAll(s)); }
+
+  initReveal() {
+    const items = this.$$('[data-reveal]');
+    items.forEach(el => {
+      el.style.opacity = '0'; el.style.transform = 'translateY(26px)';
+      el.style.transition = 'opacity .8s cubic-bezier(.22,1,.36,1), transform .8s cubic-bezier(.22,1,.36,1)';
+    });
+    if (!('IntersectionObserver' in window)) { items.forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; }); return; }
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'none'; io.unobserve(e.target); }
+    }), { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
+    items.forEach(el => io.observe(el));
+    this.cleanup.push(() => io.disconnect());
+  }
+
+  initFilter() {
+    const chips = this.$$('.wf-chip');
+    const cards = this.$$('#wf-grid .wf-card');
+    const countEl = this.$('#wf-count');
+    this._tok = 0;
+    const labels = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field' };
+    const apply = cat => {
+      const tok = ++this._tok;
+      chips.forEach(c => {
+        const on = c.dataset.cat === cat;
+        c.style.background = on ? 'var(--wf-grad)' : 'var(--wf-glass)';
+        c.style.color = on ? '#0d0b07' : 'var(--wf-silver)';
+        c.style.borderColor = on ? 'transparent' : 'var(--wf-rule)';
+      });
+      let shown = 0;
+      cards.forEach(card => {
+        const show = cat === 'all' || card.dataset.cat === cat;
+        if (show) {
+          shown++;
+          card.style.display = '';
+          requestAnimationFrame(() => { if (this._tok === tok) { card.style.opacity = '1'; card.style.transform = 'none'; } });
+        } else {
+          card.style.opacity = '0'; card.style.transform = 'scale(.96)';
+          setTimeout(() => { if (this._tok === tok && cat !== 'all' && card.dataset.cat !== cat) card.style.display = 'none'; }, 300);
+        }
+      });
+      if (countEl) countEl.textContent = shown + ' ' + (labels[cat] || 'fields') + (cat === 'all' ? '' : ' fields');
+    };
+    chips.forEach(c => c.addEventListener('click', () => {
+      const cat = c.dataset.cat;
+      history.replaceState(null, '', cat === 'all' ? location.pathname : '#' + cat);
+      apply(cat);
+    }));
+    const init = (location.hash || '').replace('#', '');
+    apply(['desire', 'akashic'].includes(init) ? init : 'all');
+  }
+
+  initGlow() {
+    const glow = this.$('#wf-glow'), dot = this.$('#wf-cursor'), trail = this.$('#wf-trail');
+    if (!glow) return;
+    let tx = innerWidth / 2, ty = innerHeight / 2, cx = tx, cy = ty, raf, last = 0;
+    const onMove = e => {
+      tx = e.clientX; ty = e.clientY;
+      if (dot) dot.style.transform = `translate(${tx}px,${ty}px)`;
+      const now = performance.now();
+      if (trail && now - last > 42) {
+        last = now;
+        const s = document.createElement('span');
+        s.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,rgba(246,231,180,.85),transparent 72%);transform:translate(-50%,-50%);animation:wf-trail .72s ease-out forwards;`;
+        trail.appendChild(s); setTimeout(() => s.remove(), 740);
+      }
+    };
+    const loop = () => { cx += (tx - cx) * 0.08; cy += (ty - cy) * 0.08; glow.style.transform = `translate(${cx}px,${cy}px)`; raf = requestAnimationFrame(loop); };
+    window.addEventListener('mousemove', onMove); loop();
+    this.cleanup.push(() => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf); });
+  }
+
+  initCardMedia() {
+    this.$$('.wf-card').forEach(card => {
+      const media = card.querySelector('img, image-slot');
+      if (!media) return;
+      const wrap = media.parentElement;
+      if (wrap) wrap.style.overflow = 'hidden';
+      media.style.transition = 'transform .65s cubic-bezier(.22,1,.36,1)';
+      card.addEventListener('mouseenter', () => { media.style.transform = 'scale(1.07)'; card.style.boxShadow = '0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(212,175,55,.25)'; card.style.borderColor = 'rgba(212,175,55,.35)'; });
+      card.addEventListener('mouseleave', () => { media.style.transform = 'scale(1)'; card.style.boxShadow = ''; card.style.borderColor = 'var(--wf-rule)'; });
+    });
+  }
+
+  initReadMore() {
+    this.$$('.wf-readmore').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const card = link.closest('.wf-card');
+        const desc = card && card.querySelector('.wf-desc');
+        if (!desc) return;
+        if (desc.dataset.open === '1') { desc.style.webkitLineClamp = '3'; desc.style.display = '-webkit-box'; desc.dataset.open = '0'; link.childNodes[0].nodeValue = 'Read more '; }
+        else { desc.style.webkitLineClamp = 'unset'; desc.style.display = 'block'; desc.dataset.open = '1'; link.childNodes[0].nodeValue = 'Read less '; }
+      });
+    });
+  }
+
+  initAudio() {
+    this._ps = { ctx: null, osc: null, gain: null, active: null, timer: null };
+    this._playSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    this._pauseSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+    this.$$('.wf-play').forEach(btn => btn.addEventListener('click', () => this.togglePlay(btn)));
+    this.cleanup.push(() => this.stopPlay());
+  }
+  togglePlay(btn) {
+    const ps = this._ps;
+    if (ps.active === btn) { this.stopPlay(); return; }
+    this.stopPlay();
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      ps.ctx = ps.ctx || new Ctx();
+      if (ps.ctx.state === 'suspended') ps.ctx.resume();
+      const ctx = ps.ctx;
+      const g = ctx.createGain(); g.gain.value = 0; g.connect(ctx.destination);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 540; lp.Q.value = 0.6; lp.connect(g);
+      const base = parseFloat(btn.dataset.freq) || 210;
+      const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = base; o1.connect(lp);
+      const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = base + 4.5; o2.connect(lp);
+      o1.start(); o2.start();
+      g.gain.linearRampToValueAtTime(0.045, ctx.currentTime + 0.7);
+      ps.osc = [o1, o2]; ps.gain = g;
+    } catch (e) {}
+    ps.active = btn;
+    btn.innerHTML = this._pauseSVG;
+    btn.style.background = 'var(--wf-grad)'; btn.style.color = '#0d0b07'; btn.style.borderColor = 'transparent'; btn.style.boxShadow = '0 0 22px rgba(212,175,55,.55)';
+    ps.timer = setTimeout(() => this.stopPlay(), 30000);
+  }
+  stopPlay() {
+    const ps = this._ps;
+    if (!ps) return;
+    if (ps.timer) { clearTimeout(ps.timer); ps.timer = null; }
+    if (ps.gain && ps.ctx) { try { ps.gain.gain.linearRampToValueAtTime(0, ps.ctx.currentTime + 0.25); } catch (e) {} }
+    if (ps.osc) { const o = ps.osc; setTimeout(() => { try { o[0].stop(); o[1].stop(); } catch (e) {} }, 300); ps.osc = null; }
+    if (ps.active) {
+      const btn = ps.active;
+      btn.innerHTML = this._playSVG;
+      btn.style.background = 'rgba(8,8,10,.55)'; btn.style.color = '#fff'; btn.style.borderColor = 'rgba(255,255,255,.25)'; btn.style.boxShadow = 'none';
+    }
+    ps.active = null;
+  }
+}
+</script>
+</body>
+</html>
