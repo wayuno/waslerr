@@ -1822,6 +1822,18 @@ a {
 }
 .wf-auth-title { font-family: var(--wf-serif); font-weight: 500; font-size: 34px; color: #f3f4f7; margin: 0; }
 .wf-auth-sub { font-size: 14.5px; color: var(--wf-mute); font-weight: 300; margin: 0 0 8px; max-width: 320px; }
+.wf-auth-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--wf-sans);
+  font-size: inherit;
+  color: var(--wf-gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wf-auth-toggle:hover { color: var(--wf-gold-2); }
 
 /* ---------- Admin ---------- */
 .wf-admin-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }

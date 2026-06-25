@@ -17,9 +17,11 @@ const phClass = (line) => (line === 'akashic' ? 'wf-card-ph-akashic' : line === 
 export default function Admin() {
   const {
     loggedIn,
+    isAdmin,
     user,
     logout,
     requireAdmin,
+    navigate,
     adminTab,
     setAdminTab,
     products,
@@ -40,17 +42,33 @@ export default function Admin() {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
   }, [chatMsgs, adminTab])
 
-  if (!loggedIn) {
+  if (!loggedIn || !isAdmin) {
     return (
       <div className="wf-app" ref={ref}>
         <Background resonanceTop="50%" />
         <section className="wf-auth" style={{ minHeight: '100vh' }}>
           <div className="wf-auth-card" data-reveal>
             <h1 className="wf-auth-title">Admin panel</h1>
-            <p className="wf-auth-sub">Sign in to manage fields, stats and support.</p>
-            <button className="wf-form-submit wf-mag" style={{ width: '100%' }} onClick={requireAdmin}>
-              Sign in to continue
-            </button>
+            {!loggedIn ? (
+              <>
+                <p className="wf-auth-sub">Sign in with the Waslerr admin account to manage fields, stats and support.</p>
+                <button className="wf-form-submit wf-mag" style={{ width: '100%' }} onClick={requireAdmin}>
+                  Sign in to continue
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="wf-auth-sub">
+                  This dashboard is restricted to the Waslerr admin. You&apos;re signed in as {user}.
+                </p>
+                <button className="wf-form-submit wf-mag" style={{ width: '100%' }} onClick={() => navigate('home')}>
+                  Back to home
+                </button>
+                <button className="wf-back" style={{ marginTop: 6 }} onClick={logout}>
+                  Sign out
+                </button>
+              </>
+            )}
           </div>
         </section>
       </div>

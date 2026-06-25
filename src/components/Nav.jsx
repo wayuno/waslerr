@@ -13,7 +13,7 @@ const NAV_LINKS = [
 ]
 
 export default function Nav() {
-  const { page, navigate, loggedIn, logout, openChat } = useStore()
+  const { page, navigate, loggedIn, isAdmin, logout, openChat } = useStore()
   const [scrolled, setScrolled] = useState(page !== 'home')
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -55,13 +55,25 @@ export default function Nav() {
             ))}
           </div>
           <div className="wf-nav-cluster">
-            {loggedIn ? (
+            {!loggedIn && (
+              <button className={`wf-navlink${page === 'login' ? ' active' : ''}`} onClick={() => go({ page: 'login' })}>
+                Sign in
+              </button>
+            )}
+            {loggedIn && isAdmin && (
               <button className={`wf-navlink${page === 'admin' ? ' active' : ''}`} onClick={() => go({ page: 'admin' })}>
                 Admin
               </button>
-            ) : (
-              <button className={`wf-navlink${page === 'login' ? ' active' : ''}`} onClick={() => go({ page: 'login' })}>
-                Sign in
+            )}
+            {loggedIn && !isAdmin && (
+              <button
+                className="wf-navlink"
+                onClick={() => {
+                  setMenuOpen(false)
+                  logout()
+                }}
+              >
+                Sign out
               </button>
             )}
             <button className="wf-nav-cta wf-mag" onClick={() => go({ page: 'fields' })}>
@@ -102,24 +114,25 @@ export default function Nav() {
         >
           Chat with support
         </button>
-        {loggedIn ? (
-          <>
-            <button className="wf-mlink" onClick={() => go({ page: 'admin' })}>
-              Admin panel
-            </button>
-            <button
-              className="wf-mlink"
-              onClick={() => {
-                setMenuOpen(false)
-                logout()
-              }}
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
+        {!loggedIn && (
           <button className="wf-mlink" onClick={() => go({ page: 'login' })}>
             Sign in
+          </button>
+        )}
+        {loggedIn && isAdmin && (
+          <button className="wf-mlink" onClick={() => go({ page: 'admin' })}>
+            Admin panel
+          </button>
+        )}
+        {loggedIn && (
+          <button
+            className="wf-mlink"
+            onClick={() => {
+              setMenuOpen(false)
+              logout()
+            }}
+          >
+            Sign out
           </button>
         )}
         <button className="wf-mlink wf-mlink--cta" onClick={() => go({ page: 'fields' })}>

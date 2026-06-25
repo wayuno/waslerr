@@ -6,6 +6,12 @@ import { allFields, freeFields, topPicks } from '../data/content'
 // catalogue + chat live in memory (reset on reload).
 const StoreCtx = createContext(null)
 
+// Only this email may open the admin dashboard. Set VITE_ADMIN_EMAIL on Railway
+// (build-time env). Falls back to a placeholder so dev still works.
+// NOTE: this is a client-side gate — fine for a demo, but not real security.
+// Anyone can read the bundled value; true protection needs server-side auth.
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || 'admin@waslerrfields.com').trim().toLowerCase()
+
 const initialProducts = () => allFields.map((f) => ({ ...f }))
 
 export function StoreProvider({ children }) {
@@ -98,9 +104,10 @@ export function StoreProvider({ children }) {
     (email) => {
       setUser(email)
       setLoggedIn(true)
+      const adminMatch = email.trim().toLowerCase() === ADMIN_EMAIL
       if (pendingAdmin) {
         setPendingAdmin(false)
-        navigate('admin')
+        navigate(adminMatch ? 'admin' : 'home')
       } else {
         navigate('home')
       }
@@ -154,6 +161,8 @@ export function StoreProvider({ children }) {
 
   const openChat = useCallback(() => setChatOpen(true), [])
 
+  const isAdmin = loggedIn && !!user && user.trim().toLowerCase() === ADMIN_EMAIL
+
   const value = {
     page,
     navigate,
@@ -175,6 +184,7 @@ export function StoreProvider({ children }) {
     pay,
     loggedIn,
     user,
+    isAdmin,
     login,
     logout,
     requireAdmin,
