@@ -1,20 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { CheckIcon, PayPalMark, BinanceMark } from '../components/icons'
+import { CheckIcon, PayPalMark, BinanceMark, CloseIcon } from '../components/icons'
 
 const METHODS = [
   { id: 'paypal', label: 'PayPal', desc: 'Pay with your PayPal balance or any card.', Mark: PayPalMark, markClass: 'paypal' },
   { id: 'binance', label: 'Binance Pay', desc: 'Pay with crypto — BTC, USDT or BNB.', Mark: BinanceMark, markClass: 'binance' },
 ]
 
-const priceOf = (f) => (f && f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0)
+const priceOf = (f) => (f && f.priceNum != null ? Number(f.priceNum) : f && f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0)
 const catLabel = (line) => (line === 'akashic' ? 'Akashic' : line === 'wealth' ? 'Wealth' : 'Desire')
 
 export default function Checkout() {
-  const { selectedProduct, payMethod, setPayMethod, payDone, orderId, pay, navigate, openDetail } = useStore()
+  const { selectedProduct, payMethod, setPayMethod, payDone, orderId, pay, navigate, openDetail, appliedCoupon, applyCoupon, clearCoupon } =
+    useStore()
+  const [couponInput, setCouponInput] = useState('')
+  const [couponMsg, setCouponMsg] = useState('')
   const ref = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
@@ -27,8 +30,21 @@ export default function Checkout() {
   const f = selectedProduct
   const total = priceOf(f)
   const free = total === 0
+  const discount =
+    appliedCoupon && !free
+      ? appliedCoupon.type === 'percent'
+        ? Math.round((total * appliedCoupon.value) / 100)
+        : Math.min(appliedCoupon.value, total)
+      : 0
+  const payable = Math.max(0, total - discount)
   const methodLabel = METHODS.find((m) => m.id === payMethod)?.label || 'PayPal'
-  const payLabel = free ? 'Get your free field' : `Pay $${total} with ${methodLabel}`
+  const payLabel = free || payable === 0 ? 'Get your field' : `Pay $${payable} with ${methodLabel}`
+
+  const applyCode = async () => {
+    setCouponMsg('')
+    const res = await applyCoupon(couponInput)
+    if (res?.error) setCouponMsg(res.error)
+  }
 
   return (
     <div className="wf-app" ref={ref}>
@@ -72,6 +88,41 @@ export default function Checkout() {
                         </button>
                       ))}
                     </div>
+
+                    <div className="wf-field-label" style={{ margin: '24px 0 12px' }}>
+                      Discount code
+                    </div>
+                    {appliedCoupon ? (
+                      <div className="wf-coupon-applied">
+                        <span>
+                          <strong>{appliedCoupon.code}</strong> applied ·{' '}
+                          {appliedCoupon.type === 'percent' ? `${appliedCoupon.value}% off` : `$${appliedCoupon.value} off`}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Remove coupon"
+                          onClick={() => {
+                            clearCoupon()
+                            setCouponInput('')
+                          }}
+                        >
+                          <CloseIcon size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="wf-coupon-row">
+                        <input
+                          className="wf-input"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value)}
+                          placeholder="Enter code"
+                        />
+                        <button type="button" className="wf-coupon-apply wf-mag" onClick={applyCode}>
+                          Apply
+                        </button>
+                      </div>
+                    )}
+                    {couponMsg && <p className="wf-auth-error" style={{ marginTop: 10 }}>{couponMsg}</p>}
                   </>
                 )}
                 {free && (
@@ -90,13 +141,19 @@ export default function Checkout() {
                   <span>Subtotal</span>
                   <span>{free ? '$0' : `$${total}`}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="wf-order-row">
+                    <span>Discount ({appliedCoupon.code})</span>
+                    <span>−${discount}</span>
+                  </div>
+                )}
                 <div className="wf-order-row">
                   <span>Fees</span>
                   <span>$0</span>
                 </div>
                 <div className="wf-order-row total">
                   <span>Total</span>
-                  <span>{free ? '$0' : `$${total}`}</span>
+                  <span>{free ? '$0' : `$${payable}`}</span>
                 </div>
                 <button className="wf-form-submit wf-mag" style={{ marginTop: 22, width: '100%' }} onClick={pay}>
                   {payLabel}
@@ -120,7 +177,7 @@ export default function Checkout() {
             </h1>
             <p className="wf-detail-desc" style={{ maxWidth: 440, margin: '14px auto 6px' }}>
               Your field {f.title} is ready.{' '}
-              {free ? 'Claimed for free.' : `Paid $${total} via ${methodLabel}.`}
+              {free || payable === 0 ? 'Claimed for free.' : `Paid $${payable} via ${methodLabel}.`}
             </p>
             <div className="wf-order-no">Order {orderId}</div>
             <button className="wf-btn wf-btn-gold wf-mag" style={{ marginTop: 28 }} onClick={() => navigate('fields')}>

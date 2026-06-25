@@ -140,6 +140,58 @@ const uploadImage = async (filename, contentType, buffer) => {
   return { ok: true, publicUrl: `${SUPABASE_URL}/storage/v1/object/public/product-images/${safe}` }
 }
 
+const sbReady = () => SUPABASE_URL && SERVICE_KEY
+const sbRest = (q, opts = {}) =>
+  fetch(`${SUPABASE_URL}/rest/v1/${q}`, { ...opts, headers: { ...sbHeaders(), ...(opts.headers || {}) } })
+
+// --- coupons ---
+const getCoupon = async (code) => {
+  const r = await sbRest(`coupons?code=eq.${encodeURIComponent(code)}&active=eq.true&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
+const listCoupons = async () => {
+  const r = await sbRest('coupons?order=created_at.desc')
+  return r.ok ? r.json() : []
+}
+const insertCoupon = async (row) => {
+  const r = await sbRest('coupons', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
+}
+const removeCoupon = async (id) => (await sbRest(`coupons?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+
+// --- support chat ---
+const insertMessage = async (row) => {
+  const r = await sbRest('support_messages', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  return { ok: r.ok }
+}
+const getMessages = async (conversationId) => {
+  const r = await sbRest(`support_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`)
+  return r.ok ? r.json() : []
+}
+const getConversations = async () => {
+  const r = await sbRest('support_messages?order=created_at.desc&limit=500')
+  const rows = r.ok ? await r.json() : []
+  const map = new Map()
+  for (const m of rows) {
+    const c = map.get(m.conversation_id)
+    if (!c) {
+      map.set(m.conversation_id, {
+        conversationId: m.conversation_id,
+        email: m.email || null,
+        lastBody: m.body,
+        lastAt: m.created_at,
+        count: 1,
+      })
+    } else {
+      c.count++
+      if (!c.email && m.email) c.email = m.email
+    }
+  }
+  return [...map.values()]
+}
+
 // --- static file serving ---
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -178,6 +230,7 @@ const serveStatic = (req, res) => {
 const server = http.createServer(async (req, res) => {
   const url = (req.url || '').split('?')[0]
   const method = req.method || 'GET'
+  const parsedUrl = new URL(req.url || '/', 'http://localhost')
 
   if (url === '/api/health') return sendJson(res, 200, { ok: true })
 
@@ -229,6 +282,69 @@ const server = http.createServer(async (req, res) => {
     const id = url.split('/').pop()
     const out = await deleteProduct(id)
     if (!out.ok) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+
+  // ---- coupons ----
+  // validate/apply a coupon (public; used at checkout)
+  if (url.startsWith('/api/coupons/') && method === 'GET') {
+    const code = decodeURIComponent(url.split('/').pop() || '').toUpperCase()
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const c = await getCoupon(code)
+    if (!c) return sendJson(res, 404, { error: 'invalid_coupon' })
+    return sendJson(res, 200, { code: c.code, type: c.type, value: Number(c.value) })
+  }
+  if (url === '/api/admin/coupons' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    const list = await listCoupons()
+    return sendJson(res, 200, {
+      coupons: (list || []).map((c) => ({ id: c.id, code: c.code, type: c.type, value: Number(c.value), active: c.active })),
+    })
+  }
+  if (url === '/api/admin/coupons' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const code = (b.code || '').trim().toUpperCase()
+    if (!code) return sendJson(res, 400, { error: 'code_required' })
+    const out = await insertCoupon({ code, type: b.type === 'fixed' ? 'fixed' : 'percent', value: Number(b.value) || 0, active: true })
+    if (!out.ok) return sendJson(res, out.status === 409 ? 409 : 502, { error: out.status === 409 ? 'duplicate' : 'insert_failed' })
+    return sendJson(res, 200, { coupon: out.data })
+  }
+  if (url.startsWith('/api/admin/coupons/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    if (!(await removeCoupon(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+
+  // ---- support chat ----
+  if (url === '/api/chat/send' && method === 'POST') {
+    const b = await readBody(req)
+    const conversationId = (b.conversationId || '').trim()
+    const text = (b.text || '').trim()
+    if (!conversationId || !text) return sendJson(res, 400, { error: 'bad_request' })
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const out = await insertMessage({ conversation_id: conversationId, sender: 'user', body: text.slice(0, 2000), email: b.email || null })
+    if (!out.ok) return sendJson(res, 502, { error: 'send_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+  if (url === '/api/chat/messages' && method === 'GET') {
+    const cid = parsedUrl.searchParams.get('conversationId') || ''
+    if (!cid || !sbReady()) return sendJson(res, 200, { messages: [] })
+    const msgs = await getMessages(cid)
+    return sendJson(res, 200, { messages: msgs.map((m) => ({ from: m.sender, text: m.body, at: m.created_at })) })
+  }
+  if (url === '/api/admin/conversations' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    return sendJson(res, 200, { conversations: await getConversations() })
+  }
+  if (url === '/api/admin/chat/reply' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const conversationId = (b.conversationId || '').trim()
+    const text = (b.text || '').trim()
+    if (!conversationId || !text) return sendJson(res, 400, { error: 'bad_request' })
+    const out = await insertMessage({ conversation_id: conversationId, sender: 'admin', body: text.slice(0, 2000) })
+    if (!out.ok) return sendJson(res, 502, { error: 'reply_failed' })
     return sendJson(res, 200, { ok: true })
   }
 

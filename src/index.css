@@ -2007,12 +2007,84 @@ a {
 .wf-chat-input .wf-input { flex: 1; padding: 11px 14px; }
 .wf-chat-send { flex: none; width: 42px; border-radius: 8px; border: none; cursor: pointer; background: var(--wf-grad); color: #15110a; display: flex; align-items: center; justify-content: center; }
 
+/* ---------- coupons (checkout) ---------- */
+.wf-coupon-row { display: flex; gap: 8px; }
+.wf-coupon-row .wf-input { flex: 1; }
+.wf-coupon-apply {
+  flex: none;
+  font-family: var(--wf-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: #0d0b07;
+  background: var(--wf-grad);
+  border: none;
+  border-radius: 8px;
+  padding: 0 20px;
+  cursor: pointer;
+}
+.wf-coupon-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--wf-silver);
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.wf-coupon-applied strong { color: var(--wf-gold); }
+.wf-coupon-applied button {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--wf-mute);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+}
+.wf-coupon-applied button:hover { color: #eef0f4; }
+
+/* ---------- admin support conversations ---------- */
+.wf-support-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 20px;
+  align-items: start;
+}
+.wf-convo-list { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; }
+.wf-convo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-rule);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: var(--wf-sans);
+  transition: border-color 0.3s, background 0.3s;
+}
+.wf-convo:hover { border-color: rgba(212, 175, 55, 0.3); }
+.wf-convo.active { border-color: var(--wf-gold); background: var(--wf-glass-2); }
+.wf-convo-name { font-size: 13.5px; color: #eef0f4; }
+.wf-convo-last {
+  font-size: 12px;
+  color: var(--wf-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---------- responsive for added screens ---------- */
 @media (max-width: 760px) {
   .wf-detail-grid { grid-template-columns: 1fr; gap: 28px; }
   .wf-detail-media { aspect-ratio: 16 / 11; }
   .wf-checkout-grid { grid-template-columns: 1fr; gap: 22px; }
   .wf-admin-fields { grid-template-columns: 1fr; }
+  .wf-support-grid { grid-template-columns: 1fr; }
   .wf-update { grid-template-columns: 1fr; gap: 6px; }
   .wf-update-date { padding-top: 0; }
 }

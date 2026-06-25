@@ -3,9 +3,17 @@ import { useStore } from '../store/StoreProvider'
 import { ChatIconBubble, CloseIcon, SendIcon } from './icons'
 
 export default function ChatWidget() {
-  const { chatOpen, setChatOpen, chatMsgs, sendUserChat } = useStore()
+  const { chatOpen, setChatOpen, chatMsgs, sendUserChat, loadChat } = useStore()
   const [text, setText] = useState('')
   const listRef = useRef(null)
+
+  // load + poll the persisted thread while the panel is open
+  useEffect(() => {
+    if (!chatOpen) return
+    loadChat()
+    const t = setInterval(loadChat, 4000)
+    return () => clearInterval(t)
+  }, [chatOpen, loadChat])
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
@@ -34,6 +42,7 @@ export default function ChatWidget() {
             </button>
           </div>
           <div className="wf-chat-list" ref={listRef}>
+            <div className="wf-msg wf-msg--support">Hi — I’m here if you have any questions about the fields.</div>
             {chatMsgs.map((m, i) => (
               <div key={i} className={`wf-msg wf-msg--${m.from}`}>
                 {m.from === 'admin' && <span className="wf-msg-who">Waslerr</span>}

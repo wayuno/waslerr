@@ -51,14 +51,15 @@ export function StoreProvider({ children }) {
   const [adminTab, setAdminTab] = useState('stats')
 
   const [chatOpen, setChatOpen] = useState(false)
-  const [chatMsgs, setChatMsgs] = useState([
-    { from: 'support', text: 'Hi — I’m here if you have any questions about the fields.' },
-  ])
+  const [chatMsgs, setChatMsgs] = useState([])
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
 
   const pendingSection = useRef(null)
   const supabaseRef = useRef(null)
   const adminEmailRef = useRef('')
   const accessTokenRef = useRef(null)
+  const userRef = useRef(null)
+  const conversationIdRef = useRef(null)
 
   const navigate = useCallback(
     (target) => {
@@ -113,6 +114,7 @@ export function StoreProvider({ children }) {
   const goCheckout = useCallback(
     (id) => {
       setPayDone(false)
+      setAppliedCoupon(null)
       navigate({ page: 'checkout', ...(id != null ? { id } : {}) })
     },
     [navigate],
@@ -128,10 +130,12 @@ export function StoreProvider({ children }) {
     const u = session?.user
     if (u) {
       const email = (u.email || '').toLowerCase()
+      userRef.current = email
       setUser(email)
       setLoggedIn(true)
       setIsAdmin(!!adminEmailRef.current && email === adminEmailRef.current)
     } else {
+      userRef.current = null
       setUser(null)
       setLoggedIn(false)
       setIsAdmin(false)
@@ -174,6 +178,18 @@ export function StoreProvider({ children }) {
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token || accessTokenRef.current
   }, [])
+
+  // fetch helper that attaches the admin's Supabase token
+  const authedFetch = useCallback(
+    async (path, opts = {}) => {
+      const token = await getToken()
+      return fetch(path, {
+        ...opts,
+        headers: { ...(opts.headers || {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+    },
+    [getToken],
+  )
 
   const signIn = useCallback(
     async (email, password) => {
@@ -260,24 +276,75 @@ export function StoreProvider({ children }) {
     [getToken, reloadProducts],
   )
 
-  // ---- support chat (in-memory; persisted in Phase 2) ----
-  const sendUserChat = useCallback((text) => {
-    const t = text.trim()
-    if (!t) return
-    setChatMsgs((prev) => [...prev, { from: 'user', text: t }])
-    setTimeout(() => {
-      setChatMsgs((prev) => [
-        ...prev,
-        { from: 'support', text: 'Thanks for reaching out — a guide will be with you shortly. Which field are you drawn to?' },
-      ])
-    }, 1300)
+  // ---- coupons ----
+  const applyCoupon = useCallback(async (code) => {
+    const c = (code || '').trim()
+    if (!c) return { error: 'Enter a code.' }
+    try {
+      const r = await fetch('/api/coupons/' + encodeURIComponent(c))
+      if (!r.ok) return { error: 'Invalid or expired code.' }
+      const data = await r.json()
+      setAppliedCoupon(data)
+      return { ok: true, coupon: data }
+    } catch {
+      return { error: 'Network error.' }
+    }
+  }, [])
+  const clearCoupon = useCallback(() => setAppliedCoupon(null), [])
+
+  // ---- support chat (persisted in Supabase via backend) ----
+  const ensureConvId = useCallback(() => {
+    if (conversationIdRef.current) return conversationIdRef.current
+    let id = null
+    try {
+      id = localStorage.getItem('wf_conv')
+    } catch {
+      /* ignore */
+    }
+    if (!id) {
+      id = crypto.randomUUID ? crypto.randomUUID() : 'c' + Math.random().toString(36).slice(2) + Date.now()
+      try {
+        localStorage.setItem('wf_conv', id)
+      } catch {
+        /* ignore */
+      }
+    }
+    conversationIdRef.current = id
+    return id
   }, [])
 
-  const sendAdminReply = useCallback((text) => {
-    const t = text.trim()
-    if (!t) return
-    setChatMsgs((prev) => [...prev, { from: 'admin', text: t }])
-  }, [])
+  const loadChat = useCallback(async () => {
+    const id = ensureConvId()
+    try {
+      const r = await fetch('/api/chat/messages?conversationId=' + encodeURIComponent(id))
+      if (r.ok) {
+        const d = await r.json()
+        setChatMsgs(d.messages || [])
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [ensureConvId])
+
+  const sendUserChat = useCallback(
+    async (text) => {
+      const t = (text || '').trim()
+      if (!t) return
+      const id = ensureConvId()
+      setChatMsgs((prev) => [...prev, { from: 'user', text: t }]) // optimistic
+      try {
+        await fetch('/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: id, text: t, email: userRef.current || null }),
+        })
+        await loadChat()
+      } catch {
+        /* ignore */
+      }
+    },
+    [ensureConvId, loadChat],
+  )
 
   const openChat = useCallback(() => setChatOpen(true), [])
 
@@ -315,8 +382,12 @@ export function StoreProvider({ children }) {
     setChatOpen,
     openChat,
     chatMsgs,
+    loadChat,
     sendUserChat,
-    sendAdminReply,
+    authedFetch,
+    appliedCoupon,
+    applyCoupon,
+    clearCoupon,
   }
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>
