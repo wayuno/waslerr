@@ -33,7 +33,15 @@ const fileToBase64 = (file) =>
   })
 
 export function StoreProvider({ children }) {
-  const [page, setPage] = useState('home')
+  // deep-link: /admin opens the admin screen (its gate shows your signed-in
+  // email, so a wrong-email login is obvious).
+  const [page, setPage] = useState(() => {
+    try {
+      return window.location.pathname.replace(/\/+$/, '').toLowerCase() === '/admin' ? 'admin' : 'home'
+    } catch {
+      return 'home'
+    }
+  })
   const [fieldsCat, setFieldsCat] = useState('all')
   const [menuOpen, setMenuOpen] = useState(false)
 
