@@ -219,7 +219,7 @@ export default function Admin() {
     <div className="wf-app" ref={ref}>
       <Background resonanceTop="50%" />
 
-      <section className="wf-section" style={{ maxWidth: 1080, margin: '0 auto', padding: '110px 28px 100px' }}>
+      <section className="wf-section wf-admin-main" style={{ maxWidth: 1080, margin: '0 auto' }}>
         <div className="wf-admin-head" data-reveal>
           <div>
             <div className="wf-eyebrow">Admin panel</div>

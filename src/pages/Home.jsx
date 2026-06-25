@@ -7,7 +7,7 @@ import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { useStore } from '../store/StoreProvider'
-import { lines, reviews, faqs, tickerItems } from '../data/content'
+import { lines, reviews, faqs, tickerItems, updates } from '../data/content'
 import { ArrowRight, ArrowDown } from '../components/icons'
 
 const EMBERS = [
@@ -252,6 +252,35 @@ export default function Home({ onNavigate }) {
             <button className="wf-btn wf-btn-glass wf-mag" onClick={() => onNavigate({ page: 'fields' })}>
               Browse all fields <ArrowRight />
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== JOURNAL & ANNOUNCEMENTS ===== */}
+      <section className="wf-section wf-section--rule wf-pad" id="wf-journal">
+        <div className="wf-container">
+          <div className="wf-journal-head">
+            <div>
+              <div className="wf-eyebrow" data-reveal>
+                From the lab
+              </div>
+              <h2 className="wf-h2" data-reveal>
+                Journal &amp; announcements
+              </h2>
+            </div>
+            <button className="wf-btn wf-btn-glass wf-mag wf-journal-cta" data-reveal onClick={() => onNavigate({ page: 'updates' })}>
+              See all updates <ArrowRight />
+            </button>
+          </div>
+          <div className="wf-journal-grid">
+            {updates.slice(0, 3).map((u) => (
+              <article className="wf-journal-card" data-reveal key={u.title} onClick={() => onNavigate({ page: 'updates' })}>
+                <span className={`wf-tag wf-tag--${u.tag.split(' ')[0].toLowerCase()}`}>{u.tag}</span>
+                <h3 className="wf-journal-title">{u.title}</h3>
+                <p className="wf-journal-body">{u.body}</p>
+                <span className="wf-journal-date">{u.date}</span>
+              </article>
+            ))}
           </div>
         </div>
       </section>
