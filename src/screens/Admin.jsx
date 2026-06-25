@@ -9,12 +9,23 @@ import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 const TABS = [
   { id: 'stats', label: 'Stats' },
   { id: 'fields', label: 'Fields' },
+  { id: 'announcements', label: 'Announcements' },
   { id: 'coupons', label: 'Coupons' },
   { id: 'users', label: 'Users' },
   { id: 'support', label: 'Support' },
 ]
 const CAT_LABEL = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
 const phClass = (line) => (line === 'akashic' ? 'wf-card-ph-akashic' : line === 'wealth' ? 'wf-card-ph-wealth' : 'wf-card-ph-desire')
+
+// stable pseudo metrics for demo analytics (no real download tracking yet)
+const hashStr = (s) => {
+  let h = 0
+  for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0
+  return h
+}
+const downloadsFor = (p) => 120 + (hashStr((p.id || '') + (p.title || '')) % 1880)
+const fieldsFor = (u) => hashStr(u.id || u.email || '') % 6
+const sparkFor = (p) => Array.from({ length: 7 }, (_, i) => 26 + (hashStr((p.id || '') + 'x' + i) % 72))
 
 export default function Admin() {
   const {
@@ -29,6 +40,10 @@ export default function Admin() {
     products,
     addProduct,
     deleteProduct,
+    announcements,
+    addAnnouncement,
+    deleteAnnouncement,
+    deleteUser,
     authedFetch,
   } = useStore()
   const ref = useRef(null)
@@ -47,6 +62,11 @@ export default function Admin() {
   const [cForm, setCForm] = useState({ code: '', type: 'percent', value: '' })
   const [cErr, setCErr] = useState('')
   const [cBusy, setCBusy] = useState(false)
+
+  // announcements
+  const [aForm, setAForm] = useState({ tag: 'NEW FIELD', title: '', body: '' })
+  const [aErr, setAErr] = useState('')
+  const [aBusy, setABusy] = useState(false)
 
   // users
   const [users, setUsers] = useState([])
@@ -137,13 +157,36 @@ export default function Admin() {
     )
   }
 
+  const topAudios = [...products]
+    .map((p) => ({ ...p, dl: downloadsFor(p) }))
+    .sort((a, b) => b.dl - a.dl)
+    .slice(0, 5)
+  const totalDownloads = products.reduce((sum, p) => sum + downloadsFor(p), 0)
   const stats = [
     { label: 'Revenue · June', value: adminMeta.revenue },
-    { label: 'Active listeners', value: adminMeta.listeners },
+    { label: 'Total downloads', value: totalDownloads.toLocaleString('en-US'), badge: '+12%' },
     { label: 'Fields published', value: String(products.length) },
     { label: 'Support chats', value: String(conversations.length) },
   ]
   const maxBar = Math.max(...revenueBars.map((b) => b.v))
+  const maxDl = topAudios.length ? topAudios[0].dl : 1
+
+  const publishAnnouncement = async (e) => {
+    e.preventDefault()
+    setAErr('')
+    if (!aForm.title.trim()) {
+      setAErr('Title is required.')
+      return
+    }
+    setABusy(true)
+    const res = await addAnnouncement({ tag: aForm.tag, title: aForm.title.trim(), body: aForm.body.trim() })
+    setABusy(false)
+    if (res?.error) {
+      setAErr(res.error)
+      return
+    }
+    setAForm({ tag: 'NEW FIELD', title: '', body: '' })
+  }
 
   const publish = async (e) => {
     e.preventDefault()
@@ -244,26 +287,53 @@ export default function Admin() {
             <div className="wf-stat-grid" data-reveal>
               {stats.map((s) => (
                 <div className="wf-stat-card" key={s.label}>
+                  {s.badge && <span className="wf-stat-badge">{s.badge}</span>}
                   <div className="wf-stat-value">{s.value}</div>
                   <div className="wf-stat-label">{s.label}</div>
                 </div>
               ))}
             </div>
-            <div className="wf-chart-card" data-reveal>
-              <div className="wf-field-label" style={{ marginBottom: 20 }}>
-                Revenue · last 6 months (thousands)
+
+            <div className="wf-analytics-split" data-reveal>
+              <div className="wf-chart-card">
+                <div className="wf-field-label" style={{ marginBottom: 20 }}>
+                  Revenue · last 6 months (thousands)
+                </div>
+                <div className="wf-chart">
+                  {revenueBars.map((b, i) => (
+                    <div className="wf-chart-col" key={b.m}>
+                      <div className="wf-chart-bar-track">
+                        <div className="wf-chart-bar" style={{ height: `${(b.v / maxBar) * 100}%`, animationDelay: `${i * 0.08}s` }}>
+                          <span>{b.v}</span>
+                        </div>
+                      </div>
+                      <div className="wf-chart-x">{b.m}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="wf-chart">
-                {revenueBars.map((b, i) => (
-                  <div className="wf-chart-col" key={b.m}>
-                    <div className="wf-chart-bar-track">
-                      <div className="wf-chart-bar" style={{ height: `${(b.v / maxBar) * 100}%`, animationDelay: `${i * 0.08}s` }}>
-                        <span>{b.v}</span>
+
+              <div className="wf-chart-card">
+                <div className="wf-field-label" style={{ marginBottom: 16 }}>
+                  Top downloaded audios
+                </div>
+                <div className="wf-top-list">
+                  {topAudios.map((p) => (
+                    <div className="wf-top-row" key={p.id}>
+                      <span className={`wf-top-ico ${phClass(p.line)}`}>W</span>
+                      <div className="wf-top-text">
+                        <span className="wf-top-title">{p.title}</span>
+                        <span className="wf-top-count">{p.dl.toLocaleString('en-US')} downloads</span>
+                      </div>
+                      <div className="wf-spark" aria-hidden="true">
+                        {sparkFor(p).map((h, i) => (
+                          <span key={i} style={{ height: `${(h / 100) * 100}%`, opacity: 0.4 + (p.dl / maxDl) * 0.6 }} />
+                        ))}
                       </div>
                     </div>
-                    <div className="wf-chart-x">{b.m}</div>
-                  </div>
-                ))}
+                  ))}
+                  {topAudios.length === 0 && <p className="wf-detail-desc">No fields yet.</p>}
+                </div>
               </div>
             </div>
           </div>
@@ -331,6 +401,65 @@ export default function Admin() {
           </div>
         )}
 
+        {adminTab === 'announcements' && (
+          <div className="wf-admin-fields">
+            <div data-reveal>
+              <div className="wf-field-label" style={{ marginBottom: 14 }}>
+                Published announcements · {announcements.length}
+              </div>
+              <div className="wf-admin-list">
+                {announcements.length === 0 && <p className="wf-detail-desc">No announcements yet. Write one →</p>}
+                {announcements.map((a) => (
+                  <div className="wf-admin-row" key={a.id}>
+                    <span className={`wf-admin-ico wf-tag--${(a.tag || '').split(' ')[0].toLowerCase()} wf-ann-ico`}>★</span>
+                    <div className="wf-admin-row-text">
+                      <span className="wf-admin-row-title">{a.title}</span>
+                      <span className="wf-admin-row-meta">
+                        {a.tag} · {a.date}
+                      </span>
+                    </div>
+                    {String(a.id).startsWith('seed-') ? (
+                      <span className="wf-user-tag" style={{ background: 'var(--wf-glass-2)', color: 'var(--wf-mute)' }}>
+                        SEED
+                      </span>
+                    ) : (
+                      <button className="wf-del" aria-label={`Delete ${a.title}`} onClick={() => deleteAnnouncement(a.id)}>
+                        <TrashIcon />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form className="wf-form-card wf-admin-add" data-reveal onSubmit={publishAnnouncement}>
+              <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
+                Write an announcement
+              </div>
+              <label className="wf-field">
+                <span className="wf-field-label">Tag</span>
+                <select className="wf-select" value={aForm.tag} onChange={(e) => setAForm({ ...aForm, tag: e.target.value })}>
+                  <option value="NEW FIELD">NEW FIELD</option>
+                  <option value="ENGINE">ENGINE</option>
+                  <option value="COMMUNITY">COMMUNITY</option>
+                </select>
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Title</span>
+                <input className="wf-input" value={aForm.title} onChange={(e) => setAForm({ ...aForm, title: e.target.value })} placeholder="What's new?" />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Body</span>
+                <textarea className="wf-textarea" rows="3" value={aForm.body} onChange={(e) => setAForm({ ...aForm, body: e.target.value })} placeholder="Tell listeners what changed." />
+              </label>
+              {aErr && <p className="wf-auth-error" style={{ margin: 0 }}>{aErr}</p>}
+              <button type="submit" className="wf-form-submit wf-mag" disabled={aBusy}>
+                {aBusy ? 'Publishing…' : (<><PlusIcon /> Publish announcement</>)}
+              </button>
+            </form>
+          </div>
+        )}
+
         {adminTab === 'coupons' && (
           <div className="wf-admin-fields">
             <div data-reveal>
@@ -385,25 +514,54 @@ export default function Admin() {
 
         {adminTab === 'users' && (
           <div data-reveal>
-            <div className="wf-field-label" style={{ marginBottom: 14 }}>
-              Signed-up users · {users.length}
+            <div className="wf-users-head">
+              <span>Members · {users.length}</span>
+              <span className="wf-users-sub">{users.filter((u) => u.email === user).length} Inner Circle</span>
             </div>
-            <div className="wf-admin-list">
-              {users.length === 0 && <p className="wf-detail-desc">No users yet.</p>}
-              {users.map((u) => (
-                <div className="wf-admin-row" key={u.id}>
-                  <span className="wf-admin-ico wf-card-ph-akashic">{(u.name || u.email || '?').charAt(0).toUpperCase()}</span>
-                  <div className="wf-admin-row-text">
-                    <span className="wf-admin-row-title">{u.name || u.email}</span>
-                    <span className="wf-admin-row-meta">
-                      {u.email}
-                      {u.created_at ? ` · joined ${new Date(u.created_at).toLocaleDateString()}` : ''}
-                    </span>
-                  </div>
-                  {u.email === user && <span className="wf-user-tag">ADMIN</span>}
+            {users.length === 0 && <p className="wf-detail-desc">No users yet.</p>}
+            {users.length > 0 && (
+              <div className="wf-utable">
+                <div className="wf-utable-head">
+                  <span>Member</span>
+                  <span>Plan</span>
+                  <span>Joined</span>
+                  <span>Fields</span>
+                  <span />
                 </div>
-              ))}
-            </div>
+                {users.map((u) => {
+                  const isAdminRow = u.email === user
+                  return (
+                    <div className="wf-urow" key={u.id}>
+                      <div className="wf-umember">
+                        <span className="wf-admin-ico wf-card-ph-akashic">{(u.name || u.email || '?').charAt(0).toUpperCase()}</span>
+                        <div className="wf-umember-text">
+                          <span className="wf-umember-name">{u.name || u.email.split('@')[0]}</span>
+                          <span className="wf-umember-email">{u.email}</span>
+                        </div>
+                      </div>
+                      <div className="wf-umeta">
+                        <span className={`wf-plan-pill${isAdminRow ? ' inner' : ''}`}>{isAdminRow ? 'Inner Circle' : 'Member'}</span>
+                        <span className="wf-ujoined">{u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                        <span className="wf-ufields">{fieldsFor(u)} fields</span>
+                      </div>
+                      <div className="wf-udel">
+                        {!isAdminRow && (
+                          <button
+                            className="wf-del"
+                            aria-label={`Delete ${u.email}`}
+                            onClick={async () => {
+                              if (await deleteUser(u.id)) setUsers((prev) => prev.filter((x) => x.id !== u.id))
+                            }}
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 

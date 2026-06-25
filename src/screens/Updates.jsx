@@ -2,10 +2,9 @@ import { useRef } from 'react'
 import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
-import { updates } from '../data/content'
 
 export default function Updates() {
-  const { navigate } = useStore()
+  const { navigate, announcements } = useStore()
   const ref = useRef(null)
   useReveal(ref)
 
@@ -28,8 +27,8 @@ export default function Updates() {
         <div className="wf-updates-divider" />
 
         <div className="wf-updates-list">
-          {updates.map((u) => (
-            <article className="wf-update" data-reveal key={u.title}>
+          {announcements.map((u) => (
+            <article className="wf-update" data-reveal key={u.id || u.title}>
               <div className="wf-update-date">{u.date}</div>
               <div className="wf-update-body">
                 <span className={`wf-tag wf-tag--${u.tag.split(' ')[0].toLowerCase()}`}>{u.tag}</span>

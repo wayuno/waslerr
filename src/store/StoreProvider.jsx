@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { allFields, freeFields } from '../data/content'
+import { allFields, freeFields, updates as seedUpdates } from '../data/content'
 import { getSupabase, loadConfig, normalizeProduct } from '../lib/supabase'
 
 // Single source of truth for routing, catalogue, auth, payment and the support
@@ -22,6 +22,16 @@ const SEED = [...allFields, ...freeFields].map((f) => {
     image_url: f.img || null,
     freq: f.freq || 200,
   }
+})
+
+// fallback journal entries when Supabase isn't configured
+const SEED_ANN = seedUpdates.map((u, i) => ({ id: 'seed-' + i, tag: u.tag, title: u.title, body: u.body, date: u.date }))
+const normalizeAnnouncement = (row) => ({
+  id: row.id,
+  tag: row.tag,
+  title: row.title,
+  body: row.body || '',
+  date: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
 })
 
 const fileToBase64 = (file) =>
@@ -47,6 +57,7 @@ export function StoreProvider({ children }) {
 
   const [selectedId, setSelectedId] = useState(null)
   const [products, setProducts] = useState(SEED)
+  const [announcements, setAnnouncements] = useState(SEED_ANN)
 
   const [payMethod, setPayMethod] = useState('paypal')
   const [payDone, setPayDone] = useState(false)
@@ -107,6 +118,13 @@ export function StoreProvider({ children }) {
     if (!supabase) return
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: true })
     if (!error && Array.isArray(data) && data.length) setProducts(data.map(normalizeProduct))
+  }, [])
+
+  const loadAnnouncements = useCallback(async (client) => {
+    const supabase = client || supabaseRef.current
+    if (!supabase) return
+    const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false })
+    if (!error && Array.isArray(data) && data.length) setAnnouncements(data.map(normalizeAnnouncement))
   }, [])
 
   const findProduct = useCallback((id) => products.find((p) => p.id === id) || null, [products])
@@ -173,12 +191,13 @@ export function StoreProvider({ children }) {
       sub = listener?.subscription
       setAuthReady(true)
       reloadProducts(supabase)
+      loadAnnouncements(supabase)
     })()
     return () => {
       cancelled = true
       sub?.unsubscribe?.()
     }
-  }, [applySession, reloadProducts])
+  }, [applySession, reloadProducts, loadAnnouncements])
 
   const getToken = useCallback(async () => {
     const supabase = supabaseRef.current
@@ -288,6 +307,36 @@ export function StoreProvider({ children }) {
     [getToken, reloadProducts],
   )
 
+  const addAnnouncement = useCallback(
+    async (form) => {
+      const r = await authedFetch('/api/admin/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!r.ok) return { error: 'Could not publish announcement.' }
+      await loadAnnouncements()
+      return { ok: true }
+    },
+    [authedFetch, loadAnnouncements],
+  )
+
+  const deleteAnnouncement = useCallback(
+    async (id) => {
+      const r = await authedFetch('/api/admin/announcements/' + id, { method: 'DELETE' })
+      if (r.ok) await loadAnnouncements()
+    },
+    [authedFetch, loadAnnouncements],
+  )
+
+  const deleteUser = useCallback(
+    async (id) => {
+      const r = await authedFetch('/api/admin/users/' + id, { method: 'DELETE' })
+      return r.ok
+    },
+    [authedFetch],
+  )
+
   // ---- coupons ----
   const applyCoupon = useCallback(async (code) => {
     const c = (code || '').trim()
@@ -370,6 +419,10 @@ export function StoreProvider({ children }) {
     reloadProducts,
     addProduct,
     deleteProduct,
+    announcements,
+    addAnnouncement,
+    deleteAnnouncement,
+    deleteUser,
     selectedId,
     selectedProduct,
     findProduct,

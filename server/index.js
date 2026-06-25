@@ -171,6 +171,27 @@ const getMessages = async (conversationId) => {
   const r = await sbRest(`support_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`)
   return r.ok ? r.json() : []
 }
+// --- announcements ---
+const listAnnouncements = async () => {
+  const r = await sbRest('announcements?order=created_at.desc')
+  return r.ok ? r.json() : []
+}
+const insertAnnouncement = async (row) => {
+  const r = await sbRest('announcements', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, data: Array.isArray(d) ? d[0] : d }
+}
+const removeAnnouncement = async (id) => (await sbRest(`announcements?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+
+// --- delete an auth user ---
+const deleteAuthUser = async (id) => {
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+  })
+  return r.ok
+}
+
 const getConversations = async () => {
   const r = await sbRest('support_messages?order=created_at.desc&limit=500')
   const rows = r.ok ? await r.json() : []
@@ -380,6 +401,36 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/admin/conversations' && method === 'GET') {
     if (!(await requireAdmin(req, res))) return
     return sendJson(res, 200, { conversations: await getConversations() })
+  }
+
+  // ---- announcements ----
+  if (url === '/api/announcements' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { announcements: [] })
+    const list = await listAnnouncements()
+    return sendJson(res, 200, { announcements: list || [] })
+  }
+  if (url === '/api/admin/announcements' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const title = (b.title || '').trim()
+    if (!title) return sendJson(res, 400, { error: 'title_required' })
+    const tag = ['NEW FIELD', 'ENGINE', 'COMMUNITY'].includes((b.tag || '').toUpperCase()) ? b.tag.toUpperCase() : 'NEW FIELD'
+    const out = await insertAnnouncement({ tag, title, body: (b.body || '').trim() })
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
+    return sendJson(res, 200, { announcement: out.data })
+  }
+  if (url.startsWith('/api/admin/announcements/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    if (!(await removeAnnouncement(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+
+  // delete an auth user (admin only; cannot delete the admin account)
+  if (url.startsWith('/api/admin/users/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    const id = url.split('/').pop()
+    if (!(await deleteAuthUser(id))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
   }
 
   // list all signed-up users (admin only)

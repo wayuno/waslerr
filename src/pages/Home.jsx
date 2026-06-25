@@ -7,7 +7,7 @@ import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { useStore } from '../store/StoreProvider'
-import { lines, reviews, faqs, tickerItems, updates } from '../data/content'
+import { lines, reviews, faqs, tickerItems } from '../data/content'
 import { ArrowRight, ArrowDown } from '../components/icons'
 
 const EMBERS = [
@@ -76,7 +76,7 @@ function FaqItem({ q, a, open, onToggle }) {
 }
 
 export default function Home({ onNavigate }) {
-  const { products } = useStore()
+  const { products, announcements } = useStore()
   const ref = useRef(null)
   const orbitRef = useRef(null)
   const heroRef = useRef(null)
@@ -273,7 +273,7 @@ export default function Home({ onNavigate }) {
             </button>
           </div>
           <div className="wf-journal-grid">
-            {updates.slice(0, 3).map((u) => (
+            {announcements.slice(0, 3).map((u) => (
               <article className="wf-journal-card" data-reveal key={u.title} onClick={() => onNavigate({ page: 'updates' })}>
                 <span className={`wf-tag wf-tag--${u.tag.split(' ')[0].toLowerCase()}`}>{u.tag}</span>
                 <h3 className="wf-journal-title">{u.title}</h3>
