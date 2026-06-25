@@ -167,27 +167,6 @@ a {
   mix-blend-mode: screen;
   will-change: transform;
 }
-.wf-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  z-index: 61;
-  display: flex;
-  align-items: flex-end;
-  gap: 1px;
-  padding: 0 2px;
-  pointer-events: none;
-  background: linear-gradient(rgba(6, 7, 9, 0.55), transparent);
-}
-.wf-progress span {
-  flex: 1;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.07);
-  transition: background 0.15s;
-}
-
 /* intro overlay */
 .wf-intro {
   position: fixed;
@@ -1557,9 +1536,63 @@ a {
 .wf-join-strip a:hover { color: var(--wf-gold); }
 
 /* responsive */
-@media (max-width: 560px) {
-  .wf-pad { padding-top: 62px; padding-bottom: 62px; }
+@media (max-width: 860px) {
+  /* sections that set 28px side padding inline-on-class — tighten a touch */
+  .wf-join-strip { gap: 14px 18px; }
+}
+
+@media (max-width: 640px) {
+  .wf-container { padding-left: 20px; padding-right: 20px; }
+
+  /* nav fits small screens */
+  .wf-nav-inner { padding: 16px 18px; }
+  .wf-nav.scrolled .wf-nav-inner { padding: 12px 18px; }
+  .wf-wordmark { font-size: 12.5px; letter-spacing: 0.2em; }
+  .wf-monogram { width: 34px; height: 34px; font-size: 19px; }
+
+  /* hero */
+  .wf-hero { padding: 104px 20px 84px; }
+  .wf-hero-sub { font-size: 15.5px; margin-top: 26px; }
+  .wf-hero-cta { width: 100%; margin-top: 36px; }
+  .wf-hero-cta .wf-btn { flex: 1 1 auto; justify-content: center; padding: 14px 18px; }
+  .wf-trust { gap: 12px; flex-wrap: wrap; justify-content: center; text-align: center; font-size: 12px; margin-top: 38px; }
+
+  /* section rhythm + body sizes */
+  .wf-pad { padding-top: 60px; padding-bottom: 60px; }
+  .wf-eyebrow { font-size: 11px; letter-spacing: 0.24em; }
+
+  /* card grids breathe */
+  .wf-grid,
+  .wf-lines-grid,
+  .wf-join-grid { gap: 16px; }
   .wf-form-row { grid-template-columns: 1fr; }
+  .wf-form-card,
+  .wf-success { padding: 26px 22px; }
+  .wf-custom-split { gap: 28px; }
+
+  /* method timeline */
+  .wf-step { gap: 18px; padding-bottom: 38px; }
+  .wf-step-num { flex: 0 0 42px; width: 42px; height: 42px; }
+  .wf-step-body h3 { font-size: 22px; }
+  .wf-timeline-spine { left: 20px; }
+
+  /* reviews never exceed the viewport */
+  .wf-review { flex: 0 0 min(360px, 84vw); width: min(360px, 84vw); padding: 24px 22px; }
+
+  /* faq padding */
+  .wf-faq-q { font-size: 15.5px; padding: 20px 20px; }
+  .wf-faq-a p { padding: 0 20px 22px; }
+
+  /* footer disclaimer reads left-aligned on its own line */
+  .wf-footer-grid { gap: 32px; padding: 52px 28px 36px; }
+  .wf-footer-base { flex-direction: column; }
+  .wf-footer-base .disclaimer { text-align: left; max-width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .wf-wordmark { font-size: 11px; letter-spacing: 0.14em; }
+  .wf-hero-cta { flex-direction: column; }
+  .wf-hero-cta .wf-btn { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

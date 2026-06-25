@@ -1,13 +1,12 @@
 import { useEffect, useRef } from 'react'
 
 // Fixed ambient layers shared across pages: particle constellation (home only),
-// resonance rings, cursor glow + dot + trail, and an optional scroll-progress bar.
-export default function Background({ particles = false, progress = false, resonanceTop = '46%' }) {
+// resonance rings, and cursor glow + dot + trail.
+export default function Background({ particles = false, resonanceTop = '46%' }) {
   const canvasRef = useRef(null)
   const glowRef = useRef(null)
   const dotRef = useRef(null)
   const trailRef = useRef(null)
-  const progressRef = useRef(null)
 
   // particle constellation
   useEffect(() => {
@@ -113,37 +112,6 @@ export default function Background({ particles = false, progress = false, resona
     }
   }, [])
 
-  // scroll progress bar (home)
-  useEffect(() => {
-    if (!progress) return
-    const bar = progressRef.current
-    if (!bar) return
-    const N = 84
-    bar.innerHTML = ''
-    for (let i = 0; i < N; i++) {
-      const s = document.createElement('span')
-      s.style.height = 32 + Math.round(((i * 53) % 68)) + '%'
-      bar.appendChild(s)
-    }
-    const spans = bar.children
-    const upd = () => {
-      const h = document.documentElement
-      const p = h.scrollTop / (h.scrollHeight - h.clientHeight || 1)
-      const idx = Math.round(p * N)
-      for (let i = 0; i < N; i++) {
-        spans[i].style.background =
-          i < idx ? (i > idx - 6 ? 'var(--wf-gold-2)' : 'var(--wf-gold)') : 'rgba(255,255,255,.07)'
-      }
-    }
-    upd()
-    window.addEventListener('scroll', upd, { passive: true })
-    window.addEventListener('resize', upd)
-    return () => {
-      window.removeEventListener('scroll', upd)
-      window.removeEventListener('resize', upd)
-    }
-  }, [progress])
-
   return (
     <>
       {particles && <canvas ref={canvasRef} className="wf-particles" />}
@@ -156,7 +124,6 @@ export default function Background({ particles = false, progress = false, resona
       <div ref={glowRef} className="wf-glow" />
       <div ref={trailRef} className="wf-trail" />
       <div ref={dotRef} className="wf-cursor" />
-      {progress && <div ref={progressRef} className="wf-progress" aria-hidden="true" />}
     </>
   )
 }

@@ -120,7 +120,7 @@ export default function Home({ onNavigate }) {
 
   return (
     <div className="wf-app" ref={ref}>
-      <Background particles progress resonanceTop="46%" />
+      <Background particles resonanceTop="46%" />
 
       {/* ===== HERO ===== */}
       <section className="wf-hero" id="wf-hero" ref={heroRef}>
