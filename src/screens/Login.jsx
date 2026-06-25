@@ -19,8 +19,9 @@ export default function Login() {
   const submit = (e) => {
     e.preventDefault()
     if (!email.trim()) return
-    // demo-only: both sign in and sign up just open a session for this email
-    login(email.trim())
+    // admin email + correct password → real admin session (verified server-side);
+    // anything else → demo customer session
+    login(email.trim(), pass)
   }
 
   return (

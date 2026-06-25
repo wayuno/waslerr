@@ -2,15 +2,12 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { allFields, freeFields, topPicks } from '../data/content'
 
 // Single source of truth for routing, catalogue, auth, payment and the shared
-// support thread. Demo-only: no backend — auth/payments are mocked and the
-// catalogue + chat live in memory (reset on reload).
+// support thread. Admin auth is REAL (server-side): logging in as admin requires
+// the secret password checked by the backend, which returns a signed token.
+// Catalogue + chat are still demo/in-memory (reset on reload).
 const StoreCtx = createContext(null)
 
-// Only this email may open the admin dashboard. Set VITE_ADMIN_EMAIL on Railway
-// (build-time env). Falls back to a placeholder so dev still works.
-// NOTE: this is a client-side gate — fine for a demo, but not real security.
-// Anyone can read the bundled value; true protection needs server-side auth.
-const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || 'admin@waslerrfields.com').trim().toLowerCase()
+const TOKEN_KEY = 'wf_admin_token'
 
 const initialProducts = () => allFields.map((f) => ({ ...f }))
 
@@ -28,8 +25,9 @@ export function StoreProvider({ children }) {
 
   const [loggedIn, setLoggedIn] = useState(false)
   const [user, setUser] = useState(null)
-  const [pendingAdmin, setPendingAdmin] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [adminTab, setAdminTab] = useState('stats')
+  const tokenRef = useRef(typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null)
 
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMsgs, setChatMsgs] = useState([
@@ -100,34 +98,96 @@ export function StoreProvider({ children }) {
     setPayDone(true)
   }, [])
 
+  // Admin login is verified by the backend (secret password). On success we get
+  // a signed token and unlock the dashboard. Anything else is a regular
+  // (demo) customer session with no admin access.
   const login = useCallback(
-    (email) => {
-      setUser(email)
-      setLoggedIn(true)
-      const adminMatch = email.trim().toLowerCase() === ADMIN_EMAIL
-      if (pendingAdmin) {
-        setPendingAdmin(false)
-        navigate(adminMatch ? 'admin' : 'home')
-      } else {
-        navigate('home')
+    async (email, password) => {
+      const mail = (email || '').trim()
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: mail, password: password || '' }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          tokenRef.current = data.token
+          try {
+            localStorage.setItem(TOKEN_KEY, data.token)
+          } catch {
+            /* ignore */
+          }
+          setUser(data.email || mail)
+          setLoggedIn(true)
+          setIsAdmin(true)
+          navigate('admin')
+          return { admin: true }
+        }
+      } catch {
+        /* backend unreachable — fall through to a demo customer session */
       }
+      // regular customer (demo) session — no admin; drop any stale admin token
+      tokenRef.current = null
+      try {
+        localStorage.removeItem(TOKEN_KEY)
+      } catch {
+        /* ignore */
+      }
+      setUser(mail)
+      setLoggedIn(true)
+      setIsAdmin(false)
+      navigate('home')
+      return { admin: false }
     },
-    [pendingAdmin, navigate],
+    [navigate],
   )
 
   const logout = useCallback(() => {
+    tokenRef.current = null
+    try {
+      localStorage.removeItem(TOKEN_KEY)
+    } catch {
+      /* ignore */
+    }
     setLoggedIn(false)
     setUser(null)
+    setIsAdmin(false)
     navigate('home')
   }, [navigate])
 
   const requireAdmin = useCallback(() => {
-    if (loggedIn) navigate('admin')
-    else {
-      setPendingAdmin(true)
-      navigate('login')
+    if (loggedIn && isAdmin) navigate('admin')
+    else navigate('login')
+  }, [loggedIn, isAdmin, navigate])
+
+  // restore an admin session from a stored token (verified server-side)
+  useEffect(() => {
+    const token = tokenRef.current
+    if (!token) return
+    let cancelled = false
+    fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return
+        if (d && d.admin) {
+          setLoggedIn(true)
+          setUser(d.email)
+          setIsAdmin(true)
+        } else {
+          tokenRef.current = null
+          try {
+            localStorage.removeItem(TOKEN_KEY)
+          } catch {
+            /* ignore */
+          }
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
     }
-  }, [loggedIn, navigate])
+  }, [])
 
   const addProduct = useCallback((p) => {
     const id = 'wf-new-' + idCounter.current++
@@ -160,8 +220,6 @@ export function StoreProvider({ children }) {
   }, [])
 
   const openChat = useCallback(() => setChatOpen(true), [])
-
-  const isAdmin = loggedIn && !!user && user.trim().toLowerCase() === ADMIN_EMAIL
 
   const value = {
     page,

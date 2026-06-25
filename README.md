@@ -1,16 +1,43 @@
-# React + Vite
+# Waslerr Fields
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Premium subliminal-audio store — animated React (Vite) frontend with a tiny
+zero-dependency Node backend that handles **real, server-side admin auth**.
 
-Currently, two official plugins are available:
+## Develop locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+cp .env.example .env      # then edit the admin values
+npm run server            # backend on :8787 (admin auth API)
+npm run dev               # frontend on :5173 (proxies /api → :8787)
+```
 
-## React Compiler
+Open http://localhost:5173. The Vite dev server proxies `/api/*` to the backend.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Admin access
 
-## Expanding the Oxlint configuration
+Admin is gated **server-side**. Logging in with the admin email **and** the
+secret `ADMIN_PASSWORD` returns a signed token; the dashboard only unlocks when
+that token verifies on the server. Any other login is a regular (demo) customer
+session with no admin access. The password is never shipped in the client
+bundle — without it, no one can become admin.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Required env vars (see `.env.example`):
+
+| Var | Purpose |
+|---|---|
+| `ADMIN_EMAIL` | The one email allowed to be admin |
+| `ADMIN_PASSWORD` | Secret admin password (required to unlock the dashboard) |
+| `JWT_SECRET` | Long random string used to sign admin session tokens |
+| `PORT` | Server port (Railway sets this automatically) |
+
+## Deploy on Railway
+
+1. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `JWT_SECRET` in **Variables**.
+2. Railway builds with `npm run build` and starts with `npm start`
+   (`node server/index.js`), which serves the built frontend **and** the auth API
+   from one service. `PORT` is provided automatically.
+
+> Catalogue and support chat are still demo/in-memory (reset on restart). Only
+> admin **authentication** is real; persisting products/orders/chat would need a
+> database.
