@@ -37,6 +37,7 @@ try {
 }
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/$/, '')
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -227,6 +228,49 @@ const serveStatic = (req, res) => {
   })
 }
 
+// On boot, make sure the admin user exists in Supabase Auth with the password
+// from env — so the Railway ADMIN_EMAIL + ADMIN_PASSWORD ARE the admin login.
+// (Env is the source of truth: this also resets the password to match on deploy.)
+const ensureAdminUser = async () => {
+  if (!sbReady() || !ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    console.warn('[waslerr] skip ensureAdminUser — need SUPABASE_URL, SERVICE_KEY, ADMIN_EMAIL, ADMIN_PASSWORD')
+    return
+  }
+  const headers = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' }
+  try {
+    const create = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, email_confirm: true }),
+    })
+    if (create.ok) {
+      console.log('[waslerr] admin user created:', ADMIN_EMAIL)
+      return
+    }
+    // already exists → find it and set the password to match env
+    const list = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+    })
+    if (list.ok) {
+      const data = await list.json()
+      const users = data.users || data || []
+      const u = users.find((x) => (x.email || '').toLowerCase() === ADMIN_EMAIL)
+      if (u) {
+        const upd = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${u.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ password: ADMIN_PASSWORD, email_confirm: true }),
+        })
+        console.log('[waslerr] admin user password synced:', upd.ok)
+      } else {
+        console.warn('[waslerr] admin create failed and user not found:', create.status)
+      }
+    }
+  } catch (e) {
+    console.warn('[waslerr] ensureAdminUser failed:', e?.message)
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = (req.url || '').split('?')[0]
   const method = req.method || 'GET'
@@ -355,4 +399,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[waslerr] server listening on :${PORT}`)
+  ensureAdminUser()
 })
