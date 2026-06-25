@@ -1,15 +1,29 @@
 import { useRef, useState } from 'react'
 import { useAudio } from '../audio/AudioProvider'
+import { useStore } from '../store/StoreProvider'
 import { PlayIcon, PauseIcon, ChevronRight, ArrowDown } from './icons'
+
+const CATS = {
+  desire: { label: 'Desire', cls: '' },
+  akashic: { label: 'Akashic', cls: 'akashic' },
+  wealth: { label: 'Wealth', cls: 'wealth' },
+}
 
 export default function ProductCard({ field, variant = 'default' }) {
   const { activeId, toggle } = useAudio()
+  const { openDetail } = useStore()
   const [open, setOpen] = useState(false)
   const cardRef = useRef(null)
   const glowRef = useRef(null)
   const free = variant === 'free'
   const playing = activeId === field.id
-  const akashic = field.line === 'akashic'
+  const cat = CATS[field.line] || CATS.desire
+  const phClass = field.line === 'akashic' ? 'wf-card-ph-akashic' : field.line === 'wealth' ? 'wf-card-ph-wealth' : 'wf-card-ph-desire'
+
+  const stop = (fn) => (e) => {
+    e.stopPropagation()
+    fn?.(e)
+  }
 
   const onMove = (e) => {
     const card = cardRef.current
@@ -39,16 +53,21 @@ export default function ProductCard({ field, variant = 'default' }) {
   }
 
   return (
-    <article ref={cardRef} className="wf-card" data-cat={field.line} data-reveal onMouseMove={onMove} onMouseLeave={onLeave}>
+    <article
+      ref={cardRef}
+      className="wf-card"
+      data-cat={field.line}
+      data-reveal
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      onClick={() => openDetail(field.id)}
+    >
       <div ref={glowRef} className="wf-card-glow" />
       <div className="wf-card-mediawrap">
         {field.img ? (
           <img className={`wf-card-media${free ? ' free' : ''}`} src={field.img} alt={field.title} />
         ) : (
-          <div
-            className={`wf-card-media${free ? ' free' : ''} wf-card-media-ph ${akashic ? 'wf-card-ph-akashic' : 'wf-card-ph-desire'}`}
-            aria-hidden="true"
-          >
+          <div className={`wf-card-media${free ? ' free' : ''} wf-card-media-ph ${phClass}`} aria-hidden="true">
             W
           </div>
         )}
@@ -57,7 +76,7 @@ export default function ProductCard({ field, variant = 'default' }) {
         <button
           className={`wf-play${playing ? ' playing' : ''}`}
           aria-label={playing ? 'Pause preview' : 'Preview audio'}
-          onClick={() => toggle(field.id, field.freq)}
+          onClick={stop(() => toggle(field.id, field.freq))}
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
@@ -66,20 +85,20 @@ export default function ProductCard({ field, variant = 'default' }) {
       <div className="wf-card-body">
         <h3 className="wf-card-title">{field.title}</h3>
         <span className="wf-card-sub">Waslerr</span>
-        <span className={`wf-card-cat${akashic ? ' akashic' : ''}`}>{akashic ? 'Akashic' : 'Desire'}</span>
+        <span className={`wf-card-cat ${cat.cls}`}>{cat.label}</span>
         <p className={`wf-desc${!free && !open ? ' clamp' : ''}`}>{field.desc}</p>
         <div className="wf-card-foot">
           {free ? (
             <>
               <span className="wf-price free">Free</span>
-              <button className="wf-getfree wf-mag">
+              <button className="wf-getfree wf-mag" onClick={stop(() => openDetail(field.id))}>
                 Get it free <ArrowDown />
               </button>
             </>
           ) : (
             <>
               <span className="wf-price">{field.price}</span>
-              <button className="wf-readmore" onClick={() => setOpen((o) => !o)}>
+              <button className="wf-readmore" onClick={stop(() => setOpen((o) => !o))}>
                 {open ? 'Read less' : 'Read more'} <ChevronRight />
               </button>
             </>

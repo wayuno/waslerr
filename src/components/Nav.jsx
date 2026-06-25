@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
+import { useStore } from '../store/StoreProvider'
 
-const LINKS = [
+// primary nav links (existing sections preserved, "What's new" added)
+const NAV_LINKS = [
   { label: 'Fields', target: { page: 'fields' } },
   { label: 'Method', target: { page: 'method' } },
+  { label: "What's new", target: { page: 'updates' } },
   { label: 'Reviews', target: { page: 'home', section: 'wf-reviews' } },
   { label: 'Custom', target: { page: 'home', section: 'wf-custom' } },
   { label: 'Community', target: { page: 'home', section: 'wf-join' } },
   { label: 'FAQ', target: { page: 'home', section: 'wf-faq' } },
 ]
 
-export default function Nav({ page, onNavigate }) {
+export default function Nav() {
+  const { page, navigate, loggedIn, logout, openChat } = useStore()
   const [scrolled, setScrolled] = useState(page !== 'home')
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -26,9 +30,8 @@ export default function Nav({ page, onNavigate }) {
 
   const go = (target) => {
     setMenuOpen(false)
-    onNavigate(target)
+    navigate(target)
   }
-
   const isActive = (target) => target.page === page && !target.section
 
   return (
@@ -41,7 +44,7 @@ export default function Nav({ page, onNavigate }) {
 
         <div className="wf-nav-desktop">
           <div className="wf-navlinks">
-            {LINKS.map((l) => (
+            {NAV_LINKS.map((l) => (
               <button
                 key={l.label}
                 className={`wf-navlink${isActive(l.target) ? ' active' : ''}`}
@@ -51,9 +54,20 @@ export default function Nav({ page, onNavigate }) {
               </button>
             ))}
           </div>
-          <button className="wf-nav-cta wf-mag" onClick={() => go({ page: 'fields' })}>
-            Begin
-          </button>
+          <div className="wf-nav-cluster">
+            {loggedIn ? (
+              <button className={`wf-navlink${page === 'admin' ? ' active' : ''}`} onClick={() => go({ page: 'admin' })}>
+                Admin
+              </button>
+            ) : (
+              <button className={`wf-navlink${page === 'login' ? ' active' : ''}`} onClick={() => go({ page: 'login' })}>
+                Sign in
+              </button>
+            )}
+            <button className="wf-nav-cta wf-mag" onClick={() => go({ page: 'fields' })}>
+              Begin
+            </button>
+          </div>
         </div>
 
         <button
@@ -69,7 +83,7 @@ export default function Nav({ page, onNavigate }) {
       </div>
 
       <div className={`wf-mobile-menu${menuOpen ? ' open' : ''}`}>
-        {LINKS.map((l, i) => (
+        {NAV_LINKS.map((l, i) => (
           <button
             key={l.label}
             className="wf-mlink"
@@ -79,6 +93,35 @@ export default function Nav({ page, onNavigate }) {
             {l.label}
           </button>
         ))}
+        <button
+          className="wf-mlink"
+          onClick={() => {
+            setMenuOpen(false)
+            openChat()
+          }}
+        >
+          Chat with support
+        </button>
+        {loggedIn ? (
+          <>
+            <button className="wf-mlink" onClick={() => go({ page: 'admin' })}>
+              Admin panel
+            </button>
+            <button
+              className="wf-mlink"
+              onClick={() => {
+                setMenuOpen(false)
+                logout()
+              }}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <button className="wf-mlink" onClick={() => go({ page: 'login' })}>
+            Sign in
+          </button>
+        )}
         <button className="wf-mlink wf-mlink--cta" onClick={() => go({ page: 'fields' })}>
           Begin
         </button>

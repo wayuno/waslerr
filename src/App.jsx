@@ -1,14 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AudioProvider } from './audio/AudioProvider'
+import { StoreProvider, useStore } from './store/StoreProvider'
 import Nav from './components/Nav'
+import ChatWidget from './components/ChatWidget'
 import Home from './pages/Home'
 import Fields from './pages/Fields'
 import Method from './pages/Method'
+import Detail from './screens/Detail'
+import Checkout from './screens/Checkout'
+import Login from './screens/Login'
+import Admin from './screens/Admin'
+import Updates from './screens/Updates'
 
-export default function App() {
-  const [page, setPage] = useState('home')
-  const [fieldsCat, setFieldsCat] = useState('all')
-  const pendingSection = useRef(null)
+function Shell() {
+  const { page, navigate, fieldsCat } = useStore()
 
   // intro overlay — plays once on first load
   const [introLift, setIntroLift] = useState(false)
@@ -22,38 +27,8 @@ export default function App() {
     }
   }, [])
 
-  const onNavigate = useCallback(
-    (target) => {
-      const { page: p = 'home', section, cat } = target || {}
-      if (cat) setFieldsCat(cat)
-      if (p === page && (!cat || p !== 'fields')) {
-        if (section) document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' })
-        else window.scrollTo({ top: 0, behavior: 'smooth' })
-        return
-      }
-      pendingSection.current = section || null
-      setPage(p)
-    },
-    [page],
-  )
-
-  // on page change: jump to top, or to a requested section once it has rendered
-  useEffect(() => {
-    const id = pendingSection.current
-    if (id) {
-      pendingSection.current = null
-      requestAnimationFrame(() => {
-        const el = document.getElementById(id)
-        if (el) el.scrollIntoView({ behavior: 'auto' })
-        else window.scrollTo(0, 0)
-      })
-    } else {
-      window.scrollTo(0, 0)
-    }
-  }, [page, fieldsCat])
-
   return (
-    <AudioProvider>
+    <>
       {!introDone && (
         <div className={`wf-intro${introLift ? ' lift' : ''}`}>
           <span className="wf-intro-logo">W</span>
@@ -64,11 +39,28 @@ export default function App() {
         </div>
       )}
 
-      <Nav page={page} onNavigate={onNavigate} />
+      <Nav />
 
-      {page === 'home' && <Home onNavigate={onNavigate} />}
-      {page === 'fields' && <Fields key={`fields-${fieldsCat}`} onNavigate={onNavigate} initialCat={fieldsCat} />}
-      {page === 'method' && <Method onNavigate={onNavigate} />}
+      {page === 'home' && <Home onNavigate={navigate} />}
+      {page === 'fields' && <Fields key={`fields-${fieldsCat}`} onNavigate={navigate} initialCat={fieldsCat} />}
+      {page === 'method' && <Method onNavigate={navigate} />}
+      {page === 'detail' && <Detail />}
+      {page === 'checkout' && <Checkout />}
+      {page === 'login' && <Login />}
+      {page === 'admin' && <Admin />}
+      {page === 'updates' && <Updates />}
+
+      <ChatWidget />
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <AudioProvider>
+      <StoreProvider>
+        <Shell />
+      </StoreProvider>
     </AudioProvider>
   )
 }

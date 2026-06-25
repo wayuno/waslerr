@@ -188,3 +188,81 @@ export const community = {
   discord: 'https://discord.gg/waslerrfields',
   email: 'mailto:hello@waslerrfields.com?subject=1%3A1%20with%20the%20creator',
 }
+
+// --- Detail page: generic per-field benefits ---
+export const fieldBenefits = [
+  'Silent subliminal layer engineered for nightly looping',
+  'Akashic carrier tuned to a calm delta-state',
+  'Desire Code affirmations written in present tense',
+  'Lifetime access and free field updates',
+]
+
+// --- "What's new" changelog ---
+export const updates = [
+  {
+    date: 'Jun 24, 2026',
+    tag: 'NEW FIELD',
+    title: 'Valentine Ultimate Male Aura is live',
+    body: 'Our most requested Desire Code yet — a magnetic masculine presence layered over a fresh Akashic carrier.',
+  },
+  {
+    date: 'Jun 18, 2026',
+    tag: 'ENGINE',
+    title: 'Akashic engine v3',
+    body: 'Rebuilt carrier rendering for cleaner sub-bass and longer silent layers. Every existing Akashic field updated free.',
+  },
+  {
+    date: 'Jun 09, 2026',
+    tag: 'COMMUNITY',
+    title: '50,000 listeners across 60 countries',
+    body: 'Custom field requests now open for Inner Circle members.',
+  },
+  {
+    date: 'May 30, 2026',
+    tag: 'NEW FIELD',
+    title: 'Wealth Magnetism Field',
+    body: 'Abundance encoding with a decisiveness sub-layer. Built for daily morning loops.',
+  },
+]
+
+// --- Admin: stats + revenue chart ---
+export const adminMeta = {
+  revenue: '$48,920',
+  listeners: '50,142',
+}
+export const revenueBars = [
+  { m: 'Jan', v: 28 },
+  { m: 'Feb', v: 34 },
+  { m: 'Mar', v: 30 },
+  { m: 'Apr', v: 39 },
+  { m: 'May', v: 44 },
+  { m: 'Jun', v: 49 },
+]
+
+// --- Admin: extra catalogue fields beyond the original handoff set ---
+export const extraFields = [
+  {
+    id: 'wealth-magnetism',
+    title: 'Wealth Magnetism Field',
+    line: 'wealth',
+    price: '$180',
+    freq: 174,
+    desc: 'A deep frequency field that encodes abundance, decisiveness and money magnetism directly into the subconscious.',
+  },
+  {
+    id: 'unshakable-confidence',
+    title: 'Unshakable Confidence',
+    line: 'desire',
+    price: '$130',
+    freq: 201,
+    desc: 'Layered Desire Code affirmations that rebuild self-worth, eye contact and the calm authority of a grounded presence.',
+  },
+  {
+    id: 'deep-sleep-reset',
+    title: 'Deep Sleep Reset',
+    line: 'akashic',
+    price: '$75',
+    freq: 172,
+    desc: 'A gentle Akashic field tuned for delta-state recovery — fall asleep faster and wake reprogrammed.',
+  },
+]

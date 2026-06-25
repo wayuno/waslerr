@@ -73,3 +73,60 @@ export const TikTokIcon = ({ size = 15 }) => (
     <path d="M16.5 2c.3 2.2 1.5 3.6 3.7 3.8v2.6c-1.3.1-2.5-.3-3.7-1v6.6c0 4-2.9 6.4-6.3 5.7-3-.6-4.6-3.6-3.7-6.5.8-2.5 3.2-3.8 5.7-3.4v2.8c-.4-.1-.8-.2-1.3-.1-1.2.1-2 1-1.9 2.2.1 1.2 1.1 2 2.4 1.8 1.1-.2 1.8-1.1 1.8-2.4V2h3.6z" />
   </svg>
 )
+
+export const ChatIconBubble = ({ size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <path d="M21 11.5a8.4 8.4 0 0 1-11.7 7.7L3 21l1.8-6.3A8.4 8.4 0 1 1 21 11.5z" />
+    <circle cx="8.5" cy="11.5" r="1" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="11.5" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15.5" cy="11.5" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+export const CloseIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+)
+
+export const SendIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+    <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
+  </svg>
+)
+
+export const PlusIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+
+export const TrashIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+  </svg>
+)
+
+export const StarRow = ({ count = 5 }) => <span aria-hidden="true">{'★'.repeat(count)}</span>
+
+// PayPal "P" mark
+export const PayPalMark = ({ size = 26 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M8.3 20.5 9 16.6h2.9c3.6 0 6.2-1.7 6.9-5 .6-2.8-.8-4.5-3.6-4.5H9.4c-.4 0-.8.3-.9.8L6.2 20.1c0 .2.1.4.4.4h1.7z"
+      fill="#0d0b07"
+      opacity="0.9"
+    />
+    <path
+      d="M10.5 18.5 11.2 14h2.4c2.9 0 5-1.4 5.6-4.1.5-2.3-.6-3.7-3-3.7h-4.6c-.4 0-.7.3-.8.7L8.6 18.1c0 .2.1.4.3.4h1.6z"
+      fill="#0d0b07"
+    />
+  </svg>
+)
+
+// Binance gold diamond (rotated squares)
+export const BinanceMark = ({ size = 26 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 3.3 14.4 5.7 12 8.1 9.6 5.7 12 3.3zM6.3 9 8.7 11.4 6.3 13.8 3.9 11.4 6.3 9zm11.4 0 2.4 2.4-2.4 2.4-2.4-2.4 2.4-2.4zM12 9.6 14.4 12 12 14.4 9.6 12 12 9.6zm0 5.7 2.4 2.4-2.4 2.4-2.4-2.4 2.4-2.4z" />
+  </svg>
+)
