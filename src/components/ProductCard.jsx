@@ -15,7 +15,8 @@ export default function ProductCard({ field, variant = 'default' }) {
   const [open, setOpen] = useState(false)
   const cardRef = useRef(null)
   const glowRef = useRef(null)
-  const free = variant === 'free'
+  const free = variant === 'free' || !field.price
+  const img = field.image_url || field.img
   const playing = activeId === field.id
   const cat = CATS[field.line] || CATS.desire
   const phClass = field.line === 'akashic' ? 'wf-card-ph-akashic' : field.line === 'wealth' ? 'wf-card-ph-wealth' : 'wf-card-ph-desire'
@@ -64,8 +65,8 @@ export default function ProductCard({ field, variant = 'default' }) {
     >
       <div ref={glowRef} className="wf-card-glow" />
       <div className="wf-card-mediawrap">
-        {field.img ? (
-          <img className={`wf-card-media${free ? ' free' : ''}`} src={field.img} alt={field.title} />
+        {img ? (
+          <img className={`wf-card-media${free ? ' free' : ''}`} src={img} alt={field.title} />
         ) : (
           <div className={`wf-card-media${free ? ' free' : ''} wf-card-media-ph ${phClass}`} aria-hidden="true">
             W

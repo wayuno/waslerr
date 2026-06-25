@@ -35,7 +35,11 @@ export default function Admin() {
   useMagnetic(ref)
 
   const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '' })
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
   const [reply, setReply] = useState('')
+  const fileInputRef = useRef(null)
   const threadRef = useRef(null)
 
   useEffect(() => {
@@ -84,17 +88,31 @@ export default function Admin() {
   ]
   const maxBar = Math.max(...revenueBars.map((b) => b.v))
 
-  const publish = (e) => {
+  const publish = async (e) => {
     e.preventDefault()
-    if (!form.title.trim()) return
-    const price = form.price.trim()
-    addProduct({
-      title: form.title.trim(),
-      line: form.category.toLowerCase(),
-      price: price ? (price.startsWith('$') ? price : `$${price}`) : '$0',
-      desc: form.desc.trim() || 'A new Waslerr field.',
-    })
+    setErr('')
+    if (!form.title.trim()) {
+      setErr('Title is required.')
+      return
+    }
+    setBusy(true)
+    const res = await addProduct(
+      {
+        title: form.title.trim(),
+        line: form.category.toLowerCase(),
+        price: parseFloat(String(form.price).replace(/[^0-9.]/g, '')) || 0,
+        description: form.desc.trim() || 'A new Waslerr field.',
+      },
+      file,
+    )
+    setBusy(false)
+    if (res?.error) {
+      setErr(res.error)
+      return
+    }
     setForm({ title: '', category: 'DESIRE', price: '', desc: '' })
+    setFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const submitReply = (e) => {
@@ -234,8 +252,19 @@ export default function Admin() {
                   placeholder="What does this field encode?"
                 />
               </label>
-              <button type="submit" className="wf-form-submit wf-mag">
-                <PlusIcon /> Publish field
+              <label className="wf-field">
+                <span className="wf-field-label">Artwork {file ? `· ${file.name}` : '(optional)'}</span>
+                <input
+                  ref={fileInputRef}
+                  className="wf-input wf-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+              </label>
+              {err && <p className="wf-auth-error" style={{ margin: 0 }}>{err}</p>}
+              <button type="submit" className="wf-form-submit wf-mag" disabled={busy}>
+                {busy ? 'Publishing…' : (<><PlusIcon /> Publish field</>)}
               </button>
             </form>
           </div>

@@ -5,23 +5,37 @@ import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 
 export default function Login() {
-  const { login } = useStore()
+  const { signIn, signUp } = useStore()
   const [mode, setMode] = useState('signin') // 'signin' | 'signup'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
+  const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
+  const [busy, setBusy] = useState(false)
   const ref = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
 
   const signup = mode === 'signup'
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    if (!email.trim()) return
-    // admin email + correct password → real admin session (verified server-side);
-    // anything else → demo customer session
-    login(email.trim(), pass)
+    setError('')
+    setInfo('')
+    if (!email.trim() || !pass) {
+      setError('Enter your email and password.')
+      return
+    }
+    setBusy(true)
+    const res = signup ? await signUp(email, pass) : await signIn(email, pass)
+    setBusy(false)
+    if (res?.error) {
+      setError(res.error)
+    } else if (res?.needsConfirm) {
+      setInfo('Check your inbox to confirm your email, then sign in.')
+      setMode('signin')
+    }
   }
 
   return (
@@ -76,8 +90,11 @@ export default function Login() {
             />
           </label>
 
-          <button type="submit" className="wf-form-submit wf-mag" style={{ width: '100%', marginTop: 6 }}>
-            {signup ? 'Create account' : 'Enter the field'}
+          {error && <p className="wf-auth-error">{error}</p>}
+          {info && <p className="wf-auth-info">{info}</p>}
+
+          <button type="submit" className="wf-form-submit wf-mag" style={{ width: '100%', marginTop: 6 }} disabled={busy}>
+            {busy ? 'Please wait…' : signup ? 'Create account' : 'Enter the field'}
           </button>
 
           <p className="wf-form-note" style={{ marginTop: 16 }}>
@@ -85,7 +102,11 @@ export default function Login() {
             <button
               type="button"
               className="wf-auth-toggle"
-              onClick={() => setMode(signup ? 'signin' : 'signup')}
+              onClick={() => {
+                setMode(signup ? 'signin' : 'signup')
+                setError('')
+                setInfo('')
+              }}
             >
               {signup ? 'Sign in' : 'Create an account'}
             </button>

@@ -28,6 +28,7 @@ export default function Detail() {
   const f = selectedProduct
   const cat = CATS[f.line] || CATS.desire
   const free = !f.price
+  const img = f.image_url || f.img
   const playing = activeId === f.id
 
   return (
@@ -41,8 +42,8 @@ export default function Detail() {
 
         <div className="wf-detail-grid">
           <div className="wf-detail-media" data-reveal>
-            {f.img ? (
-              <img src={f.img} alt={f.title} className="wf-detail-img" />
+            {img ? (
+              <img src={img} alt={f.title} className="wf-detail-img" />
             ) : (
               <div className={`wf-detail-ph ${cat.ph}`} aria-hidden="true">
                 W

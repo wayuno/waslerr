@@ -1,15 +1,36 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { allFields, freeFields, topPicks } from '../data/content'
+import { allFields, freeFields } from '../data/content'
+import { getSupabase, loadConfig, normalizeProduct } from '../lib/supabase'
 
-// Single source of truth for routing, catalogue, auth, payment and the shared
-// support thread. Admin auth is REAL (server-side): logging in as admin requires
-// the secret password checked by the backend, which returns a signed token.
-// Catalogue + chat are still demo/in-memory (reset on reload).
+// Single source of truth for routing, catalogue, auth, payment and the support
+// thread. Auth + products are REAL (Supabase): sessions persist across reloads,
+// admin is gated to ADMIN_EMAIL, and product writes go through the backend.
+// (Coupons + persistent chat arrive in Phase 2.)
 const StoreCtx = createContext(null)
 
-const TOKEN_KEY = 'wf_admin_token'
+// Fallback catalogue used only when Supabase isn't configured (e.g. local dev
+// without keys) so the storefront is never blank.
+const SEED = [...allFields, ...freeFields].map((f) => {
+  const priceNum = f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
+  return {
+    id: f.id,
+    title: f.title,
+    line: f.line,
+    price: priceNum > 0 ? `$${priceNum}` : undefined,
+    priceNum,
+    desc: f.desc,
+    image_url: f.img || null,
+    freq: f.freq || 200,
+  }
+})
 
-const initialProducts = () => allFields.map((f) => ({ ...f }))
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result).split(',')[1])
+    r.onerror = reject
+    r.readAsDataURL(file)
+  })
 
 export function StoreProvider({ children }) {
   const [page, setPage] = useState('home')
@@ -17,7 +38,7 @@ export function StoreProvider({ children }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const [selectedId, setSelectedId] = useState(null)
-  const [products, setProducts] = useState(initialProducts)
+  const [products, setProducts] = useState(SEED)
 
   const [payMethod, setPayMethod] = useState('paypal')
   const [payDone, setPayDone] = useState(false)
@@ -26,8 +47,8 @@ export function StoreProvider({ children }) {
   const [loggedIn, setLoggedIn] = useState(false)
   const [user, setUser] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [authReady, setAuthReady] = useState(false)
   const [adminTab, setAdminTab] = useState('stats')
-  const tokenRef = useRef(typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null)
 
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMsgs, setChatMsgs] = useState([
@@ -35,7 +56,9 @@ export function StoreProvider({ children }) {
   ])
 
   const pendingSection = useRef(null)
-  const idCounter = useRef(1)
+  const supabaseRef = useRef(null)
+  const adminEmailRef = useRef('')
+  const accessTokenRef = useRef(null)
 
   const navigate = useCallback(
     (target) => {
@@ -55,7 +78,6 @@ export function StoreProvider({ children }) {
     [page],
   )
 
-  // jump to top, or to a requested section once the page has rendered
   useEffect(() => {
     const id = pendingSection.current
     if (id) {
@@ -70,11 +92,15 @@ export function StoreProvider({ children }) {
     }
   }, [page, fieldsCat])
 
-  // catalogue lookup across managed products + free fields + top picks
-  const findProduct = useCallback(
-    (id) => [...products, ...freeFields, ...topPicks].find((f) => f.id === id) || null,
-    [products],
-  )
+  // ---- products ----
+  const reloadProducts = useCallback(async (client) => {
+    const supabase = client || supabaseRef.current
+    if (!supabase) return
+    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: true })
+    if (!error && Array.isArray(data) && data.length) setProducts(data.map(normalizeProduct))
+  }, [])
+
+  const findProduct = useCallback((id) => products.find((p) => p.id === id) || null, [products])
   const selectedProduct = selectedId != null ? findProduct(selectedId) : null
 
   const openDetail = useCallback(
@@ -84,7 +110,6 @@ export function StoreProvider({ children }) {
     },
     [navigate],
   )
-
   const goCheckout = useCallback(
     (id) => {
       setPayDone(false)
@@ -92,66 +117,95 @@ export function StoreProvider({ children }) {
     },
     [navigate],
   )
-
   const pay = useCallback(() => {
     setOrderId('WF-' + (1000 + Math.floor(Math.random() * 9000)))
     setPayDone(true)
   }, [])
 
-  // Admin login is verified by the backend (secret password). On success we get
-  // a signed token and unlock the dashboard. Anything else is a regular
-  // (demo) customer session with no admin access.
-  const login = useCallback(
-    async (email, password) => {
-      const mail = (email || '').trim()
-      try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: mail, password: password || '' }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          tokenRef.current = data.token
-          try {
-            localStorage.setItem(TOKEN_KEY, data.token)
-          } catch {
-            /* ignore */
-          }
-          setUser(data.email || mail)
-          setLoggedIn(true)
-          setIsAdmin(true)
-          navigate('admin')
-          return { admin: true }
-        }
-      } catch {
-        /* backend unreachable — fall through to a demo customer session */
-      }
-      // regular customer (demo) session — no admin; drop any stale admin token
-      tokenRef.current = null
-      try {
-        localStorage.removeItem(TOKEN_KEY)
-      } catch {
-        /* ignore */
-      }
-      setUser(mail)
+  // ---- auth (Supabase) ----
+  const applySession = useCallback((session) => {
+    accessTokenRef.current = session?.access_token || null
+    const u = session?.user
+    if (u) {
+      const email = (u.email || '').toLowerCase()
+      setUser(email)
       setLoggedIn(true)
+      setIsAdmin(!!adminEmailRef.current && email === adminEmailRef.current)
+    } else {
+      setUser(null)
+      setLoggedIn(false)
       setIsAdmin(false)
-      navigate('home')
-      return { admin: false }
+    }
+  }, [])
+
+  useEffect(() => {
+    let sub
+    let cancelled = false
+    ;(async () => {
+      const cfg = await loadConfig()
+      if (cancelled) return
+      adminEmailRef.current = (cfg.adminEmail || '').toLowerCase()
+      const supabase = await getSupabase()
+      if (cancelled) return
+      supabaseRef.current = supabase
+      if (!supabase) {
+        setAuthReady(true)
+        return
+      }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (cancelled) return
+      applySession(session)
+      const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => applySession(s))
+      sub = listener?.subscription
+      setAuthReady(true)
+      reloadProducts(supabase)
+    })()
+    return () => {
+      cancelled = true
+      sub?.unsubscribe?.()
+    }
+  }, [applySession, reloadProducts])
+
+  const getToken = useCallback(async () => {
+    const supabase = supabaseRef.current
+    if (!supabase) return null
+    const { data } = await supabase.auth.getSession()
+    return data.session?.access_token || accessTokenRef.current
+  }, [])
+
+  const signIn = useCallback(
+    async (email, password) => {
+      const supabase = supabaseRef.current
+      if (!supabase) return { error: 'Sign-in is not available yet — Supabase isn’t configured.' }
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (error) return { error: error.message }
+      const mail = (data.user?.email || '').toLowerCase()
+      navigate(adminEmailRef.current && mail === adminEmailRef.current ? 'admin' : 'home')
+      return { ok: true }
     },
     [navigate],
   )
 
-  const logout = useCallback(() => {
-    tokenRef.current = null
-    try {
-      localStorage.removeItem(TOKEN_KEY)
-    } catch {
-      /* ignore */
-    }
-    setLoggedIn(false)
+  const signUp = useCallback(
+    async (email, password) => {
+      const supabase = supabaseRef.current
+      if (!supabase) return { error: 'Sign-up is not available yet — Supabase isn’t configured.' }
+      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+      if (error) return { error: error.message }
+      if (!data.session) return { ok: true, needsConfirm: true }
+      navigate('home')
+      return { ok: true }
+    },
+    [navigate],
+  )
+
+  const logout = useCallback(async () => {
+    const supabase = supabaseRef.current
+    if (supabase) await supabase.auth.signOut()
     setUser(null)
+    setLoggedIn(false)
     setIsAdmin(false)
     navigate('home')
   }, [navigate])
@@ -161,43 +215,52 @@ export function StoreProvider({ children }) {
     else navigate('login')
   }, [loggedIn, isAdmin, navigate])
 
-  // restore an admin session from a stored token (verified server-side)
-  useEffect(() => {
-    const token = tokenRef.current
-    if (!token) return
-    let cancelled = false
-    fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (cancelled) return
-        if (d && d.admin) {
-          setLoggedIn(true)
-          setUser(d.email)
-          setIsAdmin(true)
-        } else {
-          tokenRef.current = null
-          try {
-            localStorage.removeItem(TOKEN_KEY)
-          } catch {
-            /* ignore */
-          }
+  // ---- admin product CRUD (via backend, service-role) ----
+  const addProduct = useCallback(
+    async (form, file) => {
+      const token = await getToken()
+      if (!token) return { error: 'Not authorized.' }
+      try {
+        let image_url = form.image_url || null
+        if (file) {
+          const dataBase64 = await fileToBase64(file)
+          const up = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+          })
+          if (!up.ok) return { error: 'Image upload failed.' }
+          image_url = (await up.json()).url
         }
+        const res = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ ...form, image_url }),
+        })
+        if (!res.ok) return { error: 'Could not publish field.' }
+        await reloadProducts()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
+    },
+    [getToken, reloadProducts],
+  )
+
+  const deleteProduct = useCallback(
+    async (id) => {
+      const token = await getToken()
+      if (!token) return
+      const res = await fetch('/api/admin/products/' + id, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
+      if (res.ok) await reloadProducts()
+    },
+    [getToken, reloadProducts],
+  )
 
-  const addProduct = useCallback((p) => {
-    const id = 'wf-new-' + idCounter.current++
-    setProducts((prev) => [{ id, freq: 200, ...p }, ...prev])
-  }, [])
-
-  const deleteProduct = useCallback((id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id))
-  }, [])
-
+  // ---- support chat (in-memory; persisted in Phase 2) ----
   const sendUserChat = useCallback((text) => {
     const t = text.trim()
     if (!t) return
@@ -205,10 +268,7 @@ export function StoreProvider({ children }) {
     setTimeout(() => {
       setChatMsgs((prev) => [
         ...prev,
-        {
-          from: 'support',
-          text: 'Thanks for reaching out — a guide will be with you shortly. Which field are you drawn to?',
-        },
+        { from: 'support', text: 'Thanks for reaching out — a guide will be with you shortly. Which field are you drawn to?' },
       ])
     }, 1300)
   }, [])
@@ -228,6 +288,7 @@ export function StoreProvider({ children }) {
     menuOpen,
     setMenuOpen,
     products,
+    reloadProducts,
     addProduct,
     deleteProduct,
     selectedId,
@@ -243,7 +304,9 @@ export function StoreProvider({ children }) {
     loggedIn,
     user,
     isAdmin,
-    login,
+    authReady,
+    signIn,
+    signUp,
     logout,
     requireAdmin,
     adminTab,

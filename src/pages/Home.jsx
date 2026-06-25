@@ -6,7 +6,8 @@ import JoinCards from '../components/JoinCards'
 import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { topPicks, freeFields, lines, reviews, faqs, tickerItems } from '../data/content'
+import { useStore } from '../store/StoreProvider'
+import { lines, reviews, faqs, tickerItems } from '../data/content'
 import { ArrowRight, ArrowDown } from '../components/icons'
 
 const EMBERS = [
@@ -75,12 +76,16 @@ function FaqItem({ q, a, open, onToggle }) {
 }
 
 export default function Home({ onNavigate }) {
+  const { products } = useStore()
   const ref = useRef(null)
   const orbitRef = useRef(null)
   const heroRef = useRef(null)
   const [faqOpen, setFaqOpen] = useState(-1)
   useReveal(ref)
   useMagnetic(ref)
+
+  const topPicks = products.filter((p) => p.priceNum > 0).slice(0, 3)
+  const freeFields = products.filter((p) => p.priceNum === 0).slice(0, 3)
 
   // hero parallax on the orbit field
   useEffect(() => {

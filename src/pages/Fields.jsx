@@ -3,7 +3,8 @@ import Background from '../components/Background'
 import ProductCard from '../components/ProductCard'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { allFields, community } from '../data/content'
+import { useStore } from '../store/StoreProvider'
+import { community } from '../data/content'
 import { YouTubeIcon, DiscordIcon, ChatIcon } from '../components/icons'
 
 const CHIPS = [
@@ -14,11 +15,12 @@ const CHIPS = [
 const LABELS = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field' }
 
 export default function Fields({ onNavigate, initialCat = 'all' }) {
+  const { products } = useStore()
   const ref = useRef(null)
   const gridRef = useRef(null)
   const tokRef = useRef(0)
   const [cat, setCat] = useState(['desire', 'akashic'].includes(initialCat) ? initialCat : 'all')
-  const [count, setCount] = useState(allFields.length)
+  const [count, setCount] = useState(products.length)
   useReveal(ref)
   useMagnetic(ref)
 
@@ -49,7 +51,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
       }
     })
     setCount(shown)
-  }, [cat])
+  }, [cat, products])
 
   return (
     <div className="wf-app" ref={ref}>
@@ -87,7 +89,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
 
       <section className="wf-section" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 28px 100px' }}>
         <div className="wf-grid" ref={gridRef}>
-          {allFields.map((f) => (
+          {products.map((f) => (
             <ProductCard key={f.id} field={f} />
           ))}
         </div>

@@ -13,7 +13,7 @@ const NAV_LINKS = [
 ]
 
 export default function Nav() {
-  const { page, navigate, loggedIn, isAdmin, logout, openChat } = useStore()
+  const { page, navigate, loggedIn, isAdmin, authReady, logout, openChat } = useStore()
   const [scrolled, setScrolled] = useState(page !== 'home')
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -55,17 +55,17 @@ export default function Nav() {
             ))}
           </div>
           <div className="wf-nav-cluster">
-            {!loggedIn && (
+            {authReady && !loggedIn && (
               <button className={`wf-navlink${page === 'login' ? ' active' : ''}`} onClick={() => go({ page: 'login' })}>
                 Sign in
               </button>
             )}
-            {loggedIn && isAdmin && (
+            {authReady && loggedIn && isAdmin && (
               <button className={`wf-navlink${page === 'admin' ? ' active' : ''}`} onClick={() => go({ page: 'admin' })}>
                 Admin
               </button>
             )}
-            {loggedIn && !isAdmin && (
+            {authReady && loggedIn && !isAdmin && (
               <button
                 className="wf-navlink"
                 onClick={() => {
@@ -114,17 +114,17 @@ export default function Nav() {
         >
           Chat with support
         </button>
-        {!loggedIn && (
+        {authReady && !loggedIn && (
           <button className="wf-mlink" onClick={() => go({ page: 'login' })}>
             Sign in
           </button>
         )}
-        {loggedIn && isAdmin && (
+        {authReady && loggedIn && isAdmin && (
           <button className="wf-mlink" onClick={() => go({ page: 'admin' })}>
             Admin panel
           </button>
         )}
-        {loggedIn && (
+        {authReady && loggedIn && (
           <button
             className="wf-mlink"
             onClick={() => {

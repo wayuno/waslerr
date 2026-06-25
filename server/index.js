@@ -1,18 +1,21 @@
-// Waslerr Fields — tiny Node backend (zero dependencies).
-// Serves the built frontend (dist/) and a real, server-side admin auth API.
+// Waslerr Fields — Node backend (zero npm deps; uses global fetch + Supabase REST).
+// Serves the built frontend (dist/) and an admin API backed by Supabase.
 //
-// Admin access requires the secret ADMIN_PASSWORD (an env var that never ships
-// in the client bundle). On success the server returns an HMAC-signed token;
-// the dashboard is only unlocked when that token verifies here.
+// Auth model:
+//  - Users sign in via Supabase Auth in the browser (session persists).
+//  - Admin = the logged-in user whose email === ADMIN_EMAIL.
+//  - Privileged writes (add/delete product, upload image) go through this
+//    server: it verifies the caller's Supabase token AND that the email is the
+//    admin, then performs the write with the SERVICE_ROLE key (kept server-side).
 //
-// Env vars (set these in Railway → Variables):
-//   ADMIN_EMAIL     — the one email allowed to be admin
-//   ADMIN_PASSWORD  — the secret admin password (required for admin login)
-//   JWT_SECRET      — long random string used to sign tokens
-//   PORT            — provided automatically by Railway
+// Env (set in Railway → Variables):
+//   ADMIN_EMAIL
+//   NEXT_PUBLIC_SUPABASE_URL
+//   NEXT_PUBLIC_SUPABASE_ANON_KEY
+//   SUPABASE_SERVICE_ROLE_KEY
+//   PORT (Railway provides this)
 
 import http from 'node:http'
-import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(__dirname, '..', 'dist')
 
-// --- minimal .env loader (for local dev; Railway uses dashboard vars) ---
+// --- minimal .env loader for local dev (Railway uses dashboard vars) ---
 try {
   const envPath = path.join(__dirname, '..', '.env')
   if (fs.existsSync(envPath)) {
@@ -33,61 +36,28 @@ try {
   /* ignore */
 }
 
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
-const JWT_SECRET = process.env.JWT_SECRET || 'wf-dev-secret-change-me'
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/$/, '')
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const PORT = process.env.PORT || 8787
-const TOKEN_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days
 
-if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-  console.warn('[waslerr] ADMIN_EMAIL / ADMIN_PASSWORD not set — admin login is disabled until you set them.')
+if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {
+  console.warn('[waslerr] Supabase env not fully set — admin writes will be disabled until configured.')
 }
-if (JWT_SECRET === 'wf-dev-secret-change-me') {
-  console.warn('[waslerr] JWT_SECRET is using the insecure default — set a strong one in production.')
-}
-
-// --- token: HMAC-SHA256 signed payload (JWT-style, HS256) ---
-const b64url = (s) => Buffer.from(s).toString('base64url')
-const signToken = (payload) => {
-  const body = b64url(JSON.stringify(payload))
-  const sig = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('base64url')
-  return `${body}.${sig}`
-}
-const verifyToken = (token) => {
-  if (!token || typeof token !== 'string') return null
-  const [body, sig] = token.split('.')
-  if (!body || !sig) return null
-  const expected = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('base64url')
-  const a = Buffer.from(sig)
-  const b = Buffer.from(expected)
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString())
-    if (payload.exp && Date.now() > payload.exp) return null
-    return payload
-  } catch {
-    return null
-  }
-}
-const safeEqual = (a, b) => {
-  const ba = Buffer.from(String(a))
-  const bb = Buffer.from(String(b))
-  if (ba.length !== bb.length) return false
-  return crypto.timingSafeEqual(ba, bb)
-}
+if (!ADMIN_EMAIL) console.warn('[waslerr] ADMIN_EMAIL not set — no one can be admin.')
 
 const sendJson = (res, status, obj) => {
-  const data = JSON.stringify(obj)
   res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
-  res.end(data)
+  res.end(JSON.stringify(obj))
 }
 
-const readBody = (req) =>
+const readBody = (req, max = 1e6) =>
   new Promise((resolve) => {
     let raw = ''
     req.on('data', (c) => {
       raw += c
-      if (raw.length > 1e6) req.destroy()
+      if (raw.length > max) req.destroy()
     })
     req.on('end', () => {
       try {
@@ -99,6 +69,78 @@ const readBody = (req) =>
     req.on('error', () => resolve({}))
   })
 
+// Verify the caller's Supabase access token and return their email (or null).
+const getAuthedEmail = async (req) => {
+  const auth = req.headers['authorization'] || ''
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+  if (!token || !SUPABASE_URL || !ANON_KEY) return null
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: ANON_KEY },
+    })
+    if (!r.ok) return null
+    const u = await r.json()
+    return (u.email || '').trim().toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+const requireAdmin = async (req, res) => {
+  if (!ADMIN_EMAIL || !SERVICE_KEY) {
+    sendJson(res, 503, { error: 'admin_not_configured' })
+    return false
+  }
+  const email = await getAuthedEmail(req)
+  if (!email || email !== ADMIN_EMAIL) {
+    sendJson(res, 403, { error: 'forbidden' })
+    return false
+  }
+  return true
+}
+
+// Supabase REST helpers (service role bypasses RLS) --------------
+const sbHeaders = () => ({
+  apikey: SERVICE_KEY,
+  Authorization: `Bearer ${SERVICE_KEY}`,
+  'Content-Type': 'application/json',
+})
+
+const insertProduct = async (body) => {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+    method: 'POST',
+    headers: { ...sbHeaders(), Prefer: 'return=representation' },
+    body: JSON.stringify(body),
+  })
+  const data = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
+}
+
+const deleteProduct = async (id) => {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: sbHeaders(),
+  })
+  return { ok: r.ok, status: r.status }
+}
+
+const uploadImage = async (filename, contentType, buffer) => {
+  const safe = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${encodeURIComponent(safe)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      apikey: SERVICE_KEY,
+      'Content-Type': contentType || 'application/octet-stream',
+      'x-upsert': 'true',
+    },
+    body: buffer,
+  })
+  if (!r.ok) return { ok: false, status: r.status }
+  return { ok: true, publicUrl: `${SUPABASE_URL}/storage/v1/object/public/product-images/${safe}` }
+}
+
+// --- static file serving ---
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -112,7 +154,6 @@ const CONTENT_TYPES = {
   '.woff2': 'font/woff2',
   '.webp': 'image/webp',
 }
-
 const serveStatic = (req, res) => {
   if (!fs.existsSync(DIST)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' })
@@ -121,9 +162,7 @@ const serveStatic = (req, res) => {
   }
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0])
   let filePath = path.join(DIST, urlPath)
-  // prevent path traversal
   if (!filePath.startsWith(DIST)) filePath = path.join(DIST, 'index.html')
-  // SPA: no file / no extension → index.html
   if (!path.extname(filePath) || !fs.existsSync(filePath)) filePath = path.join(DIST, 'index.html')
   fs.readFile(filePath, (err, buf) => {
     if (err) {
@@ -138,33 +177,63 @@ const serveStatic = (req, res) => {
 
 const server = http.createServer(async (req, res) => {
   const url = (req.url || '').split('?')[0]
+  const method = req.method || 'GET'
 
   if (url === '/api/health') return sendJson(res, 200, { ok: true })
 
-  // admin login — verify email + secret password, issue signed token
-  if (url === '/api/admin/login') {
-    if (req.method !== 'POST') return sendJson(res, 405, { error: 'method_not_allowed' })
-    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return sendJson(res, 401, { error: 'admin_not_configured' })
-    const { email, password } = await readBody(req)
-    const emailOk = (email || '').trim().toLowerCase() === ADMIN_EMAIL
-    const passOk = safeEqual(password || '', ADMIN_PASSWORD)
-    if (!emailOk || !passOk) return sendJson(res, 401, { error: 'invalid_credentials' })
-    const token = signToken({ email: ADMIN_EMAIL, role: 'admin', exp: Date.now() + TOKEN_TTL })
-    return sendJson(res, 200, { token, email: ADMIN_EMAIL })
+  // public config for the browser to init Supabase + know who the admin is
+  if (url === '/api/config') {
+    return sendJson(res, 200, {
+      supabaseUrl: SUPABASE_URL,
+      supabaseAnonKey: ANON_KEY,
+      adminEmail: ADMIN_EMAIL,
+    })
   }
 
-  // verify a token (used by the dashboard on load / on gate)
-  if (url === '/api/admin/me') {
-    const auth = req.headers['authorization'] || ''
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-    const payload = verifyToken(token)
-    if (!payload || payload.role !== 'admin') return sendJson(res, 401, { error: 'unauthorized' })
-    return sendJson(res, 200, { admin: true, email: payload.email })
+  // upload a product image (admin only) → returns a public URL
+  if (url === '/api/admin/upload' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const { filename, contentType, dataBase64 } = await readBody(req, 12e6)
+    if (!dataBase64) return sendJson(res, 400, { error: 'no_file' })
+    try {
+      const buffer = Buffer.from(dataBase64, 'base64')
+      const out = await uploadImage(filename || 'image', contentType, buffer)
+      if (!out.ok) return sendJson(res, 502, { error: 'upload_failed' })
+      return sendJson(res, 200, { url: out.publicUrl })
+    } catch {
+      return sendJson(res, 500, { error: 'upload_error' })
+    }
+  }
+
+  // create a product (admin only)
+  if (url === '/api/admin/products' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const title = (b.title || '').trim()
+    if (!title) return sendJson(res, 400, { error: 'title_required' })
+    const row = {
+      title,
+      line: ['desire', 'akashic', 'wealth'].includes((b.line || '').toLowerCase()) ? b.line.toLowerCase() : 'desire',
+      price: Number(b.price) || 0,
+      description: (b.description || '').trim(),
+      image_url: b.image_url || null,
+    }
+    const out = await insertProduct(row)
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
+    return sendJson(res, 200, { product: out.data })
+  }
+
+  // delete a product (admin only)
+  if (url.startsWith('/api/admin/products/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    const id = url.split('/').pop()
+    const out = await deleteProduct(id)
+    if (!out.ok) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
   }
 
   if (url.startsWith('/api/')) return sendJson(res, 404, { error: 'not_found' })
 
-  // everything else → static frontend
   return serveStatic(req, res)
 })
 
