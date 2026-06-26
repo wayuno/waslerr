@@ -11,7 +11,8 @@ const METHODS = [
 ]
 
 const priceOf = (f) => (f && f.priceNum != null ? Number(f.priceNum) : f && f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0)
-const catLabel = (line) => (line === 'akashic' ? 'Akashic' : line === 'wealth' ? 'Wealth' : 'Desire')
+const KNOWN = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
+const catLabel = (line) => KNOWN[line] || (line ? line.charAt(0).toUpperCase() + line.slice(1) : 'Desire')
 
 export default function Checkout() {
   const { selectedProduct, payMethod, setPayMethod, payDone, orderId, pay, navigate, openDetail, appliedCoupon, applyCoupon, clearCoupon } =

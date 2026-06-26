@@ -7,19 +7,17 @@ import { useStore } from '../store/StoreProvider'
 import { community } from '../data/content'
 import { YouTubeIcon, DiscordIcon, ChatIcon } from '../components/icons'
 
-const CHIPS = [
-  { cat: 'all', label: 'All fields' },
-  { cat: 'desire', label: 'Desire Code' },
-  { cat: 'akashic', label: 'Akashic Field' },
-]
-const LABELS = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field' }
+const KNOWN_LABELS = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'Wealth' }
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 
 export default function Fields({ onNavigate, initialCat = 'all' }) {
   const { products } = useStore()
   const ref = useRef(null)
   const gridRef = useRef(null)
   const tokRef = useRef(0)
-  const [cat, setCat] = useState(['desire', 'akashic'].includes(initialCat) ? initialCat : 'all')
+  const cats = [...new Set(products.map((p) => p.line).filter(Boolean))]
+  const CHIPS = [{ cat: 'all', label: 'All fields' }, ...cats.map((c) => ({ cat: c, label: KNOWN_LABELS[c] || cap(c) }))]
+  const [cat, setCat] = useState(cats.includes(initialCat) ? initialCat : 'all')
   const [count, setCount] = useState(products.length)
   useReveal(ref)
   useMagnetic(ref)
@@ -82,7 +80,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
           ))}
         </div>
         <div className="wf-count" data-reveal style={{ marginBottom: 8 }}>
-          {count} {LABELS[cat]}
+          {count} {KNOWN_LABELS[cat] || cap(cat)}
           {cat === 'all' ? '' : ' fields'}
         </div>
       </section>

@@ -2167,10 +2167,24 @@ a {
 .wf-utable-head,
 .wf-urow {
   display: grid;
-  grid-template-columns: 2.2fr 1fr 1fr 0.9fr 44px;
+  grid-template-columns: 2fr 0.9fr 0.9fr 1.2fr 44px;
   align-items: center;
   gap: 12px;
 }
+.wf-uaction { display: flex; }
+.wf-role-btn {
+  font-family: var(--wf-sans);
+  font-size: 12px;
+  color: var(--wf-silver);
+  background: var(--wf-glass-2);
+  border: 1px solid var(--wf-rule);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.3s, color 0.3s;
+}
+.wf-role-btn:hover { border-color: rgba(212, 175, 55, 0.4); color: var(--wf-gold); }
+.wf-muted-mini { color: var(--wf-mute); }
 .wf-utable-head {
   padding: 0 14px 6px;
   font-family: var(--wf-mono);
@@ -2231,6 +2245,8 @@ a {
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s, transform 0.3s;
 }
 .wf-journal-card .wf-tag { align-self: flex-start; margin-bottom: 16px; }
+.wf-journal-img { width: 100%; height: 150px; object-fit: cover; border-radius: 12px; margin-bottom: 16px; }
+.wf-update-img { width: 100%; max-width: 360px; height: 180px; object-fit: cover; border-radius: 12px; margin-top: 14px; }
 .wf-journal-title {
   font-family: var(--wf-serif);
   font-weight: 500;

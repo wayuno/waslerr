@@ -29,6 +29,7 @@ const LAYERS = [
   { n: '03', title: 'Frequency Carrier', body: 'Studio-mastered sub-bass and silent layers tuned for nightly headphone looping.' },
 ]
 const META_CHIPS = ['22 min loop', '3 engineered layers', 'FLAC', 'MP3', 'Lifetime']
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 const TRUST = ['100% free · no card required', 'Instant download', 'FLAC + MP3 included', 'Loved by 50,000+ listeners']
 
 const hashStr = (s) => {
@@ -93,7 +94,7 @@ export default function Detail() {
   if (!selectedProduct) return null
 
   const f = selectedProduct
-  const cat = CATS[f.line] || CATS.desire
+  const cat = CATS[f.line] || { label: cap(f.line), cls: '', ph: 'wf-card-ph-desire' }
   const free = !f.price
   const img = f.image_url || f.img
   const playing = activeId === f.id

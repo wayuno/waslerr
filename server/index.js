@@ -70,8 +70,8 @@ const readBody = (req, max = 1e6) =>
     req.on('error', () => resolve({}))
   })
 
-// Verify the caller's Supabase access token and return their email (or null).
-const getAuthedEmail = async (req) => {
+// Verify the caller's Supabase access token; return { id, email, role } or null.
+const getAuthedUser = async (req) => {
   const auth = req.headers['authorization'] || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
   if (!token || !SUPABASE_URL || !ANON_KEY) return null
@@ -81,19 +81,24 @@ const getAuthedEmail = async (req) => {
     })
     if (!r.ok) return null
     const u = await r.json()
-    return (u.email || '').trim().toLowerCase()
+    return {
+      id: u.id,
+      email: (u.email || '').trim().toLowerCase(),
+      role: (u.app_metadata && u.app_metadata.role) || 'customer',
+    }
   } catch {
     return null
   }
 }
 
+// Admin = the env owner email OR any user granted role 'admin'.
 const requireAdmin = async (req, res) => {
   if (!ADMIN_EMAIL || !SERVICE_KEY) {
     sendJson(res, 503, { error: 'admin_not_configured' })
     return false
   }
-  const email = await getAuthedEmail(req)
-  if (!email || email !== ADMIN_EMAIL) {
+  const u = await getAuthedUser(req)
+  if (!u || (u.email !== ADMIN_EMAIL && u.role !== 'admin')) {
     sendJson(res, 403, { error: 'forbidden' })
     return false
   }
@@ -179,7 +184,7 @@ const listAnnouncements = async () => {
 const insertAnnouncement = async (row) => {
   const r = await sbRest('announcements', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
   const d = await r.json().catch(() => null)
-  return { ok: r.ok, data: Array.isArray(d) ? d[0] : d }
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d, detail: !r.ok && d ? d.message || d.code : null }
 }
 const removeAnnouncement = async (id) => (await sbRest(`announcements?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
 
@@ -414,15 +419,39 @@ const server = http.createServer(async (req, res) => {
     const b = await readBody(req)
     const title = (b.title || '').trim()
     if (!title) return sendJson(res, 400, { error: 'title_required' })
-    const tag = ['NEW FIELD', 'ENGINE', 'COMMUNITY'].includes((b.tag || '').toUpperCase()) ? b.tag.toUpperCase() : 'NEW FIELD'
-    const out = await insertAnnouncement({ tag, title, body: (b.body || '').trim() })
-    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
+    const tag = (b.tag || 'NEW FIELD').toString().trim().toUpperCase().slice(0, 32) || 'NEW FIELD'
+    const out = await insertAnnouncement({ tag, title, body: (b.body || '').trim(), image_url: b.image_url || null })
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.detail })
     return sendJson(res, 200, { announcement: out.data })
   }
   if (url.startsWith('/api/admin/announcements/') && method === 'DELETE') {
     if (!(await requireAdmin(req, res))) return
     if (!(await removeAnnouncement(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
     return sendJson(res, 200, { ok: true })
+  }
+
+  // set a user's role: customer | admin (admin only; cannot change the owner)
+  if (/^\/api\/admin\/users\/[^/]+\/role$/.test(url) && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const id = url.split('/')[4]
+    const b = await readBody(req)
+    const role = b.role === 'admin' ? 'admin' : 'customer'
+    try {
+      const ur = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(id)}`, {
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+      })
+      const tu = ur.ok ? await ur.json() : null
+      if (tu && (tu.email || '').toLowerCase() === ADMIN_EMAIL) return sendJson(res, 400, { error: 'cannot_change_owner' })
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_metadata: { role } }),
+      })
+      if (!r.ok) return sendJson(res, 502, { error: 'role_failed' })
+      return sendJson(res, 200, { ok: true, role })
+    } catch {
+      return sendJson(res, 500, { error: 'role_error' })
+    }
   }
 
   // delete an auth user (admin only; cannot delete the admin account)
@@ -445,6 +474,7 @@ const server = http.createServer(async (req, res) => {
         id: u.id,
         email: u.email,
         name: (u.user_metadata && u.user_metadata.name) || '',
+        role: (u.app_metadata && u.app_metadata.role) || 'customer',
         created_at: u.created_at,
       }))
       return sendJson(res, 200, { users })

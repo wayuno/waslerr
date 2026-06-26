@@ -31,6 +31,7 @@ const normalizeAnnouncement = (row) => ({
   tag: row.tag,
   title: row.title,
   body: row.body || '',
+  image_url: row.image_url || null,
   date: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
 })
 
@@ -116,7 +117,7 @@ export function StoreProvider({ children }) {
   const reloadProducts = useCallback(async (client) => {
     const supabase = client || supabaseRef.current
     if (!supabase) return
-    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: true })
+    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
     if (!error && Array.isArray(data) && data.length) setProducts(data.map(normalizeProduct))
   }, [])
 
@@ -156,10 +157,11 @@ export function StoreProvider({ children }) {
     const u = session?.user
     if (u) {
       const email = (u.email || '').toLowerCase()
+      const role = (u.app_metadata && u.app_metadata.role) || 'customer'
       userRef.current = email
       setUser(email)
       setLoggedIn(true)
-      setIsAdmin(!!adminEmailRef.current && email === adminEmailRef.current)
+      setIsAdmin(role === 'admin' || (!!adminEmailRef.current && email === adminEmailRef.current))
     } else {
       userRef.current = null
       setUser(null)
@@ -308,17 +310,51 @@ export function StoreProvider({ children }) {
   )
 
   const addAnnouncement = useCallback(
-    async (form) => {
-      const r = await authedFetch('/api/admin/announcements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      if (!r.ok) return { error: 'Could not publish announcement.' }
-      await loadAnnouncements()
-      return { ok: true }
+    async (form, file) => {
+      try {
+        let image_url = form.image_url || null
+        if (file) {
+          const dataBase64 = await fileToBase64(file)
+          const up = await authedFetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+          })
+          if (!up.ok) return { error: 'Image upload failed.' }
+          image_url = (await up.json()).url
+        }
+        const r = await authedFetch('/api/admin/announcements', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, image_url }),
+        })
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          return {
+            error: j.detail
+              ? `Failed: ${j.detail}`
+              : 'Could not publish — make sure you ran supabase/full.sql (announcements table).',
+          }
+        }
+        await loadAnnouncements()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
     },
     [authedFetch, loadAnnouncements],
+  )
+
+  const setUserRole = useCallback(
+    async (id, role) => {
+      const r = await authedFetch('/api/admin/users/' + id + '/role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      })
+      return r.ok
+    },
+    [authedFetch],
   )
 
   const deleteAnnouncement = useCallback(
@@ -423,6 +459,7 @@ export function StoreProvider({ children }) {
     addAnnouncement,
     deleteAnnouncement,
     deleteUser,
+    setUserRole,
     selectedId,
     selectedProduct,
     findProduct,
@@ -436,6 +473,7 @@ export function StoreProvider({ children }) {
     loggedIn,
     user,
     isAdmin,
+    adminEmail: adminEmailRef.current,
     authReady,
     signIn,
     signUp,

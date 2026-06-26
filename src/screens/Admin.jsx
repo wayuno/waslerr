@@ -24,7 +24,6 @@ const hashStr = (s) => {
   return h
 }
 const downloadsFor = (p) => 120 + (hashStr((p.id || '') + (p.title || '')) % 1880)
-const fieldsFor = (u) => hashStr(u.id || u.email || '') % 6
 const sparkFor = (p) => Array.from({ length: 7 }, (_, i) => 26 + (hashStr((p.id || '') + 'x' + i) % 72))
 
 export default function Admin() {
@@ -32,6 +31,7 @@ export default function Admin() {
     loggedIn,
     isAdmin,
     user,
+    adminEmail,
     logout,
     requireAdmin,
     navigate,
@@ -44,6 +44,7 @@ export default function Admin() {
     addAnnouncement,
     deleteAnnouncement,
     deleteUser,
+    setUserRole,
     authedFetch,
   } = useStore()
   const ref = useRef(null)
@@ -65,8 +66,10 @@ export default function Admin() {
 
   // announcements
   const [aForm, setAForm] = useState({ tag: 'NEW FIELD', title: '', body: '' })
+  const [aFile, setAFile] = useState(null)
   const [aErr, setAErr] = useState('')
   const [aBusy, setABusy] = useState(false)
+  const aFileRef = useRef(null)
 
   // users
   const [users, setUsers] = useState([])
@@ -170,6 +173,7 @@ export default function Admin() {
   ]
   const maxBar = Math.max(...revenueBars.map((b) => b.v))
   const maxDl = topAudios.length ? topAudios[0].dl : 1
+  const categoryOptions = [...new Set([...products.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
 
   const publishAnnouncement = async (e) => {
     e.preventDefault()
@@ -179,13 +183,15 @@ export default function Admin() {
       return
     }
     setABusy(true)
-    const res = await addAnnouncement({ tag: aForm.tag, title: aForm.title.trim(), body: aForm.body.trim() })
+    const res = await addAnnouncement({ tag: aForm.tag.trim() || 'NEW FIELD', title: aForm.title.trim(), body: aForm.body.trim() }, aFile)
     setABusy(false)
     if (res?.error) {
       setAErr(res.error)
       return
     }
     setAForm({ tag: 'NEW FIELD', title: '', body: '' })
+    setAFile(null)
+    if (aFileRef.current) aFileRef.current.value = ''
   }
 
   const publish = async (e) => {
@@ -373,12 +379,19 @@ export default function Admin() {
               </label>
               <div className="wf-form-row">
                 <label className="wf-field">
-                  <span className="wf-field-label">Category</span>
-                  <select className="wf-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                    <option value="DESIRE">DESIRE</option>
-                    <option value="AKASHIC">AKASHIC</option>
-                    <option value="WEALTH">WEALTH</option>
-                  </select>
+                  <span className="wf-field-label">Category (type any)</span>
+                  <input
+                    className="wf-input"
+                    list="wf-cats"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value.toUpperCase() })}
+                    placeholder="DESIRE"
+                  />
+                  <datalist id="wf-cats">
+                    {categoryOptions.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </label>
                 <label className="wf-field">
                   <span className="wf-field-label">Price (0 = free)</span>
@@ -437,12 +450,21 @@ export default function Admin() {
                 Write an announcement
               </div>
               <label className="wf-field">
-                <span className="wf-field-label">Tag</span>
-                <select className="wf-select" value={aForm.tag} onChange={(e) => setAForm({ ...aForm, tag: e.target.value })}>
-                  <option value="NEW FIELD">NEW FIELD</option>
-                  <option value="ENGINE">ENGINE</option>
-                  <option value="COMMUNITY">COMMUNITY</option>
-                </select>
+                <span className="wf-field-label">Tag (type any)</span>
+                <input
+                  className="wf-input"
+                  list="wf-tags"
+                  value={aForm.tag}
+                  onChange={(e) => setAForm({ ...aForm, tag: e.target.value.toUpperCase() })}
+                  placeholder="NEW FIELD"
+                />
+                <datalist id="wf-tags">
+                  <option value="NEW FIELD" />
+                  <option value="ENGINE" />
+                  <option value="COMMUNITY" />
+                  <option value="UPDATE" />
+                  <option value="OFFER" />
+                </datalist>
               </label>
               <label className="wf-field">
                 <span className="wf-field-label">Title</span>
@@ -451,6 +473,10 @@ export default function Admin() {
               <label className="wf-field">
                 <span className="wf-field-label">Body</span>
                 <textarea className="wf-textarea" rows="3" value={aForm.body} onChange={(e) => setAForm({ ...aForm, body: e.target.value })} placeholder="Tell listeners what changed." />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Photo {aFile ? `· ${aFile.name}` : '(optional)'}</span>
+                <input ref={aFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setAFile(e.target.files?.[0] || null)} />
               </label>
               {aErr && <p className="wf-auth-error" style={{ margin: 0 }}>{aErr}</p>}
               <button type="submit" className="wf-form-submit wf-mag" disabled={aBusy}>
@@ -516,20 +542,31 @@ export default function Admin() {
           <div data-reveal>
             <div className="wf-users-head">
               <span>Members · {users.length}</span>
-              <span className="wf-users-sub">{users.filter((u) => u.email === user).length} Inner Circle</span>
+              <span className="wf-users-sub">
+                {users.filter((u) => u.role === 'admin' || u.email === adminEmail).length} admin ·{' '}
+                {users.filter((u) => u.role !== 'admin' && u.email !== adminEmail).length} customer
+              </span>
             </div>
             {users.length === 0 && <p className="wf-detail-desc">No users yet.</p>}
             {users.length > 0 && (
               <div className="wf-utable">
                 <div className="wf-utable-head">
                   <span>Member</span>
-                  <span>Plan</span>
+                  <span>Role</span>
                   <span>Joined</span>
-                  <span>Fields</span>
+                  <span>Action</span>
                   <span />
                 </div>
                 {users.map((u) => {
-                  const isAdminRow = u.email === user
+                  const isOwner = u.email === adminEmail
+                  const isSelf = u.email === user
+                  const isAdminRole = isOwner || u.role === 'admin'
+                  const toggleRole = async () => {
+                    const next = isAdminRole ? 'customer' : 'admin'
+                    if (await setUserRole(u.id, next)) {
+                      setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, role: next } : x)))
+                    }
+                  }
                   return (
                     <div className="wf-urow" key={u.id}>
                       <div className="wf-umember">
@@ -540,12 +577,23 @@ export default function Admin() {
                         </div>
                       </div>
                       <div className="wf-umeta">
-                        <span className={`wf-plan-pill${isAdminRow ? ' inner' : ''}`}>{isAdminRow ? 'Inner Circle' : 'Member'}</span>
-                        <span className="wf-ujoined">{u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
-                        <span className="wf-ufields">{fieldsFor(u)} fields</span>
+                        <span className={`wf-plan-pill${isAdminRole ? ' inner' : ''}`}>
+                          {isOwner ? 'Owner' : isAdminRole ? 'Admin' : 'Customer'}
+                        </span>
+                        <span className="wf-ujoined">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </span>
+                        <span className="wf-uaction">
+                          {!isOwner && !isSelf && (
+                            <button className="wf-role-btn" onClick={toggleRole}>
+                              {isAdminRole ? 'Revoke admin' : 'Make admin'}
+                            </button>
+                          )}
+                          {(isOwner || isSelf) && <span className="wf-muted-mini">—</span>}
+                        </span>
                       </div>
                       <div className="wf-udel">
-                        {!isAdminRow && (
+                        {!isOwner && !isSelf && (
                           <button
                             className="wf-del"
                             aria-label={`Delete ${u.email}`}

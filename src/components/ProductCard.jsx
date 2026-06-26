@@ -8,6 +8,7 @@ const CATS = {
   akashic: { label: 'Akashic', cls: 'akashic' },
   wealth: { label: 'Wealth', cls: 'wealth' },
 }
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 
 export default function ProductCard({ field, variant = 'default' }) {
   const { activeId, toggle } = useAudio()
@@ -18,7 +19,7 @@ export default function ProductCard({ field, variant = 'default' }) {
   const free = variant === 'free' || !field.price
   const img = field.image_url || field.img
   const playing = activeId === field.id
-  const cat = CATS[field.line] || CATS.desire
+  const cat = CATS[field.line] || { label: cap(field.line), cls: '' }
   const phClass = field.line === 'akashic' ? 'wf-card-ph-akashic' : field.line === 'wealth' ? 'wf-card-ph-wealth' : 'wf-card-ph-desire'
 
   const stop = (fn) => (e) => {

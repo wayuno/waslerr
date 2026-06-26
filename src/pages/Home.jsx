@@ -85,7 +85,7 @@ export default function Home({ onNavigate }) {
   useMagnetic(ref)
 
   const topPicks = products.filter((p) => p.priceNum > 0).slice(0, 3)
-  const freeFields = products.filter((p) => p.priceNum === 0).slice(0, 3)
+  const freeFields = products.filter((p) => p.priceNum === 0).slice(0, 6)
 
   // hero parallax on the orbit field
   useEffect(() => {
@@ -274,7 +274,8 @@ export default function Home({ onNavigate }) {
           </div>
           <div className="wf-journal-grid">
             {announcements.slice(0, 3).map((u) => (
-              <article className="wf-journal-card" data-reveal key={u.title} onClick={() => onNavigate({ page: 'updates' })}>
+              <article className="wf-journal-card" data-reveal key={u.id || u.title} onClick={() => onNavigate({ page: 'updates' })}>
+                {u.image_url && <img className="wf-journal-img" src={u.image_url} alt="" />}
                 <span className={`wf-tag wf-tag--${u.tag.split(' ')[0].toLowerCase()}`}>{u.tag}</span>
                 <h3 className="wf-journal-title">{u.title}</h3>
                 <p className="wf-journal-body">{u.body}</p>

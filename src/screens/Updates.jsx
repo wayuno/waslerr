@@ -34,6 +34,7 @@ export default function Updates() {
                 <span className={`wf-tag wf-tag--${u.tag.split(' ')[0].toLowerCase()}`}>{u.tag}</span>
                 <h3 className="wf-update-title">{u.title}</h3>
                 <p className="wf-update-text">{u.body}</p>
+                {u.image_url && <img className="wf-update-img" src={u.image_url} alt="" />}
               </div>
             </article>
           ))}
