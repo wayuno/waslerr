@@ -160,7 +160,13 @@ const ensureBucket = async (bucket = 'product-images') => {
       bucketEnsured.add(bucket)
       return true
     }
+    // Supabase returns HTTP 400 with a 409 "Duplicate"/"already exists" body
+    // when the bucket already exists — that's success, not a failure.
     const detail = await r.text().catch(() => '')
+    if (/already exists|duplicate|"statuscode":\s*"?409/i.test(detail)) {
+      bucketEnsured.add(bucket)
+      return true
+    }
     console.warn(`[waslerr] ensureBucket(${bucket}) failed:`, r.status, detail.slice(0, 200))
     return false
   } catch (e) {
