@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
+import Starfield from '../components/Starfield'
 import { useStore } from '../store/StoreProvider'
 import { useAudio } from '../audio/AudioProvider'
 import { useReveal } from '../hooks/useReveal'
@@ -38,41 +39,7 @@ const hashStr = (s) => {
   return h
 }
 
-// JS-driven bar visualizer — animates while playing, flat when paused.
-function Visualizer({ playing, bars = 42 }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    const root = ref.current
-    if (!root) return
-    const spans = Array.from(root.children)
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!playing || reduce) {
-      spans.forEach((s) => {
-        s.style.height = '16%'
-      })
-      return
-    }
-    let raf
-    let t = 0
-    const loop = () => {
-      t += 0.09
-      for (let i = 0; i < spans.length; i++) {
-        const v = Math.abs(Math.sin(t + i * 0.45)) * 0.55 + Math.random() * 0.45
-        spans[i].style.height = 12 + v * 86 + '%'
-      }
-      raf = requestAnimationFrame(loop)
-    }
-    loop()
-    return () => cancelAnimationFrame(raf)
-  }, [playing])
-  return (
-    <div className="wf-viz" ref={ref} aria-hidden="true">
-      {Array.from({ length: bars }).map((_, i) => (
-        <span key={i} />
-      ))}
-    </div>
-  )
-}
+const VIZ_BARS = 42
 
 export default function Detail() {
   const { selectedProduct, goCheckout, openChat, navigate } = useStore()
@@ -81,8 +48,15 @@ export default function Detail() {
   const [shareOpen, setShareOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const ref = useRef(null)
+  const coverRef = useRef(null)
+  const vizRef = useRef(null)
+  const fillRef = useRef(null)
+  const timeRef = useRef(null)
+  const elapsedRef = useRef(0)
   useReveal(ref)
   useMagnetic(ref)
+
+  const playingNow = selectedProduct && activeId === selectedProduct.id
 
   useEffect(() => {
     if (!selectedProduct) navigate('fields')
@@ -90,7 +64,68 @@ export default function Detail() {
   useEffect(() => {
     setSaved(false)
     setShareOpen(false)
+    elapsedRef.current = 0
+    if (fillRef.current) fillRef.current.style.width = '4%'
+    if (timeRef.current) timeRef.current.textContent = '0:00'
   }, [selectedProduct])
+
+  // Shared "energy" signal drives the cover wash, the bars and the progress in
+  // sync while playing; everything settles to rest on pause.
+  useEffect(() => {
+    const cover = coverRef.current
+    const bars = vizRef.current ? Array.from(vizRef.current.children) : []
+    const fill = fillRef.current
+    const timeEl = timeRef.current
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const rest = () => {
+      // clear inline so the CSS base + transition smoothly settle to rest
+      if (cover) {
+        cover.style.transform = ''
+        cover.style.opacity = ''
+        cover.style.filter = ''
+      }
+      bars.forEach((b) => {
+        b.style.height = ''
+        b.style.opacity = ''
+      })
+    }
+    if (!playingNow) {
+      rest()
+      return
+    }
+    if (reduce) {
+      if (cover) cover.style.opacity = '0.6'
+      return
+    }
+    let raf
+    let t = 0
+    let last = performance.now()
+    const loop = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      t += dt
+      const energy = Math.min(1, 0.45 + 0.32 * Math.abs(Math.sin(t * 1.7)) + 0.18 * Math.abs(Math.sin(t * 4.2)))
+      const beat = Math.max(0, Math.sin(t * 3.1))
+      if (cover) {
+        cover.style.transform = `scale(${(1.2 + energy * 0.09 + beat * 0.03).toFixed(3)})`
+        cover.style.opacity = (0.42 + energy * 0.28).toFixed(3)
+        cover.style.filter = `blur(36px) saturate(${(1.3 + energy * 0.6).toFixed(2)}) brightness(${(0.55 + energy * 0.3).toFixed(2)})`
+      }
+      for (let i = 0; i < bars.length; i++) {
+        const v = Math.abs(Math.sin(t * 4 + i * 0.45)) * energy
+        bars[i].style.height = 12 + v * 86 + '%'
+        bars[i].style.opacity = (0.5 + v * 0.5).toFixed(2)
+      }
+      elapsedRef.current += dt
+      const s = Math.floor(elapsedRef.current)
+      if (fill) fill.style.width = Math.min(96, elapsedRef.current * 3) + '%'
+      if (timeEl) timeEl.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0')
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [playingNow, selectedProduct])
+
   if (!selectedProduct) return null
 
   const f = selectedProduct
@@ -185,7 +220,7 @@ export default function Detail() {
   const downloads = (8000 + (hashStr(f.id) % 18000)).toLocaleString('en-US')
   return (
     <div className="wf-app" ref={ref}>
-      <Background resonanceTop="50%" />
+      <Starfield />
       <section className="wf-section wf-free-detail" style={{ maxWidth: 1180, margin: '0 auto' }}>
         <nav className="wf-breadcrumb" data-reveal>
           <button onClick={() => navigate('fields')}>All fields</button>
@@ -196,13 +231,15 @@ export default function Detail() {
         </nav>
 
         <div className="wf-free-grid">
-          <div className={`wf-player-box${playing ? ' playing' : ''}`}>
+          <div className="wf-player-box">
               <div
+                ref={coverRef}
                 className="wf-cover-layer"
                 style={img ? { backgroundImage: `url(${img})` } : undefined}
                 aria-hidden="true"
               />
               <div className="wf-cover-scrim" aria-hidden="true" />
+              <div className="wf-grooves" aria-hidden="true" />
               <div className="wf-player-inner">
                 <div className={`wf-disc${playing ? ' playing' : ''}`}>
                   {img ? (
@@ -226,14 +263,18 @@ export default function Detail() {
                   <span className={`wf-now-dot${playing ? ' on' : ''}`} />
                   {playing ? 'Now playing' : 'Paused · tap to play'}
                 </div>
-                <Visualizer playing={playing} />
+                <div className="wf-viz" ref={vizRef} aria-hidden="true">
+                  {Array.from({ length: VIZ_BARS }).map((_, i) => (
+                    <span key={i} />
+                  ))}
+                </div>
                 <div className="wf-progress-row">
                   <span className="wf-progress-track">
-                    <span className="wf-progress-fill" style={{ width: playing ? '34%' : '4%' }} />
+                    <span className="wf-progress-fill" ref={fillRef} style={{ width: '4%' }} />
                   </span>
                 </div>
                 <div className="wf-time-row">
-                  <span>{playing ? '0:42' : '0:00'}</span>
+                  <span ref={timeRef}>0:00</span>
                   <span>Sample preview · 22:00</span>
                 </div>
               </div>
