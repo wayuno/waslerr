@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { customBenefits, focusOptions } from '../data/content'
+import { useStore } from '../store/StoreProvider'
 import { CheckIcon } from './icons'
 
 export default function CustomForm() {
+  const { requestViaChat } = useStore()
   const formRef = useRef(null)
   const [submitted, setSubmitted] = useState(false)
   const [name, setName] = useState('')
@@ -13,21 +15,23 @@ export default function CustomForm() {
     if (!form.reportValidity()) return
     const fd = new FormData(form)
     const submittedName = (fd.get('name') || '').toString().trim()
+    const payload = {
+      name: submittedName,
+      email: (fd.get('email') || '').toString(),
+      focus: (fd.get('focus') || '').toString(),
+      intention: (fd.get('intention') || '').toString(),
+    }
     try {
       const list = JSON.parse(localStorage.getItem('wf_custom_requests') || '[]')
-      list.push({
-        name: submittedName,
-        email: fd.get('email'),
-        focus: fd.get('focus'),
-        intention: fd.get('intention'),
-        ts: Date.now(),
-      })
+      list.push({ ...payload, ts: Date.now() })
       localStorage.setItem('wf_custom_requests', JSON.stringify(list))
     } catch {
       /* storage unavailable — proceed to confirmation regardless */
     }
     setName(submittedName)
     setSubmitted(true)
+    // also route the request through the support chat
+    requestViaChat(payload)
   }
 
   const reset = () => {

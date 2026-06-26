@@ -72,6 +72,7 @@ export function StoreProvider({ children }) {
 
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMsgs, setChatMsgs] = useState([])
+  const [chatRequest, setChatRequest] = useState(null)
   const [appliedCoupon, setAppliedCoupon] = useState(null)
 
   const pendingSection = useRef(null)
@@ -443,6 +444,12 @@ export function StoreProvider({ children }) {
   )
 
   const openChat = useCallback(() => setChatOpen(true), [])
+  // route a Custom Code request into the support chat
+  const requestViaChat = useCallback((payload) => {
+    setChatRequest({ ...payload, ts: Date.now() })
+    setChatOpen(true)
+  }, [])
+  const clearChatRequest = useCallback(() => setChatRequest(null), [])
 
   const value = {
     page,
@@ -486,6 +493,11 @@ export function StoreProvider({ children }) {
     chatMsgs,
     loadChat,
     sendUserChat,
+    conversationId: ensureConvId(),
+    userEmail: user,
+    chatRequest,
+    requestViaChat,
+    clearChatRequest,
     authedFetch,
     appliedCoupon,
     applyCoupon,
