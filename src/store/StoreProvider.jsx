@@ -81,6 +81,7 @@ export function StoreProvider({ children }) {
   const [payMethod, setPayMethod] = useState('paypal')
   const [payDone, setPayDone] = useState(false)
   const [orderId, setOrderId] = useState(null)
+  const [deliveredParams, setDeliveredParams] = useState(null)
 
   const [loggedIn, setLoggedIn] = useState(false)
   const [user, setUser] = useState(null)
@@ -235,6 +236,14 @@ export function StoreProvider({ children }) {
     setOrderId('WF-' + (1000 + Math.floor(Math.random() * 9000)))
     setPayDone(true)
   }, [])
+
+  const goDelivered = useCallback(
+    (params) => {
+      setDeliveredParams(params || null)
+      navigate('delivered')
+    },
+    [navigate],
+  )
 
   // ---- auth (Supabase) ----
   const applySession = useCallback((session) => {
@@ -686,6 +695,8 @@ export function StoreProvider({ children }) {
     payDone,
     orderId,
     pay,
+    deliveredParams,
+    goDelivered,
     loggedIn,
     user,
     isAdmin,

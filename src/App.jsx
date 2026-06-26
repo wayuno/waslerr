@@ -10,6 +10,7 @@ import Method from './pages/Method'
 import Community from './pages/Community'
 import Detail from './screens/Detail'
 import Checkout from './screens/Checkout'
+import Delivered from './screens/Delivered'
 import Login from './screens/Login'
 import Admin from './screens/Admin'
 import Updates from './screens/Updates'
@@ -50,6 +51,7 @@ function Shell() {
       {page === 'community' && <Community onNavigate={navigate} />}
       {page === 'detail' && <Detail />}
       {page === 'checkout' && <Checkout />}
+      {page === 'delivered' && <Delivered />}
       {page === 'login' && <Login />}
       {page === 'admin' && <Admin />}
       {page === 'updates' && <Updates />}

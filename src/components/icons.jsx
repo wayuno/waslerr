@@ -188,23 +188,28 @@ export const TelegramIcon = ({ size = 18 }) => (
     <path d="M21.9 4.3 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6 13.7l-4.9-1.5c-1.1-.3-1.1-1 .2-1.5l19.2-7.4c.9-.3 1.7.2 1.4 1z" />
   </svg>
 )
-export const PayPalMark = ({ size = 26 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <path
-      d="M8.3 20.5 9 16.6h2.9c3.6 0 6.2-1.7 6.9-5 .6-2.8-.8-4.5-3.6-4.5H9.4c-.4 0-.8.3-.9.8L6.2 20.1c0 .2.1.4.4.4h1.7z"
-      fill="#0d0b07"
-      opacity="0.9"
-    />
-    <path
-      d="M10.5 18.5 11.2 14h2.4c2.9 0 5-1.4 5.6-4.1.5-2.3-.6-3.7-3-3.7h-4.6c-.4 0-.7.3-.8.7L8.6 18.1c0 .2.1.4.3.4h1.6z"
-      fill="#0d0b07"
-    />
+// PayPal: two overlapping P glyphs — back #003087 (dark), front #0099de (light), offset right
+// Renders on a white tile; counters drawn in white to create the P's inner bowl
+export const PayPalMark = ({ size = 32 }) => (
+  <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+    {/* Back P — dark blue */}
+    <path d="M4 5h3v18H4zm3 0h7c3 0 5 2 5 5s-2 5-5 5H7V5z" fill="#003087" />
+    <path d="M7.5 8h6c1.1 0 2 .9 2 2s-.9 2-2 2H7.5V8z" fill="white" />
+    {/* Front P — light blue, shifted right 4px */}
+    <path d="M8 5h3v18H8zm3 0h7c3 0 5 2 5 5s-2 5-5 5h-7V5z" fill="#0099de" />
+    <path d="M11.5 8h6c1.1 0 2 .9 2 2s-.9 2-2 2H11.5V8z" fill="white" />
   </svg>
 )
 
-// Binance gold diamond (rotated squares)
-export const BinanceMark = ({ size = 26 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 3.3 14.4 5.7 12 8.1 9.6 5.7 12 3.3zM6.3 9 8.7 11.4 6.3 13.8 3.9 11.4 6.3 9zm11.4 0 2.4 2.4-2.4 2.4-2.4-2.4 2.4-2.4zM12 9.6 14.4 12 12 14.4 9.6 12 12 9.6zm0 5.7 2.4 2.4-2.4 2.4-2.4-2.4 2.4-2.4z" />
+// Binance: #F0B90B gold circle with authentic mark path knocked out in white
+export const BinanceMark = ({ size = 36 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="12" fill="#F0B90B" />
+    <g transform="translate(12,12) scale(0.64) translate(-11,-12)">
+      <path
+        fill="white"
+        d="M16.624 13.9202l2.7175 2.7174L12 23.9776l-7.3387-7.34 2.7176-2.7174L12 18.5425l4.624-4.6223zM12 .0224l7.34 7.3398-2.7177 2.7176L12 5.4576 7.0975 10.08 4.3799 7.3622 12 .0224zM2.7176 9.2599L5.435 11.9774l-2.7174 2.7176L0 11.9774l2.7176-2.7175zm16.5648 0l2.7176 2.7174-2.7176 2.7177-2.7175-2.7176 2.7175-2.7175zM14.6976 11.9775L12 9.28l-1.9945 1.9945-.2293.2295-.4726.4734-.0027.0024.0027.003L12 14.6776l2.6976-2.7z"
+      />
+    </g>
   </svg>
 )
