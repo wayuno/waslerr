@@ -496,9 +496,6 @@ export default function Checkout() {
                     </div>
 
                     <div className="wf-co-logo-rings">
-                      <div className="wf-co-ring" style={{ animationDelay: '0s' }} />
-                      <div className="wf-co-ring" style={{ animationDelay: '0.7s' }} />
-                      <div className="wf-co-ring" style={{ animationDelay: '1.4s' }} />
                       <div className="wf-co-logo-center">
                         {payMethod === 'binance' ? (
                           <div style={{ animation: 'wf-binpulse 1.6s ease-in-out infinite' }}>
@@ -520,13 +517,13 @@ export default function Checkout() {
                       {TIMELINE.map((label, i) => {
                         const status = dotStatus(i)
                         return (
-                          <div key={i} className={`wf-tl-row ${status}`}>
-                            <span className={`wf-tl-dot ${status}`}>
+                          <div key={i} className={`wf-cot-row ${status}`}>
+                            <span className={`wf-cot-dot ${status}`}>
                               {status === 'done' && <CheckIcon size={9} stroke={3} />}
-                              {status === 'active' && <span className="wf-tl-spinner" />}
+                              {status === 'active' && <span className="wf-cot-spinner" />}
                             </span>
-                            <span className="wf-tl-label">{label}</span>
-                            {status === 'active' && <span className="wf-tl-trailing" aria-hidden="true">{DOTS_SEQ[dotPhase]}</span>}
+                            <span className="wf-cot-label">{label}</span>
+                            {status === 'active' && <span className="wf-cot-trailing" aria-hidden="true">{DOTS_SEQ[dotPhase]}</span>}
                           </div>
                         )
                       })}

@@ -3973,7 +3973,7 @@ a {
   width: 100%;
   text-align: left;
 }
-.wf-tl-row {
+.wf-cot-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3982,9 +3982,10 @@ a {
   transition: color 0.4s;
   min-height: 22px;
 }
-.wf-tl-row.done { color: var(--wf-silver); }
-.wf-tl-row.active { color: var(--wf-gold); font-weight: 500; }
-.wf-tl-dot {
+.wf-cot-row.done { color: var(--wf-silver); }
+.wf-cot-row.active { color: var(--wf-gold); font-weight: 500; }
+.wf-cot-dot {
+  position: static;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -3995,13 +3996,13 @@ a {
   flex: none;
   transition: background 0.4s, border-color 0.4s;
 }
-.wf-tl-dot.done {
+.wf-cot-dot.done {
   background: var(--wf-grad);
   border-color: transparent;
   color: #0d0b07;
 }
-.wf-tl-dot.active { border-color: var(--wf-gold); }
-.wf-tl-spinner {
+.wf-cot-dot.active { border-color: var(--wf-gold); }
+.wf-cot-spinner {
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -4009,8 +4010,8 @@ a {
   border-top-color: var(--wf-gold);
   animation: wf-tlspin 0.85s linear infinite;
 }
-.wf-tl-label { flex: 1; }
-.wf-tl-trailing {
+.wf-cot-label { flex: 1; }
+.wf-cot-trailing {
   font-family: var(--wf-mono);
   font-size: 12px;
   color: var(--wf-gold);
