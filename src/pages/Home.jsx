@@ -8,7 +8,7 @@ import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { useStore } from '../store/StoreProvider'
-import { lines, reviews, faqs, tickerItems } from '../data/content'
+import { lines, reviews, tickerItems } from '../data/content'
 import { ArrowRight, ArrowDown } from '../components/icons'
 
 const EMBERS = [
@@ -57,31 +57,11 @@ function DecryptText({ text, order = 0, className, style }) {
   )
 }
 
-function FaqItem({ q, a, open, onToggle }) {
-  const aRef = useRef(null)
-  return (
-    <div className={`wf-faq${open ? ' open' : ''}`} data-reveal>
-      <button className="wf-faq-q" onClick={onToggle} aria-expanded={open}>
-        {q}
-        <span className="wf-faq-ic">+</span>
-      </button>
-      <div
-        className="wf-faq-a"
-        ref={aRef}
-        style={{ maxHeight: open ? (aRef.current ? aRef.current.scrollHeight + 40 : 600) + 'px' : '0px' }}
-      >
-        <p>{a}</p>
-      </div>
-    </div>
-  )
-}
-
 export default function Home({ onNavigate }) {
   const { products } = useStore()
   const ref = useRef(null)
   const orbitRef = useRef(null)
   const heroRef = useRef(null)
-  const [faqOpen, setFaqOpen] = useState(-1)
   useReveal(ref)
   useMagnetic(ref)
 
@@ -365,25 +345,6 @@ export default function Home({ onNavigate }) {
 
       {/* ===== JOURNAL & ANNOUNCEMENTS ===== */}
       <JournalAnnouncements onNavigate={onNavigate} />
-
-      {/* ===== FAQ ===== */}
-      <section className="wf-section wf-section--rule" id="wf-faq" style={{ maxWidth: 760, margin: '0 auto' }}>
-        <div style={{ padding: '82px 28px' }}>
-          <div className="wf-center" style={{ marginBottom: 54 }}>
-            <div className="wf-eyebrow" data-reveal>
-              04 · Questions
-            </div>
-            <h2 className="wf-h2" data-reveal>
-              Everything you wondered.
-            </h2>
-          </div>
-          <div className="wf-faq-list">
-            {faqs.map((f, i) => (
-              <FaqItem key={f.q} q={f.q} a={f.a} open={faqOpen === i} onToggle={() => setFaqOpen(faqOpen === i ? -1 : i)} />
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ===== JOIN ===== */}
       <section className="wf-section wf-section--rule" id="wf-join" style={{ maxWidth: 1080, margin: '0 auto' }}>

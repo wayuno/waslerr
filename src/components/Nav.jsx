@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { label: 'Reviews', target: { page: 'home', section: 'wf-reviews' } },
   { label: 'Custom', target: { page: 'home', section: 'wf-custom' } },
   { label: 'Community', target: { page: 'home', section: 'wf-join' } },
-  { label: 'FAQ', target: { page: 'home', section: 'wf-faq' } },
+  { label: 'FAQ', chat: true },
 ]
 
 export default function Nav() {
@@ -32,7 +32,15 @@ export default function Nav() {
     setMenuOpen(false)
     navigate(target)
   }
-  const isActive = (target) => target.page === page && !target.section
+  const handleLink = (l) => {
+    if (l.chat) {
+      setMenuOpen(false)
+      openChat()
+    } else {
+      go(l.target)
+    }
+  }
+  const isActive = (target) => !!target && target.page === page && !target.section
 
   return (
     <nav className={`wf-nav${scrolled ? ' scrolled' : ''}`}>
@@ -48,7 +56,7 @@ export default function Nav() {
               <button
                 key={l.label}
                 className={`wf-navlink${isActive(l.target) ? ' active' : ''}`}
-                onClick={() => go(l.target)}
+                onClick={() => handleLink(l)}
               >
                 {l.label}
               </button>
@@ -100,7 +108,7 @@ export default function Nav() {
             key={l.label}
             className="wf-mlink"
             style={{ animation: menuOpen ? `wf-fadeup .4s ease ${0.04 + i * 0.05}s both` : undefined }}
-            onClick={() => go(l.target)}
+            onClick={() => handleLink(l)}
           >
             {l.label}
           </button>

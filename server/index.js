@@ -303,6 +303,24 @@ const ensureAdminUser = async () => {
   }
 }
 
+// FAQ auto-responder for the support chat — keyword match → answer.
+const FAQ_BOT = [
+  { keys: ['how do', 'how does', 'how it work', 'work'], a: 'Affirmations are mixed beneath the threshold of conscious hearing — your conscious mind hears ambient sound while your subconscious receives the suggestions directly, bypassing the critical filter.' },
+  { keys: ['hear', 'audible', 'listen to the affirmation'], a: 'By design the affirmations sit below conscious perception — you’ll only hear the cinematic soundscape and carrier tones. That’s exactly how they slip past resistance.' },
+  { keys: ['how often', 'daily', 'how much should', 'how many times'], a: 'Listen daily, 30–60 minutes, with headphones. Consistency matters far more than volume — the subconscious responds to repetition over time.' },
+  { keys: ['result', 'how long', 'notice', 'week', 'see change', 'effect'], a: 'Most listeners report subtle shifts in mood and self-talk within 1–2 weeks, with clearer behavioural change across 4–8 weeks. Results vary by individual and consistency.' },
+  { keys: ['safe', 'danger', 'side effect', 'harm'], a: 'Yes — every affirmation is positive, ethically written and reviewed. Nothing is coercive. Just avoid listening while driving or operating machinery.' },
+  { keys: ['sleep', 'night', 'bed', 'overnight'], a: 'Absolutely — the Delta-frequency fields are built for it. The sleeping mind is unusually receptive, making overnight one of the most effective windows.' },
+  { keys: ['price', 'cost', 'pay', 'refund', 'guarantee', 'expensive'], a: 'Each field shows its price on its page (checkout via PayPal or Binance Pay), and several fields are completely free. There’s a 30-day guarantee.' },
+  { keys: ['free', 'download'], a: 'Yes — some fields are 100% free. Open any “Free field” and hit Download free audio (FLAC + MP3, no card required).' },
+  { keys: ['hello', 'hi', 'hey'], a: 'Hi! Ask me anything about how the fields work, listening, results, safety, sleeping, pricing or free fields — or a guide will follow up here shortly.' },
+]
+const faqReply = (text) => {
+  const t = (text || '').toLowerCase()
+  for (const f of FAQ_BOT) if (f.keys.some((k) => t.includes(k))) return f.a
+  return 'Thanks for reaching out! Ask about how subliminals work, whether they’re audible, how often to listen, when you’ll see results, safety, sleeping, pricing or free fields — or a guide will follow up here shortly.'
+}
+
 const server = http.createServer(async (req, res) => {
   const url = (req.url || '').split('?')[0]
   const method = req.method || 'GET'
@@ -401,6 +419,8 @@ const server = http.createServer(async (req, res) => {
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
     const out = await insertMessage({ conversation_id: conversationId, sender: 'user', body: text.slice(0, 2000), email: b.email || null })
     if (!out.ok) return sendJson(res, 502, { error: 'send_failed' })
+    // FAQ auto-reply (persisted so it shows for the visitor and the admin)
+    await insertMessage({ conversation_id: conversationId, sender: 'support', body: faqReply(text) })
     return sendJson(res, 200, { ok: true })
   }
   if (url === '/api/chat/messages' && method === 'GET') {
