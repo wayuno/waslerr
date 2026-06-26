@@ -12,6 +12,7 @@ const TABS = [
   { id: 'announcements', label: 'Announcements' },
   { id: 'coupons', label: 'Coupons' },
   { id: 'users', label: 'Users' },
+  { id: 'community', label: 'Community' },
   { id: 'support', label: 'Support' },
 ]
 const CAT_LABEL = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
@@ -45,6 +46,8 @@ export default function Admin() {
     deleteAnnouncement,
     deleteUser,
     setUserRole,
+    communityLinks,
+    setCommunityLinks,
     authedFetch,
   } = useStore()
   const ref = useRef(null)
@@ -73,6 +76,10 @@ export default function Admin() {
 
   // users
   const [users, setUsers] = useState([])
+
+  // community links
+  const [clForm, setClForm] = useState(communityLinks)
+  const [clSaved, setClSaved] = useState(false)
 
   // support
   const [conversations, setConversations] = useState([])
@@ -249,6 +256,17 @@ export default function Admin() {
   const removeCoupon = async (id) => {
     const r = await authedFetch('/api/admin/coupons/' + id, { method: 'DELETE' })
     if (r.ok) setCoupons((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  const saveCommunity = (e) => {
+    e.preventDefault()
+    setCommunityLinks({
+      youtube: clForm.youtube.trim(),
+      discord: clForm.discord.trim(),
+      creator: clForm.creator.trim(),
+    })
+    setClSaved(true)
+    setTimeout(() => setClSaved(false), 2200)
   }
 
   const sendReply = async (e) => {
@@ -611,6 +629,50 @@ export default function Admin() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {adminTab === 'community' && (
+          <div className="wf-cl-wrap" data-reveal>
+            <form className="wf-form-card" onSubmit={saveCommunity}>
+              <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
+                Community links
+              </div>
+              <p className="wf-card-sub" style={{ margin: '0 0 8px' }}>
+                These power the Community page and the footer. Changes apply across the site instantly.
+              </p>
+              <label className="wf-field">
+                <span className="wf-field-label">YouTube URL</span>
+                <input
+                  className="wf-input"
+                  value={clForm.youtube}
+                  onChange={(e) => setClForm({ ...clForm, youtube: e.target.value })}
+                  placeholder="https://youtube.com/@waslerrfields"
+                />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Discord invite URL</span>
+                <input
+                  className="wf-input"
+                  value={clForm.discord}
+                  onChange={(e) => setClForm({ ...clForm, discord: e.target.value })}
+                  placeholder="https://discord.gg/waslerrfields"
+                />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">1:1 with the creator — email or booking link</span>
+                <input
+                  className="wf-input"
+                  value={clForm.creator}
+                  onChange={(e) => setClForm({ ...clForm, creator: e.target.value })}
+                  placeholder="hello@waslerrfields.com or https://cal.com/you"
+                />
+                <span className="wf-field-hint">An email opens the visitor&apos;s mail app; a link opens in a new tab.</span>
+              </label>
+              <button type="submit" className="wf-form-submit wf-mag">
+                {clSaved ? '✓ Saved' : 'Save links'}
+              </button>
+            </form>
           </div>
         )}
 

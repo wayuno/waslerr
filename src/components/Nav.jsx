@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { label: "What's new", target: { page: 'updates' } },
   { label: 'Reviews', target: { page: 'home', section: 'wf-reviews' } },
   { label: 'Custom', target: { page: 'home', section: 'wf-custom' } },
-  { label: 'Community', target: { page: 'home', section: 'wf-join' } },
+  { label: 'Community', target: { page: 'community' } },
   { label: 'FAQ', chat: true },
 ]
 

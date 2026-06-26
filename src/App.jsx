@@ -6,6 +6,7 @@ import ChatWidget from './components/ChatWidget'
 import Home from './pages/Home'
 import Fields from './pages/Fields'
 import Method from './pages/Method'
+import Community from './pages/Community'
 import Detail from './screens/Detail'
 import Checkout from './screens/Checkout'
 import Login from './screens/Login'
@@ -44,6 +45,7 @@ function Shell() {
       {page === 'home' && <Home onNavigate={navigate} />}
       {page === 'fields' && <Fields key={`fields-${fieldsCat}`} onNavigate={navigate} initialCat={fieldsCat} />}
       {page === 'method' && <Method onNavigate={navigate} />}
+      {page === 'community' && <Community onNavigate={navigate} />}
       {page === 'detail' && <Detail />}
       {page === 'checkout' && <Checkout />}
       {page === 'login' && <Login />}

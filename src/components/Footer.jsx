@@ -1,6 +1,15 @@
 import { XIcon, InstagramIcon, YouTubeIcon, TikTokIcon } from './icons'
+import { useStore } from '../store/StoreProvider'
+import { resolveCommunityLink } from '../lib/communityLinks'
+
+const COMMUNITY_FOOTER = [
+  { key: 'youtube', label: 'YouTube' },
+  { key: 'discord', label: 'Discord' },
+  { key: 'creator', label: '1:1 with the creator' },
+]
 
 export default function Footer({ onNavigate }) {
+  const { communityLinks } = useStore()
   const goHome = () => onNavigate({ page: 'home' })
   const goSection = (section) => onNavigate({ page: 'home', section })
   const goFields = (cat) => onNavigate({ page: 'fields', cat })
@@ -53,6 +62,28 @@ export default function Footer({ onNavigate }) {
             <button className="wf-flink" onClick={() => goFields('akashic')}>Akashic Field</button>
             <button className="wf-flink" onClick={() => goSection('wf-free')}>Free fields</button>
             <button className="wf-flink" onClick={() => goSection('wf-custom')}>Custom Code</button>
+          </div>
+        </div>
+
+        <div>
+          <div className="wf-foot-col-h">Community</div>
+          <div className="wf-foot-links">
+            <button className="wf-flink" onClick={() => onNavigate({ page: 'community' })}>
+              Join the circle
+            </button>
+            {COMMUNITY_FOOTER.map(({ key, label }) => {
+              const { href, external } = resolveCommunityLink(key, communityLinks[key])
+              return (
+                <a
+                  key={key}
+                  className="wf-flink"
+                  href={href}
+                  {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                >
+                  {label}
+                </a>
+              )
+            })}
           </div>
         </div>
 

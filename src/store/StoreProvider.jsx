@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { allFields, freeFields, updates as seedUpdates } from '../data/content'
 import { getSupabase, loadConfig, normalizeProduct } from '../lib/supabase'
+import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
 
 // Single source of truth for routing, catalogue, auth, payment and the support
 // thread. Auth + products are REAL (Supabase): sessions persist across reloads,
@@ -109,6 +110,15 @@ export function StoreProvider({ children }) {
   }
   const [notifReadAt, setNotifReadAt] = useState(readInit)
   const [localNotifs, setLocalNotifs] = useState(localInit)
+
+  // admin-controlled community links (YouTube / Discord / 1:1), persisted to
+  // localStorage and shared across the Community page + footer + admin.
+  const [communityLinks, setCommunityLinksState] = useState(loadCommunityLinks)
+  const setCommunityLinks = useCallback((next) => {
+    const merged = { ...loadCommunityLinks(), ...next }
+    setCommunityLinksState(merged)
+    saveCommunityLinks(merged)
+  }, [])
 
   const pendingSection = useRef(null)
   const supabaseRef = useRef(null)
@@ -519,6 +529,7 @@ export function StoreProvider({ children }) {
           /* ignore */
         }
       }
+      if (e.key === COMMUNITY_LINKS_KEY) setCommunityLinksState(loadCommunityLinks())
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -582,6 +593,8 @@ export function StoreProvider({ children }) {
     notifReadAt,
     markNotifsRead,
     pushNotification,
+    communityLinks,
+    setCommunityLinks,
     authedFetch,
     appliedCoupon,
     applyCoupon,

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
 import ProductCard from '../components/ProductCard'
 import CustomForm from '../components/CustomForm'
-import JoinCards from '../components/JoinCards'
 import JournalAnnouncements from '../components/JournalAnnouncements'
 import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
@@ -345,24 +344,6 @@ export default function Home({ onNavigate }) {
 
       {/* ===== JOURNAL & ANNOUNCEMENTS ===== */}
       <JournalAnnouncements onNavigate={onNavigate} />
-
-      {/* ===== JOIN ===== */}
-      <section className="wf-section wf-section--rule" id="wf-join" style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <div style={{ padding: '90px 28px' }}>
-          <div className="wf-head-block wf-center" style={{ maxWidth: 600, marginBottom: 50 }}>
-            <div className="wf-eyebrow" data-reveal>
-              Join the party
-            </div>
-            <h2 className="wf-h2" data-reveal>
-              Step inside the Waslerr circle.
-            </h2>
-            <p className="wf-lead" data-reveal style={{ maxWidth: 480 }}>
-              Weekly drops, free fields, and direct access to the creator. Come build with us.
-            </p>
-          </div>
-          <JoinCards />
-        </div>
-      </section>
 
       <Footer onNavigate={onNavigate} />
     </div>
