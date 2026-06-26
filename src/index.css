@@ -4190,3 +4190,70 @@ a {
 }
 .wf-story-photo:hover { transform: translateY(-2px); border-color: rgba(212, 175, 55, 0.45); }
 .wf-story-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ---------- Admin: sold-count inline editor ---------- */
+.wf-sold-edit { display: flex; align-items: center; gap: 6px; flex: none; }
+.wf-sold-input {
+  width: 78px;
+  padding: 7px 9px;
+  font-size: 13px;
+  text-align: right;
+  font-family: var(--wf-mono);
+}
+.wf-sold-suffix { font-size: 11px; color: var(--wf-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+.wf-sold-save {
+  background: var(--wf-grad);
+  color: #0d0b07;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--wf-sans);
+}
+
+/* ---------- Admin: roomier review cards ---------- */
+.wf-rv-list { display: flex; flex-direction: column; gap: 14px; }
+.wf-rv-card {
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-rule);
+  border-radius: 16px;
+  padding: 18px 20px;
+  transition: border-color 0.3s, background 0.3s;
+}
+.wf-rv-card.featured { border-color: rgba(212, 175, 55, 0.4); background: var(--wf-glass-2); }
+.wf-rv-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.wf-rv-headtext { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.wf-rv-name { font-size: 15px; color: #eef0f4; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.wf-rv-feat {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+.wf-rv-field { font-size: 12.5px; color: var(--wf-mute); }
+.wf-rv-text { font-size: 14px; line-height: 1.6; color: var(--wf-silver); margin: 0 0 12px; }
+.wf-rv-photos { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.wf-rv-photo {
+  display: block;
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--wf-rule);
+}
+.wf-rv-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-rv-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+
+/* checkbox row (admin add-review) */
+.wf-check-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--wf-silver); cursor: pointer; }
+.wf-check-row input { width: 16px; height: 16px; accent-color: var(--wf-gold); cursor: pointer; }
+
+@media (max-width: 820px) {
+  .wf-sold-edit { flex-wrap: wrap; }
+  .wf-sold-input { width: 64px; }
+}

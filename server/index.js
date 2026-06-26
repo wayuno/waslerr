@@ -137,6 +137,25 @@ const insertProduct = async (body) => {
   return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
 }
 
+const updateProductRow = async (id, patch) => {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), Prefer: 'return=representation' },
+    body: JSON.stringify(patch),
+  })
+  const data = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
+}
+const updateFreeFieldRow = async (id, patch) => {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/free_fields?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), Prefer: 'return=representation' },
+    body: JSON.stringify(patch),
+  })
+  const data = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
+}
+
 const deleteProduct = async (id) => {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -432,6 +451,12 @@ const listReviews = async () => {
 const setReviewFeatured = async (id, featured) =>
   (await sbRest(`reviews?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ featured: !!featured }) })).ok
 const removeReview = async (id) => (await sbRest(`reviews?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+// admin insert (service-role) — may set featured + images freely
+const insertReviewAdmin = async (row) => {
+  const r = await sbRest('reviews', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
+}
 
 // --- site settings (key/value) ---
 const getSetting = async (key) => {
@@ -600,9 +625,23 @@ const server = http.createServer(async (req, res) => {
       price: Number(b.price) || 0,
       description: (b.description || '').trim(),
       image_url: b.image_url || null,
+      sold_count: Math.max(0, parseInt(b.sold_count, 10) || 0),
     }
     const out = await insertProduct(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
+    return sendJson(res, 200, { product: out.data })
+  }
+
+  // update a product (admin only) — currently the editable sold count
+  if (url.startsWith('/api/admin/products/') && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const id = url.split('/').pop()
+    const b = await readBody(req)
+    const patch = {}
+    if (b.sold_count != null) patch.sold_count = Math.max(0, parseInt(b.sold_count, 10) || 0)
+    if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
+    const out = await updateProductRow(id, patch)
+    if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
     return sendJson(res, 200, { product: out.data })
   }
 
@@ -800,6 +839,17 @@ const server = http.createServer(async (req, res) => {
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { freeField: out.data })
   }
+  if (url.startsWith('/api/admin/free-fields/') && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const id = url.split('/').pop()
+    const b = await readBody(req)
+    const patch = {}
+    if (b.sold_count != null) patch.sold_count = Math.max(0, parseInt(b.sold_count, 10) || 0)
+    if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
+    const out = await updateFreeFieldRow(id, patch)
+    if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
+    return sendJson(res, 200, { freeField: out.data })
+  }
   if (url.startsWith('/api/admin/free-fields/') && method === 'DELETE') {
     if (!(await requireAdmin(req, res))) return
     if (!(await removeFreeField(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
@@ -892,6 +942,26 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       return sendJson(res, 500, { error: 'upload_error', detail: e?.message })
     }
+  }
+  // admin: create a story for any field (custom name/rating/text/photos)
+  if (url === '/api/admin/reviews' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const field = (b.field || '').toString()
+    const name = (b.name || '').toString().trim()
+    const text = (b.text || '').toString().trim()
+    if (!field || !name || text.length < 4) return sendJson(res, 400, { error: 'bad_request', detail: 'field, name and a story (4+ chars) are required' })
+    const row = {
+      field,
+      name: name.slice(0, 80),
+      rating: Math.min(5, Math.max(1, parseInt(b.rating, 10) || 5)),
+      text: text.slice(0, 2000),
+      featured: !!b.featured,
+      images: Array.isArray(b.images) ? b.images.slice(0, 4) : [],
+    }
+    const out = await insertReviewAdmin(row)
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.status })
+    return sendJson(res, 200, { review: out.data })
   }
   // admin: feature / unfeature a story
   if (/^\/api\/admin\/reviews\/[^/]+\/feature$/.test(url) && method === 'POST') {

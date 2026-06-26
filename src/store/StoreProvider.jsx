@@ -38,6 +38,7 @@ const normalizeFreeField = (row) => ({
   priceNum: 0,
   desc: row.description || '',
   image_url: row.image_url || null,
+  sold: Number(row.sold_count) || 0,
   freq: 200,
 })
 
@@ -629,10 +630,51 @@ export function StoreProvider({ children }) {
   const deleteReview = useCallback(
     async (id) => {
       const r = await authedFetch(`/api/admin/reviews/${id}`, { method: 'DELETE' })
-      if (r.ok) await loadReviews()
+      if (r.ok) {
+        setWall((prev) => prev.filter((rv) => rv.id !== id)) // optimistic — works for seed + new
+        saveWall(loadWall().filter((rv) => rv.id !== id))
+        await loadReviews()
+      }
       return r.ok
     },
     [authedFetch, loadReviews],
+  )
+
+  // admin: create a review for any field (custom name/rating/text/photos)
+  const adminAddReview = useCallback(
+    async (entry) => {
+      const r = await authedFetch('/api/admin/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        return { error: j.detail || j.error || 'Could not add review.' }
+      }
+      await loadReviews()
+      return { ok: true }
+    },
+    [authedFetch, loadReviews],
+  )
+
+  // admin: set the editable "sold" count for a paid product or free field
+  const setSoldCount = useCallback(
+    async (id, isFree, value) => {
+      const sold = Math.max(0, parseInt(value, 10) || 0)
+      const path = isFree ? '/api/admin/free-fields/' + id : '/api/admin/products/' + id
+      const r = await authedFetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sold_count: sold }),
+      })
+      if (r.ok) {
+        const setter = isFree ? setFreeFieldsList : setPaidProducts
+        setter((prev) => prev.map((p) => (p.id === id ? { ...p, sold } : p)))
+      }
+      return r.ok
+    },
+    [authedFetch],
   )
 
   // ---- coupons ----
@@ -839,6 +881,8 @@ export function StoreProvider({ children }) {
     showToast,
     wall,
     addReview,
+    adminAddReview,
+    setSoldCount,
     reloadReviews: loadReviews,
     featureReview,
     deleteReview,

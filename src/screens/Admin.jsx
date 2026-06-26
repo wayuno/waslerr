@@ -4,9 +4,34 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { Stars } from '../components/StoryCard'
-import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
+import { TrashIcon, SendIcon, PlusIcon, StarIcon } from '../components/icons'
 
 const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
+
+// Inline editor for a field's "sold" count (admin-set social proof).
+function SoldEditor({ item, isFree, soldEdits, setSoldEdits, saveSold }) {
+  const dirty = soldEdits[item.id] != null
+  const val = dirty ? soldEdits[item.id] : String(item.sold || 0)
+  return (
+    <div className="wf-sold-edit">
+      <input
+        className="wf-input wf-sold-input"
+        type="number"
+        min="0"
+        value={val}
+        onChange={(e) => setSoldEdits((prev) => ({ ...prev, [item.id]: e.target.value }))}
+        onKeyDown={(e) => e.key === 'Enter' && saveSold(item.id, isFree)}
+        aria-label={`Sold count for ${item.title}`}
+      />
+      <span className="wf-sold-suffix">sold</span>
+      {dirty && (
+        <button type="button" className="wf-sold-save" onClick={() => saveSold(item.id, isFree)}>
+          Save
+        </button>
+      )}
+    </div>
+  )
+}
 const ZERO_STATS = {
   revenueWeek: 0, revenueMonth: 0, revenueYear: 0, revenueTotal: 0,
   salesWeek: 0, salesMonth: 0, salesYear: 0, salesTotal: 0,
@@ -57,6 +82,8 @@ export default function Admin() {
     reloadReviews,
     featureReview,
     deleteReview,
+    adminAddReview,
+    setSoldCount,
     authedFetch,
   } = useStore()
   const ref = useRef(null)
@@ -92,6 +119,18 @@ export default function Admin() {
 
   // stats (real, from Supabase orders)
   const [stats, setStats] = useState(ZERO_STATS)
+
+  // admin add-review form
+  const [rvForm, setRvForm] = useState({ field: '', name: '', rating: 5, text: '', featured: false })
+  const [rvHover, setRvHover] = useState(0)
+  const [rvPhotos, setRvPhotos] = useState([])
+  const [rvErr, setRvErr] = useState('')
+  const [rvBusy, setRvBusy] = useState(false)
+  const [rvUploading, setRvUploading] = useState(false)
+  const rvPhotoRef = useRef(null)
+
+  // inline "sold count" edits per field id → string value
+  const [soldEdits, setSoldEdits] = useState({})
 
   // support
   const [conversations, setConversations] = useState([])
@@ -204,6 +243,7 @@ export default function Admin() {
   const topFields = stats.topFields || []
   const maxUnits = topFields.length ? Math.max(1, topFields[0].units) : 1
   const categoryOptions = [...new Set([...paidProducts.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
+  const allFieldOptions = [...paidProducts, ...freeFields]
 
   const publishAnnouncement = async (e) => {
     e.preventDefault()
@@ -311,6 +351,70 @@ export default function Admin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversationId: activeConv, text }),
     })
+  }
+
+  // ---- admin add-review ----
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result).split(',')[1])
+      r.onerror = reject
+      r.readAsDataURL(file)
+    })
+
+  const onPickReviewPhotos = async (e) => {
+    setRvErr('')
+    const files = Array.from(e.target.files || [])
+    if (rvPhotoRef.current) rvPhotoRef.current.value = ''
+    const room = 2 - rvPhotos.length
+    if (room <= 0) return setRvErr('Up to 2 photos.')
+    setRvUploading(true)
+    for (const file of files.slice(0, room)) {
+      if (!file.type.startsWith('image/')) { setRvErr('Images only.'); continue }
+      try {
+        const dataBase64 = await fileToBase64(file)
+        const r = await fetch('/api/reviews/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+        })
+        const d = await r.json().catch(() => ({}))
+        if (r.ok && d.url) setRvPhotos((prev) => (prev.length < 2 ? [...prev, d.url] : prev))
+        else setRvErr(`Photo upload failed${d.detail ? ': ' + d.detail : ''}`)
+      } catch {
+        setRvErr('Photo upload failed.')
+      }
+    }
+    setRvUploading(false)
+  }
+
+  const submitAdminReview = async (e) => {
+    e.preventDefault()
+    setRvErr('')
+    const field = rvForm.field || allFieldOptions[0]?.id
+    if (!field) return setRvErr('Pick a field.')
+    if (!rvForm.name.trim()) return setRvErr('Add a name.')
+    if (rvForm.text.trim().length < 4) return setRvErr('Add a short story.')
+    setRvBusy(true)
+    const res = await adminAddReview({
+      field,
+      name: rvForm.name.trim(),
+      rating: rvForm.rating,
+      text: rvForm.text.trim(),
+      featured: rvForm.featured,
+      images: rvPhotos,
+    })
+    setRvBusy(false)
+    if (res?.error) return setRvErr(res.error)
+    setRvForm({ field, name: '', rating: 5, text: '', featured: false })
+    setRvPhotos([])
+    setRvHover(0)
+  }
+
+  const saveSold = async (id, isFree) => {
+    const val = soldEdits[id]
+    if (val == null) return
+    if (await setSoldCount(id, isFree, val)) setSoldEdits((prev) => { const n = { ...prev }; delete n[id]; return n })
   }
 
   const removeConversation = async (conversationId) => {
@@ -442,6 +546,7 @@ export default function Admin() {
                         {CAT_LABEL[p.line] || 'Desire'} · {p.price || '—'}
                       </span>
                     </div>
+                    <SoldEditor item={p} isFree={false} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
                     <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteProduct(p.id)}>
                       <TrashIcon />
                     </button>
@@ -461,6 +566,7 @@ export default function Admin() {
                       <span className="wf-admin-row-title">{p.title}</span>
                       <span className="wf-admin-row-meta">{CAT_LABEL[p.line] || 'Desire'} · Free</span>
                     </div>
+                    <SoldEditor item={p} isFree={true} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
                     <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteFreeField(p.id)}>
                       <TrashIcon />
                     </button>
@@ -588,41 +694,124 @@ export default function Admin() {
         )}
 
         {adminTab === 'reviews' && (
-          <div data-reveal>
-            <div className="wf-field-label" style={{ marginBottom: 14 }}>
-              Community stories · {wall.length} · {wall.filter((r) => r.featured).length} featured
-            </div>
-            {wall.length === 0 && <p className="wf-detail-desc">No stories yet.</p>}
-            <div className="wf-admin-list">
-              {wall.map((rv) => {
-                const prod = products.find((p) => p.id === rv.field)
-                const snippet = rv.text.length > 90 ? rv.text.slice(0, 90) + '…' : rv.text
-                return (
-                  <div className="wf-admin-row" key={rv.id}>
-                    <span className="wf-admin-ico wf-card-ph-akashic">{(rv.name || '?').charAt(0).toUpperCase()}</span>
-                    <div className="wf-admin-row-text">
-                      <span className="wf-admin-row-title">{rv.name}</span>
-                      <span className="wf-admin-row-meta">
-                        {(prod?.title || 'a field')} · “{snippet}”
-                      </span>
+          <div className="wf-admin-fields">
+            <div data-reveal>
+              <div className="wf-field-label" style={{ marginBottom: 16 }}>
+                Community stories · {wall.length} · {wall.filter((r) => r.featured).length} featured
+              </div>
+              {wall.length === 0 && <p className="wf-detail-desc">No stories yet.</p>}
+              <div className="wf-rv-list">
+                {wall.map((rv) => {
+                  const prod = products.find((p) => p.id === rv.field)
+                  return (
+                    <div className={`wf-rv-card${rv.featured ? ' featured' : ''}`} key={rv.id}>
+                      <div className="wf-rv-head">
+                        <span className="wf-admin-ico wf-card-ph-akashic">{(rv.name || '?').charAt(0).toUpperCase()}</span>
+                        <div className="wf-rv-headtext">
+                          <span className="wf-rv-name">
+                            {rv.name}
+                            {rv.featured && <span className="wf-rv-feat">★ Featured</span>}
+                          </span>
+                          <span className="wf-rv-field">on {prod?.title || 'a field'}</span>
+                        </div>
+                        <Stars rating={rv.rating} size={13} />
+                      </div>
+                      <p className="wf-rv-text">{rv.text}</p>
+                      {Array.isArray(rv.images) && rv.images.length > 0 && (
+                        <div className="wf-rv-photos">
+                          {rv.images.map((u) => (
+                            <a className="wf-rv-photo" href={u} target="_blank" rel="noreferrer" key={u}>
+                              <img src={u} alt="Review" loading="lazy" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      <div className="wf-rv-actions">
+                        <button className={`wf-role-btn${rv.featured ? ' on' : ''}`} onClick={() => featureReview(rv.id, !rv.featured)}>
+                          {rv.featured ? '★ Featured' : 'Feature'}
+                        </button>
+                        <button className="wf-del" aria-label={`Delete ${rv.name}'s story`} onClick={() => deleteReview(rv.id)}>
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
-                    <span className="wf-stars-row" style={{ flex: 'none' }}>
-                      <Stars rating={rv.rating} size={12} />
-                    </span>
-                    <button
-                      className={`wf-role-btn${rv.featured ? ' on' : ''}`}
-                      style={{ flex: 'none' }}
-                      onClick={() => featureReview(rv.id, !rv.featured)}
-                    >
-                      {rv.featured ? '★ Featured' : 'Feature'}
-                    </button>
-                    <button className="wf-del" aria-label={`Delete ${rv.name}'s story`} onClick={() => deleteReview(rv.id)}>
-                      <TrashIcon />
-                    </button>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
+
+            <form className="wf-form-card wf-admin-add" data-reveal onSubmit={submitAdminReview}>
+              <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
+                Add a review
+              </div>
+              <label className="wf-field">
+                <span className="wf-field-label">Field</span>
+                <select
+                  className="wf-select"
+                  value={rvForm.field || allFieldOptions[0]?.id || ''}
+                  onChange={(e) => setRvForm({ ...rvForm, field: e.target.value })}
+                >
+                  {allFieldOptions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Name</span>
+                <input className="wf-input" value={rvForm.name} onChange={(e) => setRvForm({ ...rvForm, name: e.target.value })} placeholder="e.g. Priya M." />
+              </label>
+              <div className="wf-field">
+                <span className="wf-field-label">Rating</span>
+                <div className="wf-star-input" role="radiogroup" aria-label="Rating">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`wf-star-btn${n <= (rvHover || rvForm.rating) ? ' on' : ''}`}
+                      aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                      onMouseEnter={() => setRvHover(n)}
+                      onMouseLeave={() => setRvHover(0)}
+                      onClick={() => setRvForm({ ...rvForm, rating: n })}
+                    >
+                      <StarIcon size={22} filled={n <= (rvHover || rvForm.rating)} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="wf-field">
+                <span className="wf-field-label">Story</span>
+                <textarea className="wf-textarea" rows="3" value={rvForm.text} onChange={(e) => setRvForm({ ...rvForm, text: e.target.value })} placeholder="What changed…" />
+              </label>
+              <div className="wf-field">
+                <span className="wf-field-label">Photos (up to 2)</span>
+                <div className="wf-review-photos">
+                  {rvPhotos.map((u) => (
+                    <div className="wf-review-thumb" key={u}>
+                      <img src={u} alt="Review" />
+                      <button type="button" className="wf-review-thumb-x" aria-label="Remove" onClick={() => setRvPhotos((prev) => prev.filter((x) => x !== u))}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {rvPhotos.length < 2 && (
+                    <button type="button" className="wf-review-add-photo" onClick={() => rvPhotoRef.current?.click()} disabled={rvUploading}>
+                      {rvUploading ? '…' : '+ Add photo'}
+                    </button>
+                  )}
+                </div>
+                <input ref={rvPhotoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onPickReviewPhotos} />
+              </div>
+              <label className="wf-check-row">
+                <input type="checkbox" checked={rvForm.featured} onChange={(e) => setRvForm({ ...rvForm, featured: e.target.checked })} />
+                <span>Feature this story</span>
+              </label>
+              {rvErr && <p className="wf-auth-error" style={{ margin: 0 }}>{rvErr}</p>}
+              <button type="submit" className="wf-form-submit wf-mag" disabled={rvBusy || rvUploading}>
+                {rvBusy ? 'Adding…' : rvUploading ? 'Uploading…' : (<><PlusIcon /> Add review</>)}
+              </button>
+            </form>
           </div>
         )}
 

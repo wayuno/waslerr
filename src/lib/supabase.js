@@ -57,6 +57,7 @@ export function normalizeProduct(row) {
     priceNum: price,
     desc: row.description || '',
     image_url: row.image_url || null,
+    sold: Number(row.sold_count) || 0,
     freq: 200,
   }
 }

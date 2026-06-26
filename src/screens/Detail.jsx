@@ -18,11 +18,6 @@ const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 const SPEC_PAID = ['Slightly audible', 'Desire Code', 'Akashic Field', 'Lifetime access', '30-day guarantee']
 const SPEC_FREE = ['Free forever', 'Instant download', 'FLAC + MP3', 'No card required']
 
-const hashStr = (s) => {
-  let h = 0
-  for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0
-  return h
-}
 const priceOf = (f) =>
   f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
 
@@ -46,7 +41,8 @@ export default function Detail() {
   const free = total === 0
   const img = f.image_url || f.img
   const benefits = benefitsById[f.id] || (free ? freeBenefits : genericBenefits)
-  const downloads = (8000 + (hashStr(f.id) % 18000)).toLocaleString('en-US')
+  const sold = Number(f.sold) || 0
+  const soldStr = sold.toLocaleString('en-US')
 
   const fieldStories = wall.filter((r) => r.field === f.id)
   const featured = [...fieldStories].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts).slice(0, 3)
@@ -106,11 +102,13 @@ export default function Detail() {
             <div className="wf-detail-metaline" data-reveal>
               {free ? (
                 <>
-                  {downloads} downloads · <Stars rating={rating} /> <span className="wf-gold">{rating}</span>
+                  {sold > 0 && <>{soldStr} downloads · </>}
+                  <Stars rating={rating} /> <span className="wf-gold">{rating}</span>
                 </>
               ) : (
                 <>
-                  <Stars rating={rating} /> <span className="wf-gold">{rating}</span> · lifetime access
+                  <Stars rating={rating} /> <span className="wf-gold">{rating}</span>
+                  {sold > 0 && <> · {soldStr} sold</>} · lifetime access
                 </>
               )}
             </div>
