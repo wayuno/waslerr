@@ -1,227 +1,66 @@
 import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
-import Starfield from '../components/Starfield'
+import PreviewPlayer from '../components/PreviewPlayer'
 import { useStore } from '../store/StoreProvider'
-import { useAudio } from '../audio/AudioProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { fieldBenefits } from '../data/content'
-import {
-  PlayIcon,
-  PauseIcon,
-  CheckIcon,
-  ChatIconBubble,
-  DownloadIcon,
-  ShareIcon,
-  LinkIcon,
-  XIcon,
-  WhatsAppIcon,
-  TelegramIcon,
-} from '../components/icons'
+import StoryCard, { Stars } from '../components/StoryCard'
+import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
+import { averageOf } from '../lib/wall'
+import { ChatIconBubble, DownloadIcon, CartIcon, CheckIcon, ArrowRight } from '../components/icons'
 
 const CATS = {
   desire: { label: 'Desire', cls: '', ph: 'wf-card-ph-desire' },
   akashic: { label: 'Akashic', cls: 'akashic', ph: 'wf-card-ph-akashic' },
   wealth: { label: 'Wealth', cls: 'wealth', ph: 'wf-card-ph-wealth' },
 }
-const LAYERS = [
-  { n: '01', title: 'Desire Code', body: 'Present-tense affirmations that encode the outcome, written to slip past the critical mind.' },
-  { n: '02', title: 'Akashic Field', body: 'A calm delta-state carrier that opens the subconscious and holds the suggestions.' },
-  { n: '03', title: 'Frequency Carrier', body: 'Studio-mastered sub-bass and silent layers tuned for nightly headphone looping.' },
-]
-const META_CHIPS = ['22 min loop', '3 engineered layers', 'FLAC', 'MP3', 'Lifetime']
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
-const TRUST = ['100% free · no card required', 'Instant download', 'FLAC + MP3 included', 'Loved by 50,000+ listeners']
+const SPEC_PAID = ['Slightly audible', 'Desire Code', 'Akashic Field', 'Lifetime access', '30-day guarantee']
+const SPEC_FREE = ['Free forever', 'Instant download', 'FLAC + MP3', 'No card required']
 
 const hashStr = (s) => {
   let h = 0
   for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0
   return h
 }
-
-const VIZ_BARS = 42
+const priceOf = (f) =>
+  f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
 
 export default function Detail() {
-  const { selectedProduct, goCheckout, openChat, navigate } = useStore()
-  const { activeId, toggle } = useAudio()
+  const { selectedProduct, goCheckout, openChat, navigate, addToCart, openReviews, openDetail, products, wall } = useStore()
   const [saved, setSaved] = useState(false)
-  const [shareOpen, setShareOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
   const ref = useRef(null)
-  const coverRef = useRef(null)
-  const vizRef = useRef(null)
-  const fillRef = useRef(null)
-  const timeRef = useRef(null)
-  const elapsedRef = useRef(0)
   useReveal(ref)
   useMagnetic(ref)
-
-  const playingNow = selectedProduct && activeId === selectedProduct.id
 
   useEffect(() => {
     if (!selectedProduct) navigate('fields')
   }, [selectedProduct, navigate])
-  useEffect(() => {
-    setSaved(false)
-    setShareOpen(false)
-    elapsedRef.current = 0
-    if (fillRef.current) fillRef.current.style.width = '4%'
-    if (timeRef.current) timeRef.current.textContent = '0:00'
-  }, [selectedProduct])
-
-  // Shared "energy" signal drives the cover wash, the bars and the progress in
-  // sync while playing; everything settles to rest on pause.
-  useEffect(() => {
-    const cover = coverRef.current
-    const bars = vizRef.current ? Array.from(vizRef.current.children) : []
-    const fill = fillRef.current
-    const timeEl = timeRef.current
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const rest = () => {
-      // clear inline so the CSS base + transition smoothly settle to rest
-      if (cover) {
-        cover.style.transform = ''
-        cover.style.opacity = ''
-        cover.style.filter = ''
-      }
-      bars.forEach((b) => {
-        b.style.height = ''
-        b.style.opacity = ''
-      })
-    }
-    if (!playingNow) {
-      rest()
-      return
-    }
-    if (reduce) {
-      if (cover) cover.style.opacity = '0.6'
-      return
-    }
-    let raf
-    let t = 0
-    let last = performance.now()
-    const loop = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000)
-      last = now
-      t += dt
-      const energy = Math.min(1, 0.45 + 0.32 * Math.abs(Math.sin(t * 1.7)) + 0.18 * Math.abs(Math.sin(t * 4.2)))
-      const beat = Math.max(0, Math.sin(t * 3.1))
-      if (cover) {
-        cover.style.transform = `scale(${(1.2 + energy * 0.09 + beat * 0.03).toFixed(3)})`
-        cover.style.opacity = (0.42 + energy * 0.28).toFixed(3)
-        cover.style.filter = `blur(36px) saturate(${(1.3 + energy * 0.6).toFixed(2)}) brightness(${(0.55 + energy * 0.3).toFixed(2)})`
-      }
-      for (let i = 0; i < bars.length; i++) {
-        const v = Math.abs(Math.sin(t * 4 + i * 0.45)) * energy
-        bars[i].style.height = 12 + v * 86 + '%'
-        bars[i].style.opacity = (0.5 + v * 0.5).toFixed(2)
-      }
-      elapsedRef.current += dt
-      const s = Math.floor(elapsedRef.current)
-      if (fill) fill.style.width = Math.min(96, elapsedRef.current * 3) + '%'
-      if (timeEl) timeEl.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0')
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [playingNow, selectedProduct])
+  useEffect(() => setSaved(false), [selectedProduct])
 
   if (!selectedProduct) return null
 
   const f = selectedProduct
   const cat = CATS[f.line] || { label: cap(f.line), cls: '', ph: 'wf-card-ph-desire' }
-  const free = !f.price
+  const total = priceOf(f)
+  const free = total === 0
   const img = f.image_url || f.img
-  const playing = activeId === f.id
-
-  const shareUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const shareText = `Listen to ${f.title} on Waslerr Fields`
-  const copyLink = () => {
-    try {
-      navigator.clipboard?.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  // -------- PAID layout (unchanged) --------
-  if (!free) {
-    return (
-      <div className="wf-app" ref={ref}>
-        <Background resonanceTop="50%" />
-        <section className="wf-section" style={{ maxWidth: 1180, margin: '0 auto', padding: '110px 28px 90px' }}>
-          <button className="wf-back" data-reveal onClick={() => navigate('fields')} style={{ marginBottom: 28 }}>
-            ← All fields
-          </button>
-          <div className="wf-detail-grid">
-            <div className="wf-detail-media" data-reveal>
-              {img ? (
-                <img src={img} alt={f.title} className="wf-detail-img" />
-              ) : (
-                <div className={`wf-detail-ph ${cat.ph}`} aria-hidden="true">
-                  W
-                </div>
-              )}
-              <button
-                className={`wf-detail-play${playing ? ' playing' : ''}`}
-                aria-label={playing ? 'Pause preview' : 'Play preview'}
-                onClick={() => toggle(f.id, f.freq)}
-              >
-                {playing ? <PauseIcon /> : <PlayIcon />}
-              </button>
-              <div className={`wf-wave${playing ? ' playing' : ''}`} aria-hidden="true">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <span key={i} style={{ animationDelay: `${i * 0.11}s` }} />
-                ))}
-              </div>
-            </div>
-            <div className="wf-detail-info">
-              <span className={`wf-card-cat ${cat.cls}`} data-reveal>
-                {cat.label}
-              </span>
-              <h1 className="wf-detail-title" data-reveal>
-                {f.title}
-              </h1>
-              <span className="wf-card-sub" data-reveal style={{ marginBottom: 18 }}>
-                by Waslerr
-              </span>
-              <div className="wf-detail-price" data-reveal>
-                {f.price}
-              </div>
-              <p className="wf-detail-desc" data-reveal>
-                {f.desc}
-              </p>
-              <ul className="wf-check-list" data-reveal style={{ marginBottom: 30 }}>
-                {fieldBenefits.map((b) => (
-                  <li key={b}>
-                    <CheckIcon />
-                    {b}
-                  </li>
-                ))}
-              </ul>
-              <div className="wf-detail-cta" data-reveal>
-                <button className="wf-btn wf-btn-gold wf-mag" onClick={() => goCheckout(f.id)}>
-                  Checkout — {f.price}
-                </button>
-                <button className="wf-btn wf-btn-glass wf-mag" onClick={openChat}>
-                  <ChatIconBubble size={16} /> Ask a guide
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    )
-  }
-
-  // -------- FREE layout (reactive player + Free/Download/Share) --------
+  const benefits = benefitsById[f.id] || (free ? freeBenefits : genericBenefits)
   const downloads = (8000 + (hashStr(f.id) % 18000)).toLocaleString('en-US')
+
+  const fieldStories = wall.filter((r) => r.field === f.id)
+  const featured = [...fieldStories].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts).slice(0, 3)
+  const avg = fieldStories.length ? averageOf(fieldStories) : 4.9
+  const rating = avg
+  const prodMap = Object.fromEntries(products.map((p) => [p.id, p]))
+  const nameOf = (id) => prodMap[id]?.title || 'a Waslerr field'
+  const clsOf = (id) => CATS[prodMap[id]?.line]?.cls || ''
+
   return (
     <div className="wf-app" ref={ref}>
-      <Starfield />
-      <section className="wf-section wf-free-detail" style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <Background resonanceTop="48%" />
+
+      <section className="wf-section" style={{ maxWidth: 1180, margin: '0 auto', padding: '104px 28px 0' }}>
         <nav className="wf-breadcrumb" data-reveal>
           <button onClick={() => navigate('fields')}>All fields</button>
           <span>›</span>
@@ -230,168 +69,165 @@ export default function Detail() {
           <span className="wf-bc-title">{f.title}</span>
         </nav>
 
-        <div className="wf-free-grid">
-          <div className="wf-player-box">
-              <div
-                ref={coverRef}
-                className="wf-cover-layer"
-                style={img ? { backgroundImage: `url(${img})` } : undefined}
-                aria-hidden="true"
-              />
-              <div className="wf-cover-scrim" aria-hidden="true" />
-              <div className="wf-grooves" aria-hidden="true" />
-              <div className="wf-player-inner">
-                <div className={`wf-disc${playing ? ' playing' : ''}`}>
-                  {img ? (
-                    <img src={img} alt={f.title} />
-                  ) : (
-                    <div className={`wf-disc-ph ${cat.ph}`} aria-hidden="true">
-                      W
-                    </div>
-                  )}
-                  <span className="wf-disc-hole" aria-hidden="true" />
-                  <button
-                    className={`wf-disc-play${playing ? ' playing' : ''}`}
-                    aria-label={playing ? 'Pause' : 'Play'}
-                    onClick={() => toggle(f.id, f.freq)}
-                  >
-                    {playing ? <PauseIcon /> : <PlayIcon />}
-                  </button>
-                </div>
+        {/* ===== HERO ===== */}
+        <div className="wf-detail-grid">
+          <div data-reveal>
+            {img ? (
+              <figure className="wf-poster-frame">
+                <img src={img} alt={f.title} />
+              </figure>
+            ) : (
+              <PreviewPlayer field={f} />
+            )}
+          </div>
 
-                <div className="wf-now">
-                  <span className={`wf-now-dot${playing ? ' on' : ''}`} />
-                  {playing ? 'Now playing' : 'Paused · tap to play'}
-                </div>
-                <div className="wf-viz" ref={vizRef} aria-hidden="true">
-                  {Array.from({ length: VIZ_BARS }).map((_, i) => (
-                    <span key={i} />
-                  ))}
-                </div>
-                <div className="wf-progress-row">
-                  <span className="wf-progress-track">
-                    <span className="wf-progress-fill" ref={fillRef} style={{ width: '4%' }} />
-                  </span>
-                </div>
-                <div className="wf-time-row">
-                  <span ref={timeRef}>0:00</span>
-                  <span>Sample preview · 22:00</span>
-                </div>
-              </div>
-            </div>
+          <div className="wf-detail-info">
+            <span className={`wf-card-cat ${cat.cls}`} data-reveal>
+              {cat.label}
+            </span>
+            <h1 className="wf-detail-title" data-reveal>
+              {f.title}
+            </h1>
+            <span className="wf-card-sub" data-reveal style={{ marginBottom: 18 }}>
+              by Waslerr
+            </span>
 
-            <div className="wf-layers" data-reveal>
-              <div className="wf-eyebrow" style={{ marginBottom: 18 }}>
-                Engineered in three layers
-              </div>
-              <div className="wf-layers-grid">
-                {LAYERS.map((l) => (
-                  <div className="wf-layer-card" key={l.n}>
-                    <span className="wf-layer-n">{l.n}</span>
-                    <h4>{l.title}</h4>
-                    <p>{l.body}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="wf-meta-chips" data-reveal>
-              {META_CHIPS.map((m) => (
-                <span className="wf-meta-chip" key={m}>
-                  {m}
-                </span>
-              ))}
-            </div>
-
-          <aside className="wf-buy" data-reveal>
-            <div className="wf-buy-card">
-              <span className={`wf-card-cat ${cat.cls}`} style={{ marginBottom: 14, display: 'block' }}>
-                {cat.label}
-              </span>
-              <h1 className="wf-detail-title" style={{ fontSize: 'clamp(28px,3.4vw,40px)', marginBottom: 16 }}>
-                {f.title}
-              </h1>
-              <div className="wf-free-priceline">
+            {free ? (
+              <div className="wf-free-priceline" data-reveal>
                 <span className="wf-free-pill">Free field</span>
                 <span className="wf-free-price">$0</span>
               </div>
-              <div className="wf-buy-stats">
-                {downloads} downloads · <span className="wf-gold">★ 4.9</span>
+            ) : (
+              <div className="wf-detail-price" data-reveal>
+                {f.price || `$${total}`}
               </div>
+            )}
 
-              <button
-                className={`wf-download-btn wf-mag${saved ? ' saved' : ''}`}
-                onClick={() => setSaved(true)}
-                disabled={saved}
-              >
-                {saved ? (
-                  <>
-                    <CheckIcon size={16} /> Saved to your library
-                  </>
-                ) : (
-                  <>
-                    <DownloadIcon /> Download free audio
-                  </>
-                )}
-              </button>
-
-              <div className="wf-buy-row">
-                <button className="wf-btn wf-btn-glass wf-mag" onClick={() => setShareOpen((o) => !o)}>
-                  <ShareIcon /> Share
-                </button>
-                <button className="wf-btn wf-btn-glass wf-mag" onClick={openChat}>
-                  <ChatIconBubble size={16} /> Ask a guide
-                </button>
-              </div>
-
-              {shareOpen && (
-                <div className="wf-share-pop">
-                  <button className="wf-share-tile" onClick={copyLink}>
-                    <LinkIcon />
-                    <span>{copied ? 'Copied!' : 'Copy link'}</span>
-                  </button>
-                  <a
-                    className="wf-share-tile"
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    <XIcon size={16} />
-                    <span>X</span>
-                  </a>
-                  <a
-                    className="wf-share-tile"
-                    href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`}
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    <WhatsAppIcon />
-                    <span>WhatsApp</span>
-                  </a>
-                  <a
-                    className="wf-share-tile"
-                    href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    <TelegramIcon />
-                    <span>Telegram</span>
-                  </a>
-                </div>
+            <div className="wf-detail-metaline" data-reveal>
+              {free ? (
+                <>
+                  {downloads} downloads · <Stars rating={rating} /> <span className="wf-gold">{rating}</span>
+                </>
+              ) : (
+                <>
+                  <Stars rating={rating} /> <span className="wf-gold">{rating}</span> · lifetime access
+                </>
               )}
-
-              <ul className="wf-trust">
-                {TRUST.map((t) => (
-                  <li key={t}>
-                    <CheckIcon size={14} />
-                    {t}
-                  </li>
-                ))}
-              </ul>
             </div>
-          </aside>
+
+            <p className="wf-detail-desc" data-reveal>
+              {f.desc}
+            </p>
+
+            <div className="wf-detail-cta" data-reveal>
+              {free ? (
+                <button
+                  className={`wf-btn wf-btn-gold wf-mag${saved ? ' is-saved' : ''}`}
+                  onClick={() => setSaved(true)}
+                  disabled={saved}
+                >
+                  {saved ? (
+                    <>
+                      <CheckIcon size={16} /> Saved to your library
+                    </>
+                  ) : (
+                    <>
+                      <DownloadIcon /> Download free audio
+                    </>
+                  )}
+                </button>
+              ) : (
+                <>
+                  <button className="wf-btn wf-btn-gold wf-mag" onClick={() => goCheckout(f.id)}>
+                    Checkout — {f.price || `$${total}`}
+                  </button>
+                  <button className="wf-btn wf-btn-glass wf-mag" onClick={() => addToCart(f)}>
+                    <CartIcon size={16} /> Add to cart
+                  </button>
+                </>
+              )}
+              <button className="wf-btn wf-btn-glass wf-mag" onClick={openChat}>
+                <ChatIconBubble size={16} /> Ask a guide
+              </button>
+            </div>
+
+            <div className="wf-spec-chips" data-reveal>
+              {(free ? SPEC_FREE : SPEC_PAID).map((s) => (
+                <span className="wf-spec-chip" key={s}>
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
+
+      {/* ===== BENEFITS ===== */}
+      <section className="wf-benefits">
+        <div className="wf-container" style={{ maxWidth: 820 }}>
+          <div className="wf-head-block wf-center" style={{ marginBottom: 38 }}>
+            <div className="wf-eyebrow" data-reveal>
+              What this field rewires
+            </div>
+            <h2 className="wf-h2" data-reveal>
+              {free ? 'What you wake up to.' : 'The benefits, in full.'}
+            </h2>
+          </div>
+          <div className="wf-benefits-panel">
+            {benefits.map((b) => (
+              <div className="wf-benefit-row" data-reveal key={b}>
+                <span className="wf-benefit-dot" aria-hidden="true" />
+                <span className="wf-benefit-text">{b}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== REVIEWS SUMMARY ===== */}
+      <section className="wf-rsum">
+        <div className="wf-container" style={{ maxWidth: 1080 }}>
+          <div className="wf-rsum-head" data-reveal>
+            <div className="wf-rsum-score">
+              <div className="wf-eyebrow">From the wall</div>
+              <div className="wf-rsum-avg">{rating}</div>
+              <Stars rating={rating} size={16} />
+              <div className="wf-rsum-count">
+                {fieldStories.length ? `${fieldStories.length} ${fieldStories.length === 1 ? 'story' : 'stories'} for this field` : 'Be the first to share your story'}
+              </div>
+            </div>
+            <div className="wf-rsum-actions">
+              <button className="wf-btn wf-btn-gold wf-mag" onClick={() => openReviews(f.id, true)}>
+                Share your story
+              </button>
+              <button className="wf-btn wf-btn-glass wf-mag" onClick={() => openReviews(f.id, false)}>
+                Read the wall <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {featured.length > 0 && (
+            <div className="wf-story-grid">
+              {featured.map((s) => (
+                <div data-reveal key={s.id}>
+                  <StoryCard story={s} fieldName={nameOf(s.field)} fieldCls={clsOf(s.field)} onField={(id) => openDetail(id)} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <footer className="wf-subfoot">
+        <div className="wf-subfoot-row">
+          <button className="wf-back" onClick={() => navigate('fields')}>
+            ← All fields
+          </button>
+          <span className="wf-subfoot-note">
+            Audio supports mindset &amp; self-improvement. Not medical treatment. Individual results vary.
+          </span>
+        </div>
+      </footer>
     </div>
   )
 }

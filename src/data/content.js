@@ -197,6 +197,69 @@ export const fieldBenefits = [
   'Lifetime access and free field updates',
 ]
 
+// Paid + free generic benefit lists (fallbacks)
+export const genericBenefits = [
+  'A magnetic, grounded presence others feel before you speak',
+  'Quiet, unshakable confidence in high-stakes rooms',
+  'Self-talk that defaults to worth instead of doubt',
+  'Calm authority — composed under pressure, never rattled',
+  'Decisions made from certainty, not anxiety',
+  'Eye contact and posture that hold their ground',
+  'A reset of the limiting beliefs running underneath',
+  'Lifetime access and every future update, free',
+]
+export const freeBenefits = [
+  'A genuine taste of the Waslerr engine — no card, no catch',
+  'A gentle shift in mood and self-talk from the first listen',
+  'A calmer baseline you can return to any time',
+  'Yours to keep forever, in lossless FLAC and MP3',
+]
+
+// Per-field benefit lists keyed by product id. Valentine ships the full 22.
+export const benefitsById = {
+  valentine: [
+    'A magnetic masculine aura people orbit toward',
+    'Effortless presence that fills a room before you say a word',
+    'Deep, settled confidence that needs no performance',
+    'The calm certainty of a man who knows his worth',
+    'Natural eye contact that holds, never flinches',
+    'A grounded, unhurried way of moving and speaking',
+    'Magnetism that reads as warmth, not arrogance',
+    'Attraction that feels inevitable rather than forced',
+    'A voice that lands lower, slower and more sure',
+    'Boundaries held without guilt or explanation',
+    'Desire and respect arriving in the same breath',
+    'Freedom from the need for approval or validation',
+    'A quiet dominance that puts others at ease',
+    'Self-image rebuilt around being genuinely wanted',
+    'The end of overthinking every interaction',
+    'Composure that holds under pressure and scrutiny',
+    'A relaxed nervous system in social settings',
+    'Leadership energy others instinctively follow',
+    'Old rejection wounds dissolved at the root',
+    'A masculine identity that feels like home',
+    'Layered over a fresh Akashic carrier for deep encoding',
+    'Lifetime access and every future revision, free',
+  ],
+  'perfect-hairs': [
+    'A scalp environment primed for thicker, healthier growth',
+    'Belief and biology aligned around a full, strong head of hair',
+    'Daily stress around hair loss quietly released',
+    'Two engineered audios working a dedicated hair field',
+    'Desire Code affirmations written in present tense',
+    'Lifetime access and every future update, free',
+  ],
+  'porn-freedom': [
+    'Compulsive urges losing their grip, one day at a time',
+    'Self-control that feels like freedom, not restriction',
+    'Dopamine reward pathways gently re-patterned',
+    'Shame replaced with steady, matter-of-fact resolve',
+    'Reclaimed time, focus and energy for what matters',
+    'Audible affirmations layered over an Akashic carrier',
+    'Lifetime access and every future update, free',
+  ],
+}
+
 // --- "What's new" changelog ---
 export const updates = [
   {

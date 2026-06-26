@@ -3,6 +3,7 @@ import { AudioProvider } from './audio/AudioProvider'
 import { StoreProvider, useStore } from './store/StoreProvider'
 import Nav from './components/Nav'
 import ChatWidget from './components/ChatWidget'
+import Toast from './components/Toast'
 import Home from './pages/Home'
 import Fields from './pages/Fields'
 import Method from './pages/Method'
@@ -12,6 +13,7 @@ import Checkout from './screens/Checkout'
 import Login from './screens/Login'
 import Admin from './screens/Admin'
 import Updates from './screens/Updates'
+import Reviews from './screens/Reviews'
 
 function Shell() {
   const { page, navigate, fieldsCat } = useStore()
@@ -51,8 +53,10 @@ function Shell() {
       {page === 'login' && <Login />}
       {page === 'admin' && <Admin />}
       {page === 'updates' && <Updates />}
+      {page === 'reviews' && <Reviews />}
 
       <ChatWidget />
+      <Toast />
     </>
   )
 }

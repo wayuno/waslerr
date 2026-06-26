@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { allFields, freeFields, updates as seedUpdates } from '../data/content'
 import { getSupabase, loadConfig, normalizeProduct } from '../lib/supabase'
 import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
+import { WALL_KEY, loadWall, saveWall } from '../lib/wall'
 
 // Single source of truth for routing, catalogue, auth, payment and the support
 // thread. Auth + products are REAL (Supabase): sessions persist across reloads,
@@ -118,6 +119,45 @@ export function StoreProvider({ children }) {
     const merged = { ...loadCommunityLinks(), ...next }
     setCommunityLinksState(merged)
     saveCommunityLinks(merged)
+  }, [])
+
+  // cart (lightweight, demo) + global toast + reviews wall
+  const [cart, setCart] = useState([])
+  const [toast, setToast] = useState(null)
+  const [wall, setWall] = useState(loadWall)
+  const [reviewField, setReviewField] = useState(null)
+  const [reviewShare, setReviewShare] = useState(false)
+  const toastTimer = useRef(null)
+
+  const showToast = useCallback((message, kind = 'ok') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ message, kind, key: Math.random().toString(36).slice(2) })
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
+  }, [])
+
+  const addToCart = useCallback(
+    (product) => {
+      if (!product) return
+      setCart((prev) => (prev.some((i) => i.id === product.id) ? prev : [...prev, product]))
+      showToast(`${product.title} added to cart`)
+    },
+    [showToast],
+  )
+  const removeFromCart = useCallback((id) => setCart((prev) => prev.filter((i) => i.id !== id)), [])
+
+  const addReview = useCallback((entry) => {
+    const item = {
+      id: 'w-' + Math.random().toString(36).slice(2),
+      ts: Date.now(),
+      featured: false,
+      ...entry,
+    }
+    setWall((prev) => {
+      const next = [item, ...prev]
+      saveWall(next)
+      return next
+    })
+    return item
   }, [])
 
   const pendingSection = useRef(null)
@@ -496,6 +536,17 @@ export function StoreProvider({ children }) {
   }, [])
   const clearChatRequest = useCallback(() => setChatRequest(null), [])
 
+  // ---- reviews wall navigation ----
+  const openReviews = useCallback(
+    (fieldId = null, share = false) => {
+      setReviewField(fieldId)
+      setReviewShare(share)
+      navigate('reviews')
+    },
+    [navigate],
+  )
+  const clearReviewShare = useCallback(() => setReviewShare(false), [])
+
   // ---- notifications ----
   const pushNotification = useCallback((n) => {
     const item = { id: 'l-' + Math.random().toString(36).slice(2), ts: Date.now(), ...n }
@@ -530,6 +581,7 @@ export function StoreProvider({ children }) {
         }
       }
       if (e.key === COMMUNITY_LINKS_KEY) setCommunityLinksState(loadCommunityLinks())
+      if (e.key === WALL_KEY) setWall(loadWall())
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -595,6 +647,18 @@ export function StoreProvider({ children }) {
     pushNotification,
     communityLinks,
     setCommunityLinks,
+    cart,
+    cartCount: cart.length,
+    addToCart,
+    removeFromCart,
+    toast,
+    showToast,
+    wall,
+    addReview,
+    reviewField,
+    reviewShare,
+    openReviews,
+    clearReviewShare,
     authedFetch,
     appliedCoupon,
     applyCoupon,

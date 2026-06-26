@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store/StoreProvider'
 import NotificationBell from './NotificationBell'
+import CartButton from './CartButton'
 
 // primary nav links (existing sections preserved, "What's new" added)
 const NAV_LINKS = [
   { label: 'Fields', target: { page: 'fields' } },
   { label: 'Method', target: { page: 'method' } },
   { label: "What's new", target: { page: 'updates' } },
-  { label: 'Reviews', target: { page: 'home', section: 'wf-reviews' } },
+  { label: 'Reviews', target: { page: 'reviews' } },
   { label: 'Custom', target: { page: 'home', section: 'wf-custom' } },
   { label: 'Community', target: { page: 'community' } },
   { label: 'FAQ', chat: true },
@@ -86,6 +87,7 @@ export default function Nav() {
               </button>
             )}
             <NotificationBell />
+            <CartButton />
             <button className="wf-nav-cta wf-mag" onClick={() => go({ page: 'fields' })}>
               Begin
             </button>
@@ -94,6 +96,7 @@ export default function Nav() {
 
         <div className="wf-notif-mobile">
           <NotificationBell />
+          <CartButton />
         </div>
         <button
           className={`wf-burger${menuOpen ? ' open' : ''}`}
