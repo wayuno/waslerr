@@ -32,6 +32,19 @@ export function getSupabase() {
   return clientPromise
 }
 
+// Normalize a reviews row to the shape the wall + detail summary use.
+export function normalizeReview(row) {
+  return {
+    id: row.id,
+    field: row.field,
+    name: row.name,
+    rating: Number(row.rating) || 5,
+    text: row.text || '',
+    featured: !!row.featured,
+    ts: Date.parse(row.created_at) || Date.now(),
+  }
+}
+
 // Normalize a DB row to the shape the UI components already use.
 export function normalizeProduct(row) {
   const price = Number(row.price) || 0

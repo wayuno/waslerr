@@ -194,6 +194,30 @@ const insertAnnouncement = async (row) => {
 }
 const removeAnnouncement = async (id) => (await sbRest(`announcements?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
 
+// --- reviews wall ---
+const listReviews = async () => {
+  const r = await sbRest('reviews?order=created_at.desc&limit=500')
+  return r.ok ? r.json() : []
+}
+const setReviewFeatured = async (id, featured) =>
+  (await sbRest(`reviews?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ featured: !!featured }) })).ok
+const removeReview = async (id) => (await sbRest(`reviews?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+
+// --- site settings (key/value) ---
+const getSetting = async (key) => {
+  const r = await sbRest(`settings?key=eq.${encodeURIComponent(key)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0].value : null
+}
+const upsertSetting = async (key, value) => {
+  const r = await sbRest('settings?on_conflict=key', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
+  })
+  return r.ok
+}
+
 // --- delete an auth user ---
 const deleteAuthUser = async (id) => {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(id)}`, {
@@ -436,6 +460,44 @@ const server = http.createServer(async (req, res) => {
     if (!(await requireAdmin(req, res))) return
     if (!(await removeAnnouncement(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
     return sendJson(res, 200, { ok: true })
+  }
+
+  // ---- reviews wall ----
+  // public read (the frontend usually reads via supabase-js; this is a fallback)
+  if (url === '/api/reviews' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { reviews: [] })
+    return sendJson(res, 200, { reviews: await listReviews() })
+  }
+  // admin: feature / unfeature a story
+  if (/^\/api\/admin\/reviews\/[^/]+\/feature$/.test(url) && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const id = url.split('/')[4]
+    const b = await readBody(req)
+    if (!(await setReviewFeatured(id, b.featured))) return sendJson(res, 502, { error: 'feature_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+  // admin: delete a story
+  if (url.startsWith('/api/admin/reviews/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    if (!(await removeReview(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+
+  // ---- site settings (community links) ----
+  if (url === '/api/settings/community' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { value: null })
+    return sendJson(res, 200, { value: await getSetting('community_links') })
+  }
+  if (url === '/api/admin/settings/community' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const value = {
+      youtube: (b.youtube || '').toString().trim().slice(0, 300),
+      discord: (b.discord || '').toString().trim().slice(0, 300),
+      creator: (b.creator || '').toString().trim().slice(0, 300),
+    }
+    if (!(await upsertSetting('community_links', value))) return sendJson(res, 502, { error: 'save_failed' })
+    return sendJson(res, 200, { ok: true, value })
   }
 
   // set a user's role: customer | admin (admin only; cannot change the owner)

@@ -2546,6 +2546,7 @@ a {
   transition: border-color 0.3s, color 0.3s;
 }
 .wf-role-btn:hover { border-color: rgba(212, 175, 55, 0.4); color: var(--wf-gold); }
+.wf-role-btn.on { color: #0d0b07; background: var(--wf-grad); border-color: transparent; }
 .wf-muted-mini { color: var(--wf-mute); }
 .wf-utable-head {
   padding: 0 14px 6px;

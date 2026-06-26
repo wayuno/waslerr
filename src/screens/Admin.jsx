@@ -4,12 +4,14 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { adminMeta, revenueBars } from '../data/content'
+import { Stars } from '../components/StoryCard'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
 const TABS = [
   { id: 'stats', label: 'Stats' },
   { id: 'fields', label: 'Fields' },
   { id: 'announcements', label: 'Announcements' },
+  { id: 'reviews', label: 'Reviews' },
   { id: 'coupons', label: 'Coupons' },
   { id: 'users', label: 'Users' },
   { id: 'community', label: 'Community' },
@@ -48,6 +50,10 @@ export default function Admin() {
     setUserRole,
     communityLinks,
     setCommunityLinks,
+    wall,
+    reloadReviews,
+    featureReview,
+    deleteReview,
     authedFetch,
   } = useStore()
   const ref = useRef(null)
@@ -118,6 +124,11 @@ export default function Admin() {
       if (r.ok) setUsers((await r.json()).users || [])
     })()
   }, [isAdmin, adminTab, authedFetch])
+
+  // refresh the wall when on the reviews tab (to pick up featured states)
+  useEffect(() => {
+    if (isAdmin && adminTab === 'reviews') reloadReviews()
+  }, [isAdmin, adminTab, reloadReviews])
 
   // load + poll the open conversation thread
   useEffect(() => {
@@ -258,9 +269,9 @@ export default function Admin() {
     if (r.ok) setCoupons((prev) => prev.filter((c) => c.id !== id))
   }
 
-  const saveCommunity = (e) => {
+  const saveCommunity = async (e) => {
     e.preventDefault()
-    setCommunityLinks({
+    await setCommunityLinks({
       youtube: clForm.youtube.trim(),
       discord: clForm.discord.trim(),
       creator: clForm.creator.trim(),
@@ -502,6 +513,45 @@ export default function Admin() {
                 {aBusy ? 'Publishing…' : (<><PlusIcon /> Publish announcement</>)}
               </button>
             </form>
+          </div>
+        )}
+
+        {adminTab === 'reviews' && (
+          <div data-reveal>
+            <div className="wf-field-label" style={{ marginBottom: 14 }}>
+              Community stories · {wall.length} · {wall.filter((r) => r.featured).length} featured
+            </div>
+            {wall.length === 0 && <p className="wf-detail-desc">No stories yet.</p>}
+            <div className="wf-admin-list">
+              {wall.map((rv) => {
+                const prod = products.find((p) => p.id === rv.field)
+                const snippet = rv.text.length > 90 ? rv.text.slice(0, 90) + '…' : rv.text
+                return (
+                  <div className="wf-admin-row" key={rv.id}>
+                    <span className="wf-admin-ico wf-card-ph-akashic">{(rv.name || '?').charAt(0).toUpperCase()}</span>
+                    <div className="wf-admin-row-text">
+                      <span className="wf-admin-row-title">{rv.name}</span>
+                      <span className="wf-admin-row-meta">
+                        {(prod?.title || 'a field')} · “{snippet}”
+                      </span>
+                    </div>
+                    <span className="wf-stars-row" style={{ flex: 'none' }}>
+                      <Stars rating={rv.rating} size={12} />
+                    </span>
+                    <button
+                      className={`wf-role-btn${rv.featured ? ' on' : ''}`}
+                      style={{ flex: 'none' }}
+                      onClick={() => featureReview(rv.id, !rv.featured)}
+                    >
+                      {rv.featured ? '★ Featured' : 'Feature'}
+                    </button>
+                    <button className="wf-del" aria-label={`Delete ${rv.name}'s story`} onClick={() => deleteReview(rv.id)}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 

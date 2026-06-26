@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { allFields, freeFields, updates as seedUpdates } from '../data/content'
-import { getSupabase, loadConfig, normalizeProduct } from '../lib/supabase'
+import { getSupabase, loadConfig, normalizeProduct, normalizeReview } from '../lib/supabase'
 import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
 import { WALL_KEY, loadWall, saveWall } from '../lib/wall'
 
@@ -112,14 +112,9 @@ export function StoreProvider({ children }) {
   const [notifReadAt, setNotifReadAt] = useState(readInit)
   const [localNotifs, setLocalNotifs] = useState(localInit)
 
-  // admin-controlled community links (YouTube / Discord / 1:1), persisted to
-  // localStorage and shared across the Community page + footer + admin.
+  // admin-controlled community links (YouTube / Discord / 1:1). Permanent source
+  // is Supabase (settings table); localStorage is an offline cache/fallback.
   const [communityLinks, setCommunityLinksState] = useState(loadCommunityLinks)
-  const setCommunityLinks = useCallback((next) => {
-    const merged = { ...loadCommunityLinks(), ...next }
-    setCommunityLinksState(merged)
-    saveCommunityLinks(merged)
-  }, [])
 
   // cart (lightweight, demo) + global toast + reviews wall
   const [cart, setCart] = useState([])
@@ -144,21 +139,6 @@ export function StoreProvider({ children }) {
     [showToast],
   )
   const removeFromCart = useCallback((id) => setCart((prev) => prev.filter((i) => i.id !== id)), [])
-
-  const addReview = useCallback((entry) => {
-    const item = {
-      id: 'w-' + Math.random().toString(36).slice(2),
-      ts: Date.now(),
-      featured: false,
-      ...entry,
-    }
-    setWall((prev) => {
-      const next = [item, ...prev]
-      saveWall(next)
-      return next
-    })
-    return item
-  }, [])
 
   const pendingSection = useRef(null)
   const supabaseRef = useRef(null)
@@ -212,6 +192,25 @@ export function StoreProvider({ children }) {
     if (!supabase) return
     const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false })
     if (!error && Array.isArray(data) && data.length) setAnnouncements(data.map(normalizeAnnouncement))
+  }, [])
+
+  // reviews wall — Supabase is the permanent source when configured
+  const loadReviews = useCallback(async (client) => {
+    const supabase = client || supabaseRef.current
+    if (!supabase) return
+    const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false })
+    if (!error && Array.isArray(data)) setWall(data.map(normalizeReview))
+  }, [])
+
+  // community links from the settings table (overrides the localStorage cache)
+  const loadSettings = useCallback(async (client) => {
+    const supabase = client || supabaseRef.current
+    if (!supabase) return
+    const { data, error } = await supabase.from('settings').select('value').eq('key', 'community_links').maybeSingle()
+    if (!error && data && data.value) {
+      setCommunityLinksState((prev) => ({ ...prev, ...data.value }))
+      saveCommunityLinks({ ...loadCommunityLinks(), ...data.value })
+    }
   }, [])
 
   const findProduct = useCallback((id) => products.find((p) => p.id === id) || null, [products])
@@ -280,12 +279,14 @@ export function StoreProvider({ children }) {
       setAuthReady(true)
       reloadProducts(supabase)
       loadAnnouncements(supabase)
+      loadReviews(supabase)
+      loadSettings(supabase)
     })()
     return () => {
       cancelled = true
       sub?.unsubscribe?.()
     }
-  }, [applySession, reloadProducts, loadAnnouncements])
+  }, [applySession, reloadProducts, loadAnnouncements, loadReviews, loadSettings])
 
   const getToken = useCallback(async () => {
     const supabase = supabaseRef.current
@@ -456,6 +457,73 @@ export function StoreProvider({ children }) {
       return r.ok
     },
     [authedFetch],
+  )
+
+  // ---- community links (admin save → Supabase settings) ----
+  const setCommunityLinks = useCallback(
+    async (next) => {
+      const merged = { ...loadCommunityLinks(), ...next }
+      setCommunityLinksState(merged)
+      saveCommunityLinks(merged) // instant local cache + offline fallback
+      try {
+        const r = await authedFetch('/api/admin/settings/community', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(merged),
+        })
+        return r.ok
+      } catch {
+        return false
+      }
+    },
+    [authedFetch],
+  )
+
+  // ---- reviews wall writes ----
+  // anyone may post (public insert via the anon client); offline → localStorage
+  const addReview = useCallback(async (entry) => {
+    const supabase = supabaseRef.current
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert({ field: entry.field, name: entry.name, rating: entry.rating, text: entry.text })
+        .select()
+        .single()
+      if (!error && data) {
+        const item = normalizeReview(data)
+        setWall((prev) => [item, ...prev])
+        return item
+      }
+    }
+    const item = { id: 'w-' + Math.random().toString(36).slice(2), ts: Date.now(), featured: false, ...entry }
+    setWall((prev) => {
+      const next = [item, ...prev]
+      saveWall(next)
+      return next
+    })
+    return item
+  }, [])
+
+  // admin: feature / delete a story (service-role via backend)
+  const featureReview = useCallback(
+    async (id, featured) => {
+      const r = await authedFetch(`/api/admin/reviews/${id}/feature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featured }),
+      })
+      if (r.ok) await loadReviews()
+      return r.ok
+    },
+    [authedFetch, loadReviews],
+  )
+  const deleteReview = useCallback(
+    async (id) => {
+      const r = await authedFetch(`/api/admin/reviews/${id}`, { method: 'DELETE' })
+      if (r.ok) await loadReviews()
+      return r.ok
+    },
+    [authedFetch, loadReviews],
   )
 
   // ---- coupons ----
@@ -655,6 +723,9 @@ export function StoreProvider({ children }) {
     showToast,
     wall,
     addReview,
+    reloadReviews: loadReviews,
+    featureReview,
+    deleteReview,
     reviewField,
     reviewShare,
     openReviews,

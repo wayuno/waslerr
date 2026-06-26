@@ -57,19 +57,22 @@ export default function Reviews() {
 
   const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-  const submit = (e) => {
+  const [busy, setBusy] = useState(false)
+  const submit = async (e) => {
     e.preventDefault()
     setErr('')
     if (!form.name.trim()) return setErr('Add your name.')
     if (!form.rating) return setErr('Pick a star rating.')
     if (form.text.trim().length < 8) return setErr('Tell us a little more about what changed.')
-    const item = addReview({
+    setBusy(true)
+    const item = await addReview({
       field: form.field,
       name: form.name.trim(),
       rating: form.rating,
       text: form.text.trim(),
     })
-    setFreshId(item.id)
+    setBusy(false)
+    if (item?.id) setFreshId(item.id)
     setForm({ name: '', field: form.field, rating: 0, text: '' })
     setHover(0)
     setFilter('all')
@@ -193,8 +196,8 @@ export default function Reviews() {
           </label>
 
           {err && <p className="wf-auth-error" style={{ margin: 0 }}>{err}</p>}
-          <button type="submit" className="wf-form-submit wf-mag">
-            Post to the wall
+          <button type="submit" className="wf-form-submit wf-mag" disabled={busy}>
+            {busy ? 'Posting…' : 'Post to the wall'}
           </button>
           <p className="wf-form-note">Open to everyone. Be honest — real stories help others choose.</p>
         </form>
