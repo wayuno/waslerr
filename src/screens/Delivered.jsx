@@ -7,7 +7,7 @@ import { useMagnetic } from '../hooks/useMagnetic'
 const truncate = (s, n = 22) => (s && s.length > n ? s.slice(0, n) + '…' : s || '—')
 
 export default function Delivered() {
-  const { deliveredParams, findProduct, navigate, openDetail, openReviews } = useStore()
+  const { deliveredParams, findProduct, navigate, openReviews } = useStore()
   const [burst, setBurst] = useState(false)
   const ref = useRef(null)
   useReveal(ref)
