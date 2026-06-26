@@ -109,6 +109,12 @@ export const TrashIcon = ({ size = 16 }) => (
 
 export const StarRow = ({ count = 5 }) => <span aria-hidden="true">{'★'.repeat(count)}</span>
 
+export const BookmarkIcon = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+    <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+  </svg>
+)
+
 export const DownloadIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />

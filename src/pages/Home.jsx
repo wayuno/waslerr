@@ -3,6 +3,7 @@ import Background from '../components/Background'
 import ProductCard from '../components/ProductCard'
 import CustomForm from '../components/CustomForm'
 import JoinCards from '../components/JoinCards'
+import JournalAnnouncements from '../components/JournalAnnouncements'
 import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
@@ -76,7 +77,7 @@ function FaqItem({ q, a, open, onToggle }) {
 }
 
 export default function Home({ onNavigate }) {
-  const { products, announcements } = useStore()
+  const { products } = useStore()
   const ref = useRef(null)
   const orbitRef = useRef(null)
   const heroRef = useRef(null)
@@ -256,36 +257,6 @@ export default function Home({ onNavigate }) {
         </div>
       </section>
 
-      {/* ===== JOURNAL & ANNOUNCEMENTS ===== */}
-      <section className="wf-section wf-section--rule wf-pad" id="wf-journal">
-        <div className="wf-container">
-          <div className="wf-journal-head">
-            <div>
-              <div className="wf-eyebrow" data-reveal>
-                From the lab
-              </div>
-              <h2 className="wf-h2" data-reveal>
-                Journal &amp; announcements
-              </h2>
-            </div>
-            <button className="wf-btn wf-btn-glass wf-mag wf-journal-cta" data-reveal onClick={() => onNavigate({ page: 'updates' })}>
-              See all updates <ArrowRight />
-            </button>
-          </div>
-          <div className="wf-journal-grid">
-            {announcements.slice(0, 3).map((u) => (
-              <article className="wf-journal-card" data-reveal key={u.id || u.title} onClick={() => onNavigate({ page: 'updates' })}>
-                {u.image_url && <img className="wf-journal-img" src={u.image_url} alt="" />}
-                <span className={`wf-tag wf-tag--${u.tag.split(' ')[0].toLowerCase()}`}>{u.tag}</span>
-                <h3 className="wf-journal-title">{u.title}</h3>
-                <p className="wf-journal-body">{u.body}</p>
-                <span className="wf-journal-date">{u.date}</span>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ===== FREE FIELDS ===== */}
       <section
         className="wf-section wf-section--rule"
@@ -391,6 +362,9 @@ export default function Home({ onNavigate }) {
           </div>
         </div>
       </section>
+
+      {/* ===== JOURNAL & ANNOUNCEMENTS ===== */}
+      <JournalAnnouncements onNavigate={onNavigate} />
 
       {/* ===== FAQ ===== */}
       <section className="wf-section wf-section--rule" id="wf-faq" style={{ maxWidth: 760, margin: '0 auto' }}>

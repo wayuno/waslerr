@@ -459,6 +459,7 @@ export default function Admin() {
                   placeholder="NEW FIELD"
                 />
                 <datalist id="wf-tags">
+                  <option value="BLOG" />
                   <option value="NEW FIELD" />
                   <option value="ENGINE" />
                   <option value="COMMUNITY" />
