@@ -145,19 +145,53 @@ const deleteProduct = async (id) => {
   return { ok: r.ok, status: r.status }
 }
 
+// Create the public product-images bucket if it doesn't exist (idempotent).
+let bucketEnsured = false
+const ensureBucket = async () => {
+  if (bucketEnsured) return true
+  try {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'product-images', name: 'product-images', public: true, file_size_limit: 26214400 }),
+    })
+    // 200 created, 409 already exists → both mean the bucket is ready
+    if (r.ok || r.status === 409) {
+      bucketEnsured = true
+      return true
+    }
+    const detail = await r.text().catch(() => '')
+    console.warn('[waslerr] ensureBucket failed:', r.status, detail.slice(0, 200))
+    return false
+  } catch (e) {
+    console.warn('[waslerr] ensureBucket error:', e?.message)
+    return false
+  }
+}
+
 const uploadImage = async (filename, contentType, buffer) => {
   const safe = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${encodeURIComponent(safe)}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SERVICE_KEY}`,
-      apikey: SERVICE_KEY,
-      'Content-Type': contentType || 'application/octet-stream',
-      'x-upsert': 'true',
-    },
-    body: buffer,
-  })
-  if (!r.ok) return { ok: false, status: r.status }
+  const put = () =>
+    fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${encodeURIComponent(safe)}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: SERVICE_KEY,
+        'Content-Type': contentType || 'application/octet-stream',
+        'x-upsert': 'true',
+      },
+      body: buffer,
+    })
+  let r = await put()
+  // bucket missing → create it and retry once
+  if (!r.ok && (r.status === 404 || r.status === 400)) {
+    await ensureBucket()
+    r = await put()
+  }
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '')
+    return { ok: false, status: r.status, detail: detail.slice(0, 300) }
+  }
   return { ok: true, publicUrl: `${SUPABASE_URL}/storage/v1/object/public/product-images/${safe}` }
 }
 
@@ -536,15 +570,15 @@ const server = http.createServer(async (req, res) => {
   // upload a product image (admin only) → returns a public URL
   if (url === '/api/admin/upload' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
-    const { filename, contentType, dataBase64 } = await readBody(req, 12e6)
-    if (!dataBase64) return sendJson(res, 400, { error: 'no_file' })
+    const { filename, contentType, dataBase64 } = await readBody(req, 40e6) // ~30MB image
+    if (!dataBase64) return sendJson(res, 400, { error: 'no_file', detail: 'No image data received (file may be too large).' })
     try {
       const buffer = Buffer.from(dataBase64, 'base64')
       const out = await uploadImage(filename || 'image', contentType, buffer)
-      if (!out.ok) return sendJson(res, 502, { error: 'upload_failed' })
+      if (!out.ok) return sendJson(res, 502, { error: 'upload_failed', status: out.status, detail: out.detail || 'storage rejected the file' })
       return sendJson(res, 200, { url: out.publicUrl })
-    } catch {
-      return sendJson(res, 500, { error: 'upload_error' })
+    } catch (e) {
+      return sendJson(res, 500, { error: 'upload_error', detail: e?.message })
     }
   }
 
@@ -940,4 +974,5 @@ server.listen(PORT, () => {
   console.log(`[waslerr] server listening on :${PORT}`)
   console.log(`[waslerr] payments — PayPal: ${paypalConfigured() ? 'configured' : 'MISSING keys'} · Binance Pay: ${binanceConfigured() ? 'configured' : 'MISSING keys'}`)
   ensureAdminUser()
+  if (sbReady()) ensureBucket() // make sure the product-images storage bucket exists
 })

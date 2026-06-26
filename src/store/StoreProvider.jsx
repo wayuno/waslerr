@@ -76,6 +76,27 @@ const fileToBase64 = (file) =>
     r.readAsDataURL(file)
   })
 
+// Upload an image through the backend → returns { url } or { error } with the
+// real reason surfaced from the server (bucket missing, too large, etc.).
+const uploadImageViaApi = async (file, token) => {
+  if (file && file.size > 28 * 1024 * 1024) return { error: 'Image is too large (max ~28MB). Please compress it and try again.' }
+  try {
+    const dataBase64 = await fileToBase64(file)
+    const up = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+    })
+    if (!up.ok) {
+      const j = await up.json().catch(() => ({}))
+      return { error: `Image upload failed${j.detail ? ': ' + j.detail : j.status ? ' (' + j.status + ')' : ''}` }
+    }
+    return { url: (await up.json()).url }
+  } catch {
+    return { error: 'Image upload failed — network error. Try a smaller image.' }
+  }
+}
+
 export function StoreProvider({ children }) {
   // deep-link: /admin opens the admin screen (its gate shows your signed-in
   // email, so a wrong-email login is obvious).
@@ -398,14 +419,9 @@ export function StoreProvider({ children }) {
       try {
         let image_url = form.image_url || null
         if (file) {
-          const dataBase64 = await fileToBase64(file)
-          const up = await fetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
-          })
-          if (!up.ok) return { error: 'Image upload failed.' }
-          image_url = (await up.json()).url
+          const up = await uploadImageViaApi(file, token)
+          if (up.error) return { error: up.error }
+          image_url = up.url
         }
         const res = await fetch('/api/admin/products', {
           method: 'POST',
@@ -449,14 +465,9 @@ export function StoreProvider({ children }) {
       try {
         let image_url = form.image_url || null
         if (file) {
-          const dataBase64 = await fileToBase64(file)
-          const up = await fetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
-          })
-          if (!up.ok) return { error: 'Image upload failed.' }
-          image_url = (await up.json()).url
+          const up = await uploadImageViaApi(file, token)
+          if (up.error) return { error: up.error }
+          image_url = up.url
         }
         const res = await fetch('/api/admin/free-fields', {
           method: 'POST',
@@ -494,14 +505,9 @@ export function StoreProvider({ children }) {
       try {
         let image_url = form.image_url || null
         if (file) {
-          const dataBase64 = await fileToBase64(file)
-          const up = await authedFetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
-          })
-          if (!up.ok) return { error: 'Image upload failed.' }
-          image_url = (await up.json()).url
+          const up = await uploadImageViaApi(file, await getToken())
+          if (up.error) return { error: up.error }
+          image_url = up.url
         }
         const r = await authedFetch('/api/admin/announcements', {
           method: 'POST',
@@ -518,7 +524,7 @@ export function StoreProvider({ children }) {
         return { error: 'Network error.' }
       }
     },
-    [authedFetch, loadAnnouncements],
+    [authedFetch, getToken, loadAnnouncements],
   )
 
   const setUserRole = useCallback(
