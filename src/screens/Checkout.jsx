@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
@@ -19,16 +19,20 @@ const METHODS = [
   { id: 'binance', label: 'Binance Pay', desc: 'Pay with crypto — BTC, USDT or BNB.' },
 ]
 
-const BINANCE_PHASES = ['Waiting for payment…', 'Payment detected', 'Confirming on-chain', 'Payment confirmed.']
-const PAYPAL_PHASES = ['Connecting…', 'Matching transaction', 'Confirming amount', 'Payment confirmed.']
+const TIMELINE = [
+  'Waiting for payment',
+  'Payment detected',
+  'Confirming',
+  'Delivered',
+]
 
-const priceOf = (f) =>
-  f && f.priceNum != null ? Number(f.priceNum) : f && f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
-
-const catLabel = (line) => {
-  const known = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
-  return known[line] || (line ? line.charAt(0).toUpperCase() + line.slice(1) : 'Desire')
+const CAT = {
+  desire: { label: 'Desire', cls: 'gold' },
+  akashic: { label: 'Akashic', cls: 'cyan' },
+  wealth: { label: 'Wealth', cls: 'gold' },
 }
+
+const DOTS_SEQ = ['.', '..', '...']
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 function genRef(fieldId) {
@@ -44,115 +48,33 @@ function fmtTime(secs) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-function PayToRow({ label, value, copyKey, copying, onCopy, mono = false }) {
-  const copied = copying === copyKey
-  return (
-    <div className="wf-payto-row">
-      <span className="wf-payto-label">{label}</span>
-      <span className={`wf-payto-value${mono ? ' mono' : ''}`}>{value}</span>
-      <button
-        className={`wf-payto-copy${copied ? ' copied' : ''}`}
-        onClick={() => onCopy(value, copyKey)}
-        aria-label={`Copy ${label}`}
-      >
-        {copied ? <CheckIcon size={13} stroke={2.5} /> : 'Copy'}
-      </button>
-    </div>
-  )
-}
-
-function BinanceRadar({ phase }) {
-  const phases = BINANCE_PHASES
-  return (
-    <div className="wf-radar-wrap">
-      <div className="wf-radar-rings">
-        <div className="wf-radar-ring" style={{ animationDelay: '0s' }} />
-        <div className="wf-radar-ring" style={{ animationDelay: '0.6s' }} />
-        <div className="wf-radar-ring" style={{ animationDelay: '1.2s' }} />
-        <div className="wf-radar-sweep" />
-        <div className="wf-radar-coin">
-          <BinanceMark size={52} />
-        </div>
-      </div>
-      <div className="wf-verify-phase">
-        <div className="wf-verify-dots">
-          <span style={{ animationDelay: '0s' }} />
-          <span style={{ animationDelay: '0.2s' }} />
-          <span style={{ animationDelay: '0.4s' }} />
-        </div>
-        <div className="wf-verify-text">{phases[Math.min(phase, 3)]}</div>
-      </div>
-      <div className="wf-chevflow" aria-hidden="true">
-        {'›'.repeat(9).split('').map((c, i) => (
-          <span key={i} style={{ animationDelay: `${i * 0.12}s` }}>{c}</span>
-        ))}
-      </div>
-      <div className="wf-verify-steps">
-        {phases.map((p, i) => (
-          <div key={i} className={`wf-vstep${i <= phase ? ' done' : ''}${i === phase ? ' active' : ''}`}>
-            <span className="wf-vstep-dot" />
-            <span>{p}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function PayPalSpinner({ phase }) {
-  const phases = PAYPAL_PHASES
-  return (
-    <div className="wf-radar-wrap">
-      <div className="wf-pp-spinner-wrap">
-        <div className="wf-pp-ring" />
-        <div className="wf-pp-mark">
-          <PayPalMark size={36} />
-        </div>
-      </div>
-      <div className="wf-verify-phase">
-        <div className="wf-verify-dots">
-          <span style={{ animationDelay: '0s' }} />
-          <span style={{ animationDelay: '0.2s' }} />
-          <span style={{ animationDelay: '0.4s' }} />
-        </div>
-        <div className="wf-verify-text">{phases[Math.min(phase, 3)]}</div>
-      </div>
-      <div className="wf-chevflow" aria-hidden="true">
-        {'›'.repeat(9).split('').map((c, i) => (
-          <span key={i} style={{ animationDelay: `${i * 0.12}s` }}>{c}</span>
-        ))}
-      </div>
-      <div className="wf-verify-steps">
-        {phases.map((p, i) => (
-          <div key={i} className={`wf-vstep${i <= phase ? ' done' : ''}${i === phase ? ' active' : ''}`}>
-            <span className="wf-vstep-dot" />
-            <span>{p}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+const priceOf = (f) =>
+  f && f.priceNum != null ? Number(f.priceNum) : f && f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
 
 export default function Checkout() {
   const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered } = useStore()
 
-  // stage: 'method' | 'pay' | 'verifying'
+  // stage: 'method' | 'verify'
   const [stage, setStage] = useState('method')
+
+  // Method stage state
   const [couponInput, setCouponInput] = useState('')
   const [couponMsg, setCouponMsg] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
+
+  // Verify stage state
   const [payRef, setPayRef] = useState('')
   const [countdown, setCountdown] = useState(15 * 60)
+  const [isFlipping, setIsFlipping] = useState(false)
+  const [phase, setPhase] = useState(0)   // 0-4: timeline position
+  const [dotPhase, setDotPhase] = useState(0) // 0-2: trailing dots cycle
+  const [fallbackOpen, setFallbackOpen] = useState(false)
   const [txnInput, setTxnInput] = useState('')
   const [txnError, setTxnError] = useState('')
-  const [verifyPhase, setVerifyPhase] = useState(-1)
   const [copying, setCopying] = useState(null)
-  const [isFlipping, setIsFlipping] = useState(false)
 
   const ref = useRef(null)
-  const timerRef = useRef(null)
-  const verifyTimersRef = useRef([])
+  const timersRef = useRef([])
   useReveal(ref)
   useMagnetic(ref)
 
@@ -160,10 +82,10 @@ export default function Checkout() {
     if (!selectedProduct) navigate('fields')
   }, [selectedProduct, navigate])
 
-  // countdown when in pay stage
+  // 15-min countdown + auto-regenerating reference
   useEffect(() => {
-    if (stage !== 'pay') return
-    timerRef.current = setInterval(() => {
+    if (stage !== 'verify') return
+    const id = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           setIsFlipping(true)
@@ -176,11 +98,33 @@ export default function Checkout() {
         return prev - 1
       })
     }, 1000)
-    return () => clearInterval(timerRef.current)
+    return () => clearInterval(id)
   }, [stage, selectedProduct])
 
-  // cleanup verify timers on unmount
-  useEffect(() => () => verifyTimersRef.current.forEach(clearTimeout), [])
+  // Auto-progression: 1s cadence through the 4 timeline phases
+  useEffect(() => {
+    if (stage !== 'verify') return
+    timersRef.current.forEach(clearTimeout)
+    const t = [
+      setTimeout(() => setPhase(1), 1000),
+      setTimeout(() => setPhase(2), 2000),
+      setTimeout(() => setPhase(3), 3000),
+      setTimeout(() => { setPhase(4); }, 4000),
+      setTimeout(() => persistAndDeliver(''), 4600),
+    ]
+    timersRef.current = t
+    return () => t.forEach(clearTimeout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage])
+
+  // Trailing dots ticker
+  useEffect(() => {
+    if (stage !== 'verify' || phase >= 4) return
+    const id = setInterval(() => setDotPhase((d) => (d + 1) % 3), 380)
+    return () => clearInterval(id)
+  }, [stage, phase])
+
+  useEffect(() => () => timersRef.current.forEach(clearTimeout), [])
 
   if (!selectedProduct) return null
 
@@ -194,40 +138,12 @@ export default function Checkout() {
     : 0
   const payable = Math.max(0, total - discount)
   const methodLabel = payMethod === 'binance' ? 'Binance Pay' : 'PayPal'
-  const payBtnLabel = free || payable === 0 ? 'Get your field' : `Pay $${payable} with ${methodLabel} →`
+  const cat = CAT[f.line] || { label: 'Field', cls: 'gold' }
 
-  const handleApplyCoupon = () => {
-    const code = couponInput.trim().toUpperCase()
-    const found = LOCAL_COUPONS[code]
-    if (!found) {
-      setCouponMsg('Invalid code.')
-      return
-    }
-    setAppliedCoupon({ code, ...found })
-    setCouponMsg('')
-  }
-
-  const copyField = async (text, key) => {
-    try {
-      await navigator.clipboard.writeText(String(text))
-    } catch {
-      /* noop */
-    }
-    setCopying(key)
-    setTimeout(() => setCopying((k) => (k === key ? null : k)), 1800)
-  }
-
-  const enterPay = () => {
-    if (free || payable === 0) {
-      persistAndDeliver()
-      return
-    }
-    const ref = genRef(f.id)
-    setPayRef(ref)
-    setCountdown(15 * 60)
-    setTxnInput('')
-    setTxnError('')
-    setStage('pay')
+  const dotStatus = (i) => {
+    if (i < phase) return 'done'
+    if (i === phase && phase < 4) return 'active'
+    return 'idle'
   }
 
   const persistAndDeliver = (txn = '') => {
@@ -236,241 +152,335 @@ export default function Checkout() {
       const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
       orders.unshift({ id: payRef, name: f.title, method: payMethod, amount: payable, ref: payRef, txn, ts: Date.now() })
       localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: payRef, txn })
   }
 
-  const startVerify = () => {
-    const txn = txnInput.trim()
-    if (txn.length < 6) {
-      setTxnError('Please enter your Transaction ID (min. 6 characters).')
-      return
-    }
+  const enterVerify = () => {
+    if (free || payable === 0) { persistAndDeliver(); return }
+    const r = genRef(f.id)
+    setPayRef(r)
+    setCountdown(15 * 60)
+    setPhase(0)
+    setFallbackOpen(false)
+    setTxnInput('')
     setTxnError('')
-    setStage('verifying')
-    setVerifyPhase(0)
-
-    const delays = [1400, 2800, 4200, 5500]
-    const timers = delays.map((d, i) =>
-      setTimeout(() => setVerifyPhase(i + 1), d),
-    )
-    const nav = setTimeout(() => persistAndDeliver(txn), 6600)
-    verifyTimersRef.current = [...timers, nav]
+    setStage('verify')
   }
 
-  // ---- ORDER SUMMARY (shared across stages) ----
-  const OrderSummary = (
-    <div className="wf-order-card">
-      <h3 className="wf-order-title">{f.title}</h3>
-      <span className="wf-card-cat" style={{ display: 'block', marginBottom: 22 }}>
-        {catLabel(f.line)} · lifetime access
-      </span>
-      <div className="wf-order-row">
-        <span>Subtotal</span>
-        <span>{free ? '$0' : `$${total}`}</span>
-      </div>
-      {discount > 0 && (
-        <div className="wf-order-row">
-          <span>Discount ({appliedCoupon.code})</span>
-          <span>−${discount}</span>
+  const handleApplyCoupon = () => {
+    const code = couponInput.trim().toUpperCase()
+    const found = LOCAL_COUPONS[code]
+    if (!found) { setCouponMsg('Invalid code.'); return }
+    setAppliedCoupon({ code, ...found })
+    setCouponMsg('')
+  }
+
+  const copyField = async (text, key) => {
+    try { await navigator.clipboard.writeText(String(text)) } catch { /* noop */ }
+    setCopying(key)
+    setTimeout(() => setCopying((k) => (k === key ? null : k)), 1800)
+  }
+
+  const submitFallbackTxn = () => {
+    const txn = txnInput.trim()
+    if (txn.length < 6) { setTxnError('Enter a valid Transaction ID (min. 6 chars).'); return }
+    timersRef.current.forEach(clearTimeout)
+    setTxnError('')
+    setPhase(4)
+    persistAndDeliver(txn)
+  }
+
+  // ---- Product card (shared) ----
+  function ProductCard({ compact }) {
+    return (
+      <div className={`wf-co-product${compact ? ' compact' : ''}`} data-reveal>
+        <div className="wf-co-w-tile">W</div>
+        <div className="wf-co-product-info">
+          <span className="wf-co-purchasing">You're purchasing</span>
+          <div className="wf-co-field-name">{f.title}</div>
+          <span className={`wf-co-cat-pill ${cat.cls}`}>{cat.label}</span>
         </div>
-      )}
-      <div className="wf-order-row">
-        <span>Fees</span>
-        <span>$0</span>
       </div>
-      <div className="wf-order-row total">
-        <span>Total</span>
-        <span>{free ? '$0' : `$${payable}`}</span>
-      </div>
-      {stage === 'method' && (
-        <button
-          className="wf-form-submit wf-mag"
-          style={{ marginTop: 22, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-          onClick={enterPay}
-        >
-          <span>{payBtnLabel}</span>
+    )
+  }
+
+  // ---- Copy row ----
+  function CopyRow({ label, value, copyKey, mono }) {
+    const copied = copying === copyKey
+    return (
+      <div className="wf-cr-row">
+        <div>
+          <div className="wf-cr-label">{label}</div>
+          <div className={`wf-cr-value${mono ? ' mono' : ''}`}>{value}</div>
+        </div>
+        <button className={`wf-payto-copy${copied ? ' copied' : ''}`} onClick={() => copyField(value, copyKey)} aria-label={`Copy ${label}`}>
+          {copied ? <CheckIcon size={13} stroke={2.5} /> : 'Copy'}
         </button>
-      )}
-      <p className="wf-form-note" style={{ marginTop: 12 }}>
-        <span className="wf-auto-verified-badge">&#x2714; Auto-verified · instant access</span>
-      </p>
-    </div>
-  )
-
-  // ---- STAGE: METHOD SELECT ----
-  const StageMethod = (
-    <div>
-      {free ? (
-        <p className="wf-detail-desc">This field is on the house — no payment required. Claim it and start listening tonight.</p>
-      ) : (
-        <>
-          <div className="wf-field-label" style={{ marginBottom: 14 }}>
-            Payment method
-          </div>
-          <div className="wf-pay-list">
-            {METHODS.map((m) => (
-              <button
-                key={m.id}
-                className={`wf-pay-option${payMethod === m.id ? ' selected' : ''}`}
-                onClick={() => setPayMethod(m.id)}
-              >
-                <span className="wf-pay-radio" aria-hidden="true" />
-                <span className={`wf-pay-mark ${m.id}`}>
-                  {m.id === 'paypal' ? <PayPalMark size={28} /> : <BinanceMark size={32} />}
-                </span>
-                <span className="wf-pay-text">
-                  <span className="wf-pay-name">{m.label}</span>
-                  <span className="wf-pay-desc">{m.desc}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="wf-field-label" style={{ margin: '24px 0 12px' }}>
-            Discount code
-          </div>
-          {appliedCoupon ? (
-            <div className="wf-coupon-applied">
-              <span>
-                <strong>{appliedCoupon.code}</strong> applied ·{' '}
-                {appliedCoupon.type === 'percent' ? `${appliedCoupon.value}% off` : `$${appliedCoupon.value} off`}
-              </span>
-              <button
-                type="button"
-                aria-label="Remove coupon"
-                onClick={() => {
-                  setAppliedCoupon(null)
-                  setCouponInput('')
-                }}
-              >
-                <CloseIcon size={14} />
-              </button>
-            </div>
-          ) : (
-            <div className="wf-coupon-row">
-              <input
-                className="wf-input"
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
-                placeholder="Enter code"
-              />
-              <button type="button" className="wf-coupon-apply wf-mag" onClick={handleApplyCoupon}>
-                Apply
-              </button>
-            </div>
-          )}
-          {couponMsg && <p className="wf-auth-error" style={{ marginTop: 10 }}>{couponMsg}</p>}
-        </>
-      )}
-    </div>
-  )
-
-  // ---- STAGE: PAY INSTRUCTIONS ----
-  const payTarget = payMethod === 'binance' ? BINANCE_ID : PAYPAL_EMAIL
-  const payTargetLabel = payMethod === 'binance' ? 'Binance Pay ID' : 'PayPal email'
-  const countdownPct = (countdown / (15 * 60)) * 100
-
-  const StagePay = (
-    <div>
-      <div className="wf-pay-header">
-        <div className={`wf-pay-header-mark ${payMethod}`}>
-          {payMethod === 'paypal' ? <PayPalMark size={28} /> : <BinanceMark size={32} />}
-        </div>
-        <span className="wf-pay-header-name">{methodLabel}</span>
       </div>
-
-      <p className="wf-pay-instructions">
-        Send the exact amount using the details below, then paste your Transaction ID to verify.
-      </p>
-
-      <div className="wf-payto-list">
-        <PayToRow label={payTargetLabel} value={payTarget} copyKey="target" copying={copying} onCopy={copyField} />
-        <PayToRow label="Amount" value={`$${payable}`} copyKey="amount" copying={copying} onCopy={copyField} mono />
-        <PayToRow label="Note to payee" value={payRef} copyKey="ref" copying={copying} onCopy={copyField} mono />
-      </div>
-
-      <div className="wf-ref-block">
-        <div className="wf-ref-eyebrow">Reference — include in your payment note</div>
-        <div className={`wf-ref-code${isFlipping ? ' flipping' : ''}`}>{payRef}</div>
-        <div className="wf-ref-timer">
-          <span className="wf-ref-time">{fmtTime(countdown)}</span>
-          <div className="wf-ref-bar">
-            <div className="wf-ref-bar-fill" style={{ width: `${countdownPct}%` }} />
-          </div>
-          <span className="wf-ref-time-label">Reference refreshes automatically</span>
-        </div>
-      </div>
-
-      <div className="wf-txn-section">
-        <label className="wf-field-label" htmlFor="wf-txn-input">
-          Paste your Transaction ID
-        </label>
-        <div className="wf-txn-row">
-          <input
-            id="wf-txn-input"
-            className={`wf-input${txnError ? ' error' : ''}`}
-            value={txnInput}
-            onChange={(e) => { setTxnInput(e.target.value); setTxnError('') }}
-            onKeyDown={(e) => e.key === 'Enter' && startVerify()}
-            placeholder="e.g. 8DK29FHQL..."
-            style={{ flex: 1 }}
-          />
-          <button className="wf-form-submit wf-mag wf-verify-btn" onClick={startVerify}>
-            Verify payment →
-          </button>
-        </div>
-        {txnError && <p className="wf-auth-error" style={{ marginTop: 8 }}>{txnError}</p>}
-      </div>
-
-      <button className="wf-back" style={{ marginTop: 20 }} onClick={() => setStage('method')}>
-        ← Change method
-      </button>
-    </div>
-  )
-
-  // ---- STAGE: VERIFYING ----
-  const StageVerifying = (
-    <div>
-      <div className="wf-pay-header">
-        <div className={`wf-pay-header-mark ${payMethod}`}>
-          {payMethod === 'paypal' ? <PayPalMark size={28} /> : <BinanceMark size={32} />}
-        </div>
-        <span className="wf-pay-header-name">Verifying with {methodLabel}</span>
-      </div>
-      {payMethod === 'binance' ? <BinanceRadar phase={verifyPhase} /> : <PayPalSpinner phase={verifyPhase} />}
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="wf-app" ref={ref}>
       <Background resonanceTop="50%" />
 
-      <section className="wf-section" style={{ maxWidth: 980, margin: '0 auto', padding: '110px 28px 100px' }}>
-        <button className="wf-back" data-reveal onClick={() => openDetail(f.id)} style={{ marginBottom: 22 }}>
-          ← Back to field
-        </button>
-        <div className="wf-eyebrow" data-reveal>
-          Checkout
-        </div>
-        <h1 className="wf-detail-title" data-reveal style={{ marginBottom: 36 }}>
-          Complete your order.
-        </h1>
+      <section
+        className="wf-section"
+        style={{ maxWidth: stage === 'verify' ? 1060 : 560, margin: '0 auto', padding: '110px 28px 100px', transition: 'max-width 0.55s var(--wf-ease)' }}
+      >
 
-        <div className="wf-checkout-grid">
-          <div data-reveal className="wf-checkout-left">
-            {stage === 'method' && StageMethod}
-            {stage === 'pay' && StagePay}
-            {stage === 'verifying' && StageVerifying}
-          </div>
+        {/* ===== STAGE: METHOD SELECT ===== */}
+        {stage === 'method' && (
+          <>
+            <button className="wf-back" data-reveal onClick={() => openDetail(f.id)} style={{ marginBottom: 24 }}>
+              ← Back to field
+            </button>
 
-          <div className="wf-checkout-right" data-reveal>
-            {OrderSummary}
-          </div>
-        </div>
+            <ProductCard />
+
+            <div className="wf-eyebrow" data-reveal style={{ marginTop: 30 }}>Checkout</div>
+            <h1 className="wf-detail-title" data-reveal style={{ marginBottom: 30 }}>Complete your order.</h1>
+
+            {free ? (
+              <p className="wf-detail-desc" data-reveal>This field is on the house — no payment required.</p>
+            ) : (
+              <>
+                <div className="wf-field-label" data-reveal style={{ marginBottom: 14 }}>Payment method</div>
+                <div className="wf-pay-list" data-reveal>
+                  {METHODS.map((m) => (
+                    <button
+                      key={m.id}
+                      className={`wf-pay-option${payMethod === m.id ? ' selected' : ''}`}
+                      onClick={() => setPayMethod(m.id)}
+                    >
+                      <span className="wf-pay-radio" aria-hidden="true" />
+                      <span className={`wf-pay-mark ${m.id}`}>
+                        {m.id === 'paypal' ? <PayPalMark size={28} /> : <BinanceMark size={32} />}
+                      </span>
+                      <span className="wf-pay-text">
+                        <span className="wf-pay-name">{m.label}</span>
+                        <span className="wf-pay-desc">{m.desc}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="wf-field-label" data-reveal style={{ margin: '22px 0 10px' }}>Discount code</div>
+                {appliedCoupon ? (
+                  <div className="wf-coupon-applied" data-reveal>
+                    <span>
+                      <strong>{appliedCoupon.code}</strong> applied ·{' '}
+                      {appliedCoupon.type === 'percent' ? `${appliedCoupon.value}% off` : `$${appliedCoupon.value} off`}
+                    </span>
+                    <button type="button" aria-label="Remove coupon" onClick={() => { setAppliedCoupon(null); setCouponInput('') }}>
+                      <CloseIcon size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="wf-coupon-row" data-reveal>
+                    <input
+                      className="wf-input"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                      placeholder="Enter code"
+                    />
+                    <button type="button" className="wf-coupon-apply wf-mag" onClick={handleApplyCoupon}>Apply</button>
+                  </div>
+                )}
+                {couponMsg && <p className="wf-auth-error" style={{ marginTop: 10 }}>{couponMsg}</p>}
+
+                <div className="wf-co-total-row" data-reveal>
+                  <span>Total</span>
+                  <span className="wf-co-total-amt">${payable}</span>
+                </div>
+              </>
+            )}
+
+            <button className="wf-form-submit wf-mag wf-co-continue" data-reveal onClick={enterVerify}>
+              <span>{free ? 'Get your field' : `Continue with ${methodLabel}`}</span>
+              <span className="wf-co-arrow" aria-hidden="true">→</span>
+            </button>
+          </>
+        )}
+
+        {/* ===== STAGE: AUTO VERIFY ===== */}
+        {stage === 'verify' && (
+          <>
+            {/* Top bar */}
+            <div className="wf-co-verify-top" data-reveal>
+              <button
+                className="wf-back"
+                onClick={() => {
+                  timersRef.current.forEach(clearTimeout)
+                  setStage('method')
+                  setPhase(0)
+                }}
+              >
+                ← Change method
+              </button>
+              <span className="wf-co-auto-pill">✓ Automatic verification</span>
+            </div>
+
+            <ProductCard compact />
+
+            {/* Reference banner — full width */}
+            <div className="wf-co-ref-banner" data-reveal>
+              <div className="wf-co-ref-inner">
+                <div>
+                  <div className="wf-ref-eyebrow">Payment reference — include in your note</div>
+                  <div className={`wf-ref-code${isFlipping ? ' flipping' : ''}`}>{payRef}</div>
+                </div>
+                <button
+                  className={`wf-payto-copy${copying === 'ref' ? ' copied' : ''}`}
+                  style={{ alignSelf: 'center' }}
+                  onClick={() => copyField(payRef, 'ref')}
+                >
+                  {copying === 'ref' ? <CheckIcon size={13} stroke={2.5} /> : 'Copy'}
+                </button>
+              </div>
+              <div className="wf-ref-timer">
+                <span className="wf-ref-time">{fmtTime(countdown)}</span>
+                <div className="wf-ref-bar">
+                  <div className="wf-ref-bar-fill" style={{ width: `${(countdown / (15 * 60)) * 100}%` }} />
+                </div>
+                <span className="wf-ref-time-label">Reference refreshes automatically</span>
+              </div>
+            </div>
+
+            {/* Two-column grid */}
+            <div className="wf-co-verify-grid">
+
+              {/* LEFT — send instructions */}
+              <div className="wf-co-send" data-reveal>
+                <div className="wf-co-send-title">
+                  <span className={`wf-co-send-logo ${payMethod}`}>
+                    {payMethod === 'paypal' ? <PayPalMark size={20} /> : <BinanceMark size={22} />}
+                  </span>
+                  <span>Send via {methodLabel}</span>
+                </div>
+
+                {/* Amount shimmer box */}
+                <div className="wf-co-amount-box">
+                  <span className="wf-co-amount-label">Amount to pay</span>
+                  <span className="wf-co-amount-value">${payable}</span>
+                  <div className="wf-co-amount-shimmer" aria-hidden="true" />
+                </div>
+
+                {/* Payee */}
+                <div className="wf-co-payee-block">
+                  <CopyRow
+                    label={payMethod === 'binance' ? 'Binance Pay UID' : 'PayPal email'}
+                    value={payMethod === 'binance' ? BINANCE_ID : PAYPAL_EMAIL}
+                    copyKey="target"
+                    mono
+                  />
+                  <div className="wf-co-payee-name">Payee: Waslerr Fields</div>
+                </div>
+
+                {/* Steps */}
+                <ol className="wf-co-steps">
+                  {payMethod === 'binance' ? (
+                    <>
+                      <li>Open Binance → Pay → Send to Binance user</li>
+                      <li>Paste the UID and send the exact amount, add the reference as a note</li>
+                      <li>Done — we detect your transfer automatically</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>Open PayPal → Send Money</li>
+                      <li>Paste the email, send the exact amount, add the reference in the note field</li>
+                      <li>Done — we detect your transfer automatically</li>
+                    </>
+                  )}
+                </ol>
+
+                <div className="wf-co-encrypted">🔒 Encrypted in transit · SSL secured</div>
+              </div>
+
+              {/* RIGHT — live status */}
+              <div className="wf-co-watch" data-reveal>
+                <div className="wf-co-watch-title">
+                  {phase < 3 ? 'Waiting for your payment…' : 'Payment confirmed'}
+                </div>
+
+                {/* Logo + expanding rings */}
+                <div className="wf-co-logo-rings">
+                  <div className="wf-co-ring" style={{ animationDelay: '0s' }} />
+                  <div className="wf-co-ring" style={{ animationDelay: '0.7s' }} />
+                  <div className="wf-co-ring" style={{ animationDelay: '1.4s' }} />
+                  <div className="wf-co-logo-center">
+                    {payMethod === 'binance' ? (
+                      <div style={{ animation: 'wf-binpulse 1.6s ease-in-out infinite' }}>
+                        <BinanceMark size={46} />
+                      </div>
+                    ) : (
+                      <div className="wf-pp-mark" style={{ width: 54, height: 54 }}>
+                        <PayPalMark size={30} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <p className="wf-co-watch-sub">
+                  {phase < 3 ? 'Unlocks automatically — nothing to submit' : 'Your field has been delivered.'}
+                </p>
+
+                {/* Timeline */}
+                <div className="wf-co-timeline">
+                  {TIMELINE.map((label, i) => {
+                    const status = dotStatus(i)
+                    return (
+                      <div key={i} className={`wf-tl-row ${status}`} style={{ animationDelay: `${i * 0.07}s` }}>
+                        <span className={`wf-tl-dot ${status}`}>
+                          {status === 'done' && <CheckIcon size={9} stroke={3} />}
+                          {status === 'active' && <span className="wf-tl-spinner" />}
+                        </span>
+                        <span className="wf-tl-label">{label}</span>
+                        {status === 'active' && (
+                          <span className="wf-tl-trailing" aria-hidden="true">{DOTS_SEQ[dotPhase]}</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="wf-co-autocheck">
+                  <span className="wf-co-spin-glyph" aria-hidden="true">◌</span>
+                  Auto-checking · on-chain
+                </div>
+              </div>
+            </div>
+
+            {/* TXID fallback — last resort */}
+            {phase < 3 && (
+              <div className="wf-co-fallback-wrap">
+                {!fallbackOpen ? (
+                  <button className="wf-co-fallback-pill" onClick={() => setFallbackOpen(true)}>
+                    <span aria-hidden="true">🕐</span>
+                    Taking too long? Submit your transaction ID
+                  </button>
+                ) : (
+                  <div className="wf-co-fallback-input">
+                    <input
+                      className={`wf-input${txnError ? ' error' : ''}`}
+                      value={txnInput}
+                      onChange={(e) => { setTxnInput(e.target.value); setTxnError('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && submitFallbackTxn()}
+                      placeholder="Paste your Transaction ID…"
+                    />
+                    <button className="wf-form-submit wf-mag" style={{ padding: '12px 22px', fontSize: 14, whiteSpace: 'nowrap' }} onClick={submitFallbackTxn}>
+                      Verify →
+                    </button>
+                    <button className="wf-back" onClick={() => { setFallbackOpen(false); setTxnError('') }}>✕</button>
+                  </div>
+                )}
+                {txnError && <p className="wf-auth-error" style={{ marginTop: 8, textAlign: 'center' }}>{txnError}</p>}
+              </div>
+            )}
+          </>
+        )}
       </section>
     </div>
   )
