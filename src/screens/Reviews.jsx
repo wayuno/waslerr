@@ -27,6 +27,10 @@ export default function Reviews() {
   const [hover, setHover] = useState(0)
   const [err, setErr] = useState('')
   const [freshId, setFreshId] = useState(null)
+  const [photos, setPhotos] = useState([]) // up to 2 uploaded image URLs
+  const [uploading, setUploading] = useState(false)
+  const photoInputRef = useRef(null)
+  const MAX_PHOTOS = 2
 
   const prodMap = Object.fromEntries(products.map((p) => [p.id, p]))
   const nameOf = (id) => prodMap[id]?.title || 'a Waslerr field'
@@ -57,6 +61,46 @@ export default function Reviews() {
 
   const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result).split(',')[1])
+      r.onerror = reject
+      r.readAsDataURL(file)
+    })
+
+  const onPickPhotos = async (e) => {
+    setErr('')
+    const files = Array.from(e.target.files || [])
+    if (photoInputRef.current) photoInputRef.current.value = ''
+    if (!files.length) return
+    const room = MAX_PHOTOS - photos.length
+    if (room <= 0) return setErr(`You can add at most ${MAX_PHOTOS} photos.`)
+    const take = files.slice(0, room)
+    if (files.length > room) setErr(`Only ${MAX_PHOTOS} photos allowed — extra ones were skipped.`)
+    setUploading(true)
+    for (const file of take) {
+      if (!file.type.startsWith('image/')) { setErr('Only image files are allowed.'); continue }
+      if (file.size > 8 * 1024 * 1024) { setErr('Each photo must be under 8MB.'); continue }
+      try {
+        const dataBase64 = await fileToBase64(file)
+        const r = await fetch('/api/reviews/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+        })
+        const d = await r.json().catch(() => ({}))
+        if (r.ok && d.url) setPhotos((prev) => (prev.length < MAX_PHOTOS ? [...prev, d.url] : prev))
+        else setErr(`Photo upload failed${d.detail ? ': ' + d.detail : ''}`)
+      } catch {
+        setErr('Photo upload failed — network error. Try a smaller image.')
+      }
+    }
+    setUploading(false)
+  }
+
+  const removePhoto = (url) => setPhotos((prev) => prev.filter((u) => u !== url))
+
   const [busy, setBusy] = useState(false)
   const submit = async (e) => {
     e.preventDefault()
@@ -70,10 +114,12 @@ export default function Reviews() {
       name: form.name.trim(),
       rating: form.rating,
       text: form.text.trim(),
+      images: photos,
     })
     setBusy(false)
     if (item?.id) setFreshId(item.id)
     setForm({ name: '', field: form.field, rating: 0, text: '' })
+    setPhotos([])
     setHover(0)
     setFilter('all')
     showToast('Thanks — your story is on the wall')
@@ -195,9 +241,41 @@ export default function Reviews() {
             />
           </label>
 
+          <div className="wf-field">
+            <span className="wf-field-label">Photos (optional · up to {MAX_PHOTOS})</span>
+            <div className="wf-review-photos">
+              {photos.map((url) => (
+                <div className="wf-review-thumb" key={url}>
+                  <img src={url} alt="Your review" />
+                  <button type="button" className="wf-review-thumb-x" aria-label="Remove photo" onClick={() => removePhoto(url)}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  className="wf-review-add-photo"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? '…' : '+ Add photo'}
+                </button>
+              )}
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={onPickPhotos}
+            />
+          </div>
+
           {err && <p className="wf-auth-error" style={{ margin: 0 }}>{err}</p>}
-          <button type="submit" className="wf-form-submit wf-mag" disabled={busy}>
-            {busy ? 'Posting…' : 'Post to the wall'}
+          <button type="submit" className="wf-form-submit wf-mag" disabled={busy || uploading}>
+            {busy ? 'Posting…' : uploading ? 'Uploading photo…' : 'Post to the wall'}
           </button>
           <p className="wf-form-note">Open to everyone. Be honest — real stories help others choose.</p>
         </form>

@@ -41,6 +41,7 @@ export function normalizeReview(row) {
     rating: Number(row.rating) || 5,
     text: row.text || '',
     featured: !!row.featured,
+    images: Array.isArray(row.images) ? row.images.slice(0, 2) : [],
     ts: Date.parse(row.created_at) || Date.now(),
   }
 }

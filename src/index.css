@@ -4131,3 +4131,62 @@ a {
   transition: filter 0.2s, transform 0.2s;
 }
 .wf-co-binance-pay-btn:hover { filter: brightness(1.08); }
+
+/* ---------- Review photos (share form + story cards) ---------- */
+.wf-review-photos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.wf-review-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--wf-rule);
+  flex: none;
+}
+.wf-review-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-review-thumb-x {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(8, 8, 10, 0.78);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wf-review-thumb-x:hover { background: #e0432f; }
+.wf-review-add-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  border: 1px dashed rgba(212, 175, 55, 0.4);
+  background: var(--wf-glass);
+  color: var(--wf-gold);
+  font-size: 12px;
+  font-family: var(--wf-sans);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  flex: none;
+}
+.wf-review-add-photo:hover:not(:disabled) { border-color: var(--wf-gold); background: var(--wf-glass-2); }
+.wf-review-add-photo:disabled { opacity: 0.6; cursor: default; }
+
+.wf-story-photos { display: flex; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
+.wf-story-photo {
+  display: block;
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--wf-rule);
+  transition: transform 0.25s var(--wf-ease), border-color 0.25s;
+}
+.wf-story-photo:hover { transform: translateY(-2px); border-color: rgba(212, 175, 55, 0.45); }
+.wf-story-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }

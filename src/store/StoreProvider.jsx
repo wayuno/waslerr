@@ -590,11 +590,12 @@ export function StoreProvider({ children }) {
   // ---- reviews wall writes ----
   // anyone may post (public insert via the anon client); offline → localStorage
   const addReview = useCallback(async (entry) => {
+    const images = Array.isArray(entry.images) ? entry.images.slice(0, 2) : []
     const supabase = supabaseRef.current
     if (supabase) {
       const { data, error } = await supabase
         .from('reviews')
-        .insert({ field: entry.field, name: entry.name, rating: entry.rating, text: entry.text })
+        .insert({ field: entry.field, name: entry.name, rating: entry.rating, text: entry.text, images })
         .select()
         .single()
       if (!error && data) {
@@ -603,7 +604,7 @@ export function StoreProvider({ children }) {
         return item
       }
     }
-    const item = { id: 'w-' + Math.random().toString(36).slice(2), ts: Date.now(), featured: false, ...entry }
+    const item = { id: 'w-' + Math.random().toString(36).slice(2), ts: Date.now(), featured: false, ...entry, images }
     setWall((prev) => {
       const next = [item, ...prev]
       saveWall(next)

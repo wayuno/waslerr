@@ -145,34 +145,34 @@ const deleteProduct = async (id) => {
   return { ok: r.ok, status: r.status }
 }
 
-// Create the public product-images bucket if it doesn't exist (idempotent).
-let bucketEnsured = false
-const ensureBucket = async () => {
-  if (bucketEnsured) return true
+// Create a public storage bucket if it doesn't exist (idempotent, per-bucket).
+const bucketEnsured = new Set()
+const ensureBucket = async (bucket = 'product-images') => {
+  if (bucketEnsured.has(bucket)) return true
   try {
     const r = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: 'product-images', name: 'product-images', public: true, file_size_limit: 26214400 }),
+      body: JSON.stringify({ id: bucket, name: bucket, public: true, file_size_limit: 26214400 }),
     })
     // 200 created, 409 already exists → both mean the bucket is ready
     if (r.ok || r.status === 409) {
-      bucketEnsured = true
+      bucketEnsured.add(bucket)
       return true
     }
     const detail = await r.text().catch(() => '')
-    console.warn('[waslerr] ensureBucket failed:', r.status, detail.slice(0, 200))
+    console.warn(`[waslerr] ensureBucket(${bucket}) failed:`, r.status, detail.slice(0, 200))
     return false
   } catch (e) {
-    console.warn('[waslerr] ensureBucket error:', e?.message)
+    console.warn(`[waslerr] ensureBucket(${bucket}) error:`, e?.message)
     return false
   }
 }
 
-const uploadImage = async (filename, contentType, buffer) => {
+const uploadImage = async (filename, contentType, buffer, bucket = 'product-images') => {
   const safe = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`
   const put = () =>
-    fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${encodeURIComponent(safe)}`, {
+    fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${encodeURIComponent(safe)}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${SERVICE_KEY}`,
@@ -185,14 +185,14 @@ const uploadImage = async (filename, contentType, buffer) => {
   let r = await put()
   // bucket missing → create it and retry once
   if (!r.ok && (r.status === 404 || r.status === 400)) {
-    await ensureBucket()
+    await ensureBucket(bucket)
     r = await put()
   }
   if (!r.ok) {
     const detail = await r.text().catch(() => '')
     return { ok: false, status: r.status, detail: detail.slice(0, 300) }
   }
-  return { ok: true, publicUrl: `${SUPABASE_URL}/storage/v1/object/public/product-images/${safe}` }
+  return { ok: true, publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${safe}` }
 }
 
 const sbReady = () => SUPABASE_URL && SERVICE_KEY
@@ -869,6 +869,23 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/reviews' && method === 'GET') {
     if (!sbReady()) return sendJson(res, 200, { reviews: [] })
     return sendJson(res, 200, { reviews: await listReviews() })
+  }
+  // public review-photo upload (open to everyone; images only, capped size).
+  // The client allows at most 2 photos per review; the DB also enforces ≤ 2.
+  if (url === '/api/reviews/upload' && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const { filename, contentType, dataBase64 } = await readBody(req, 14e6) // ~10MB image
+    if (!dataBase64) return sendJson(res, 400, { error: 'no_file', detail: 'No image received (file may be too large).' })
+    if (!String(contentType || '').startsWith('image/')) return sendJson(res, 400, { error: 'not_image', detail: 'Only image files are allowed.' })
+    try {
+      const buffer = Buffer.from(dataBase64, 'base64')
+      if (buffer.length > 8 * 1024 * 1024) return sendJson(res, 413, { error: 'too_large', detail: 'Image is too large (max 8MB).' })
+      const out = await uploadImage(filename || 'review', contentType, buffer, 'review-images')
+      if (!out.ok) return sendJson(res, 502, { error: 'upload_failed', detail: out.detail || 'storage rejected the file' })
+      return sendJson(res, 200, { url: out.publicUrl })
+    } catch (e) {
+      return sendJson(res, 500, { error: 'upload_error', detail: e?.message })
+    }
   }
   // admin: feature / unfeature a story
   if (/^\/api\/admin\/reviews\/[^/]+\/feature$/.test(url) && method === 'POST') {
