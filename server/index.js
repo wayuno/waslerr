@@ -253,49 +253,101 @@ const removeConversation = async (conversationId) =>
 
 // --- stats (aggregated from real orders) ---------------------------
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const computeStats = async () => {
-  // delivered/paid orders are the source of truth for revenue + sales
-  const r = await sbRest('orders?status=in.(paid,delivered)&select=amount,field_id,field_title,created_at&order=created_at.desc&limit=5000')
-  const orders = r.ok ? await r.json() : []
 
-  const now = Date.now()
+// Window boundaries (local server time).
+const statWindows = () => {
   const day = 864e5
-  const weekAgo = now - 7 * day
-  const monthStart = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() })()
-  const yearStart = (() => { const d = new Date(); return new Date(d.getFullYear(), 0, 1).getTime() })()
+  const d = new Date()
+  return {
+    weekAgo: Date.now() - 7 * day,
+    monthStart: new Date(d.getFullYear(), d.getMonth(), 1).getTime(),
+    yearStart: new Date(d.getFullYear(), 0, 1).getTime(),
+  }
+}
 
-  let revenueWeek = 0, revenueMonth = 0, revenueYear = 0, revenueTotal = 0
-  let salesWeek = 0, salesMonth = 0, salesYear = 0
-  const byField = new Map()
-  // last 6 months buckets
+// Read the dedicated stats_daily rollup table → time-windowed aggregates +
+// 6-month bars. Returns null if the table isn't there yet (pre-migration).
+const aggregateFromDaily = async () => {
+  const r = await sbRest('stats_daily?select=day,revenue,sales,downloads&order=day.asc&limit=4000')
+  if (!r.ok) return null
+  const rows = await r.json().catch(() => [])
+  const { weekAgo, monthStart, yearStart } = statWindows()
+  const out = {
+    revenueWeek: 0, revenueMonth: 0, revenueYear: 0, revenueTotal: 0,
+    salesWeek: 0, salesMonth: 0, salesYear: 0, salesTotal: 0,
+    downloadsTotal: 0,
+  }
   const months = []
   for (let i = 5; i >= 0; i--) {
-    const d = new Date()
-    d.setMonth(d.getMonth() - i, 1)
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i)
     months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, m: MONTH_NAMES[d.getMonth()], v: 0 })
   }
   const monthIndex = new Map(months.map((mm, i) => [mm.key, i]))
+  for (const row of rows) {
+    const rev = Number(row.revenue) || 0
+    const sales = Number(row.sales) || 0
+    const ts = Date.parse(row.day) || 0
+    out.revenueTotal += rev; out.salesTotal += sales; out.downloadsTotal += Number(row.downloads) || 0
+    if (ts >= weekAgo) { out.revenueWeek += rev; out.salesWeek += sales }
+    if (ts >= monthStart) { out.revenueMonth += rev; out.salesMonth += sales }
+    if (ts >= yearStart) { out.revenueYear += rev; out.salesYear += sales }
+    const dd = new Date(ts)
+    const mk = `${dd.getFullYear()}-${dd.getMonth()}`
+    if (monthIndex.has(mk)) months[monthIndex.get(mk)].v += rev
+  }
+  out.monthly = months.map((m) => ({ m: m.m, v: m.v }))
+  return out
+}
 
+// Fallback (pre-migration): derive the same aggregates by scanning orders.
+const aggregateFromOrders = async (orders) => {
+  const { weekAgo, monthStart, yearStart } = statWindows()
+  const out = {
+    revenueWeek: 0, revenueMonth: 0, revenueYear: 0, revenueTotal: 0,
+    salesWeek: 0, salesMonth: 0, salesYear: 0, salesTotal: orders.length, downloadsTotal: orders.length,
+  }
+  const months = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i)
+    months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, m: MONTH_NAMES[d.getMonth()], v: 0 })
+  }
+  const monthIndex = new Map(months.map((mm, i) => [mm.key, i]))
   for (const o of orders) {
     const amt = Number(o.amount) || 0
     const ts = Date.parse(o.created_at) || 0
-    revenueTotal += amt
-    if (ts >= weekAgo) { revenueWeek += amt; salesWeek++ }
-    if (ts >= monthStart) { revenueMonth += amt; salesMonth++ }
-    if (ts >= yearStart) { revenueYear += amt; salesYear++ }
+    out.revenueTotal += amt
+    if (ts >= weekAgo) { out.revenueWeek += amt; out.salesWeek++ }
+    if (ts >= monthStart) { out.revenueMonth += amt; out.salesMonth++ }
+    if (ts >= yearStart) { out.revenueYear += amt; out.salesYear++ }
     const d = new Date(ts)
     const mk = `${d.getFullYear()}-${d.getMonth()}`
     if (monthIndex.has(mk)) months[monthIndex.get(mk)].v += amt
+  }
+  out.monthly = months.map((m) => ({ m: m.m, v: m.v }))
+  return out
+}
+
+const computeStats = async () => {
+  // Revenue / sales / monthly come from the dedicated stats_daily rollup table.
+  // Orders are still read for the per-field "top fields" breakdown (the rollup
+  // is by day, not by field) and as a fallback before stats.sql is applied.
+  const ordersRes = await sbRest('orders?status=in.(paid,delivered)&select=amount,field_id,field_title,created_at&order=created_at.desc&limit=5000')
+  const orders = ordersRes.ok ? await ordersRes.json() : []
+
+  const agg = (await aggregateFromDaily()) || (await aggregateFromOrders(orders))
+
+  // top fields by units sold (from orders — per-field detail)
+  const byField = new Map()
+  for (const o of orders) {
+    const amt = Number(o.amount) || 0
     const fid = o.field_id || o.field_title || 'unknown'
     const cur = byField.get(fid) || { id: fid, title: o.field_title || 'Field', units: 0, revenue: 0 }
-    cur.units++
-    cur.revenue += amt
+    cur.units++; cur.revenue += amt
     byField.set(fid, cur)
   }
-
   const topFields = [...byField.values()].sort((a, b) => b.units - a.units).slice(0, 5)
 
-  // counts from catalog + support
+  // catalog + support counts
   const pc = await sbRest('products?select=id')
   const products = pc.ok ? await pc.json() : []
   const ffc = await sbRest('free_fields?select=id')
@@ -303,12 +355,10 @@ const computeStats = async () => {
   const convs = await getConversations()
 
   return {
-    revenueWeek, revenueMonth, revenueYear, revenueTotal,
-    salesWeek, salesMonth, salesYear, salesTotal: orders.length,
+    ...agg,
     fieldsPublished: products.length,
     freeFields: free.length,
     supportChats: convs.length,
-    monthly: months.map((m) => ({ m: m.m, v: m.v })),
     topFields,
   }
 }
