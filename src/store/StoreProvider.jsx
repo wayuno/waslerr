@@ -286,7 +286,10 @@ export function StoreProvider({ children }) {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ ...form, image_url }),
         })
-        if (!res.ok) return { error: 'Could not publish field.' }
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          return { error: `Publish failed (${res.status})${j.detail ? ': ' + j.detail : j.error ? ': ' + j.error : ''}` }
+        }
         await reloadProducts()
         return { ok: true }
       } catch {
@@ -330,11 +333,7 @@ export function StoreProvider({ children }) {
         })
         if (!r.ok) {
           const j = await r.json().catch(() => ({}))
-          return {
-            error: j.detail
-              ? `Failed: ${j.detail}`
-              : 'Could not publish — make sure you ran supabase/full.sql (announcements table).',
-          }
+          return { error: `Publish failed (${r.status})${j.detail ? ': ' + j.detail : j.error ? ': ' + j.error : ''}` }
         }
         await loadAnnouncements()
         return { ok: true }

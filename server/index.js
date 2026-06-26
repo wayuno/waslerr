@@ -71,13 +71,15 @@ const readBody = (req, max = 1e6) =>
   })
 
 // Verify the caller's Supabase access token; return { id, email, role } or null.
+// Uses the service-role key as the apikey (known-valid) so verification doesn't
+// depend on the anon key being correct.
 const getAuthedUser = async (req) => {
   const auth = req.headers['authorization'] || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  if (!token || !SUPABASE_URL || !ANON_KEY) return null
+  if (!token || !SUPABASE_URL) return null
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { Authorization: `Bearer ${token}`, apikey: ANON_KEY },
+      headers: { Authorization: `Bearer ${token}`, apikey: SERVICE_KEY || ANON_KEY },
     })
     if (!r.ok) return null
     const u = await r.json()
@@ -98,8 +100,12 @@ const requireAdmin = async (req, res) => {
     return false
   }
   const u = await getAuthedUser(req)
-  if (!u || (u.email !== ADMIN_EMAIL && u.role !== 'admin')) {
-    sendJson(res, 403, { error: 'forbidden' })
+  if (!u) {
+    sendJson(res, 403, { error: 'forbidden', detail: 'not signed in or token expired — sign out and sign in again' })
+    return false
+  }
+  if (u.email !== ADMIN_EMAIL && u.role !== 'admin') {
+    sendJson(res, 403, { error: 'forbidden', detail: `signed in as ${u.email} (role: ${u.role}) — not the admin` })
     return false
   }
   return true
