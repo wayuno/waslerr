@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store/StoreProvider'
+import NotificationBell from './NotificationBell'
 
 // primary nav links (existing sections preserved, "What's new" added)
 const NAV_LINKS = [
@@ -84,12 +85,16 @@ export default function Nav() {
                 Sign out
               </button>
             )}
+            <NotificationBell />
             <button className="wf-nav-cta wf-mag" onClick={() => go({ page: 'fields' })}>
               Begin
             </button>
           </div>
         </div>
 
+        <div className="wf-notif-mobile">
+          <NotificationBell />
+        </div>
         <button
           className={`wf-burger${menuOpen ? ' open' : ''}`}
           aria-label="Menu"

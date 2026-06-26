@@ -25,7 +25,14 @@ const SEED = [...allFields, ...freeFields].map((f) => {
 })
 
 // fallback journal entries when Supabase isn't configured
-const SEED_ANN = seedUpdates.map((u, i) => ({ id: 'seed-' + i, tag: u.tag, title: u.title, body: u.body, date: u.date }))
+const SEED_ANN = seedUpdates.map((u, i) => ({
+  id: 'seed-' + i,
+  tag: u.tag,
+  title: u.title,
+  body: u.body,
+  date: u.date,
+  ts: Date.parse(u.date) || Date.now() - i * 6 * 864e5,
+}))
 const normalizeAnnouncement = (row) => ({
   id: row.id,
   tag: row.tag,
@@ -33,7 +40,16 @@ const normalizeAnnouncement = (row) => ({
   body: row.body || '',
   image_url: row.image_url || null,
   date: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+  ts: Date.parse(row.created_at) || Date.now(),
 })
+
+// map an announcement tag to a notification type + icon
+const tagToType = (tag) => {
+  const t = (tag || '').toUpperCase()
+  if (t === 'NEW FIELD') return 'release'
+  if (t === 'OFFER') return 'offer'
+  return 'announce'
+}
 
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -74,6 +90,25 @@ export function StoreProvider({ children }) {
   const [chatMsgs, setChatMsgs] = useState([])
   const [chatRequest, setChatRequest] = useState(null)
   const [appliedCoupon, setAppliedCoupon] = useState(null)
+
+  // notifications: derived from announcements (admin-published) + local items
+  // (e.g. chat replies); per-user read state via localStorage.
+  const readInit = () => {
+    try {
+      return Number(localStorage.getItem('wf_notif_read_at')) || 0
+    } catch {
+      return 0
+    }
+  }
+  const localInit = () => {
+    try {
+      return JSON.parse(localStorage.getItem('wf_notif_local') || '[]')
+    } catch {
+      return []
+    }
+  }
+  const [notifReadAt, setNotifReadAt] = useState(readInit)
+  const [localNotifs, setLocalNotifs] = useState(localInit)
 
   const pendingSection = useRef(null)
   const supabaseRef = useRef(null)
@@ -451,6 +486,50 @@ export function StoreProvider({ children }) {
   }, [])
   const clearChatRequest = useCallback(() => setChatRequest(null), [])
 
+  // ---- notifications ----
+  const pushNotification = useCallback((n) => {
+    const item = { id: 'l-' + Math.random().toString(36).slice(2), ts: Date.now(), ...n }
+    setLocalNotifs((prev) => {
+      const next = [item, ...prev].slice(0, 30)
+      try {
+        localStorage.setItem('wf_notif_local', JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+  const markNotifsRead = useCallback(() => {
+    const now = Date.now()
+    setNotifReadAt(now)
+    try {
+      localStorage.setItem('wf_notif_read_at', String(now))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+  // cross-tab sync
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'wf_notif_read_at') setNotifReadAt(Number(e.newValue) || 0)
+      if (e.key === 'wf_notif_local') {
+        try {
+          setLocalNotifs(JSON.parse(e.newValue || '[]'))
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  const notifications = [
+    ...announcements.map((a) => ({ id: 'a-' + a.id, type: tagToType(a.tag), title: a.title, body: a.body, href: 'updates', ts: a.ts || 0 })),
+    ...localNotifs,
+  ].sort((a, b) => b.ts - a.ts)
+  const unreadCount = notifications.filter((n) => n.ts > notifReadAt).length
+
   const value = {
     page,
     navigate,
@@ -498,6 +577,11 @@ export function StoreProvider({ children }) {
     chatRequest,
     requestViaChat,
     clearChatRequest,
+    notifications,
+    unreadCount,
+    notifReadAt,
+    markNotifsRead,
+    pushNotification,
     authedFetch,
     appliedCoupon,
     applyCoupon,

@@ -31,7 +31,7 @@ const greeting = () => {
 }
 
 export default function ChatWidget() {
-  const { chatOpen, setChatOpen, conversationId, userEmail, chatRequest, clearChatRequest } = useStore()
+  const { chatOpen, setChatOpen, conversationId, userEmail, chatRequest, clearChatRequest, pushNotification } = useStore()
   const [msgs, setMsgs] = useState([])
   const [typing, setTyping] = useState(false)
   const [text, setText] = useState('')
@@ -167,6 +167,7 @@ export default function ChatWidget() {
         body: JSON.stringify({ conversationId, email: userEmail || null, text: t }),
       }).catch(() => {})
     }
+    pushNotification({ type: 'reply', title: 'Support is on it', body: 'Your message reached the team — we’ll reply right here shortly.', href: 'chat' })
     later(() => patchMsg(uId, { status: '✓ Delivered' }), 600)
     later(() => setTyping(true), 1600)
     later(() => {

@@ -109,6 +109,33 @@ export const TrashIcon = ({ size = 16 }) => (
 
 export const StarRow = ({ count = 5 }) => <span aria-hidden="true">{'★'.repeat(count)}</span>
 
+export const BellIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+  </svg>
+)
+
+export const MegaphoneIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m3 11 15-5v12L3 13zM3 11v4M11.6 16.5l1 3.5" />
+  </svg>
+)
+
+export const TagIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 12.5 12.5 20l-8-8V4h8z" />
+    <circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+export const DiscIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="2.4" />
+  </svg>
+)
+
 export const BookmarkIcon = ({ size = 13 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
     <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
