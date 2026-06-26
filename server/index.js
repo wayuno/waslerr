@@ -18,7 +18,16 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import {
+  paypalConfigured,
+  binanceConfigured,
+  paypalFindByReference,
+  paypalVerifyTxid,
+  binanceCreateOrder,
+  binanceQueryOrder,
+} from './payments.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(__dirname, '..', 'dist')
@@ -172,6 +181,59 @@ const insertCoupon = async (row) => {
   return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
 }
 const removeCoupon = async (id) => (await sbRest(`coupons?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+
+// --- payments / orders ---------------------------------------------
+// Merchant payee config (shown to the buyer). Override via env if needed.
+const PAYPAL_EMAIL = process.env.PAYPAL_EMAIL || 'ck806180@gmail.com'
+const BINANCE_PAY_ID = process.env.BINANCE_PAY_ID || '767314103'
+
+// Server-side catalog price lookup (never trust the client). Returns the
+// product row or null.
+const getProductById = async (id) => {
+  if (!sbReady() || !id) return null
+  const r = await sbRest(`products?id=eq.${encodeURIComponent(id)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
+
+const REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const genReference = (fieldTitle) => {
+  const fld = (fieldTitle || 'FLD').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'FLD'
+  let s = ''
+  for (let i = 0; i < 5; i++) s += REF_CHARS[crypto.randomInt(REF_CHARS.length)]
+  return `WF-${fld}-${s}`
+}
+
+const insertOrder = async (row) => {
+  const r = await sbRest('orders', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
+}
+const getOrderByRef = async (reference) => {
+  const r = await sbRest(`orders?reference=eq.${encodeURIComponent(reference)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
+const updateOrder = async (reference, patch) => {
+  const r = await sbRest(`orders?reference=eq.${encodeURIComponent(reference)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(patch),
+  })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, data: Array.isArray(d) ? d[0] : d }
+}
+
+// Mark an order paid+delivered once (idempotent). Returns the updated order.
+const markDelivered = async (order, { txid, meta } = {}) => {
+  if (order.status === 'delivered' || order.status === 'paid') return order
+  const out = await updateOrder(order.reference, {
+    status: 'delivered',
+    txid: txid || order.txid || null,
+    meta: meta || order.meta || null,
+  })
+  return out.data || { ...order, status: 'delivered' }
+}
 
 // --- support chat ---
 const insertMessage = async (row) => {
@@ -416,6 +478,140 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true })
   }
 
+  // ---- checkout / payments ----
+  // Create an order. Server sets the price from the catalog (never the client),
+  // applies the coupon, generates the note-to-payee reference, and (for Binance)
+  // creates a real merchant order so the buyer can pay inside Binance.
+  if (url === '/api/checkout/create' && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const b = await readBody(req)
+    const fieldId = (b.fieldId || '').toString()
+    const methodSel = b.method === 'binance' ? 'binance' : 'paypal'
+    if (!fieldId) return sendJson(res, 400, { error: 'field_required' })
+
+    const product = await getProductById(fieldId)
+    if (!product) return sendJson(res, 404, { error: 'field_not_found' })
+
+    let amount = Number(product.price) || 0
+    if (amount <= 0) return sendJson(res, 400, { error: 'free_field', detail: 'free fields need no checkout' })
+
+    // server-side coupon application
+    let couponCode = null
+    if (b.coupon) {
+      const c = await getCoupon((b.coupon || '').toUpperCase())
+      if (c) {
+        couponCode = c.code
+        amount = c.type === 'percent' ? amount - Math.round((amount * Number(c.value)) / 100) : Math.max(0, amount - Number(c.value))
+      }
+    }
+    amount = Math.max(0, amount)
+
+    const reference = genReference(product.title)
+    const orderRow = {
+      reference,
+      field_id: fieldId,
+      field_title: product.title,
+      method: methodSel,
+      amount,
+      currency: 'USD',
+      status: 'pending',
+      coupon: couponCode,
+      buyer_email: (b.email || '').toString().toLowerCase() || null,
+    }
+
+    let binance = null
+    if (methodSel === 'binance' && binanceConfigured()) {
+      const created = await binanceCreateOrder({ reference, amount, goodsName: product.title })
+      if (created.ok) {
+        orderRow.prepay_id = created.prepayId || null
+        binance = {
+          checkoutUrl: created.checkoutUrl,
+          deeplink: created.deeplink,
+          qrcodeLink: created.qrcodeLink,
+          universalUrl: created.universalUrl,
+        }
+      }
+      // if create fails we still return the manual UID flow; status polling will
+      // fall back to query-by-reference (works once a merchant order exists).
+    }
+
+    const out = await insertOrder(orderRow)
+    if (!out.ok) return sendJson(res, 502, { error: 'order_failed' })
+
+    return sendJson(res, 200, {
+      reference,
+      amount,
+      method: methodSel,
+      coupon: couponCode,
+      fieldTitle: product.title,
+      payee: methodSel === 'binance' ? { binanceId: BINANCE_PAY_ID } : { paypalEmail: PAYPAL_EMAIL },
+      binance,
+      providerReady: methodSel === 'binance' ? binanceConfigured() : paypalConfigured(),
+    })
+  }
+
+  // Poll order status. Hits the provider API and matches by reference.
+  // Returns { status: pending | detected | paid | delivered | failed, txid? }.
+  if (url === '/api/checkout/status' && method === 'GET') {
+    const reference = parsedUrl.searchParams.get('reference') || ''
+    if (!reference || !sbReady()) return sendJson(res, 400, { error: 'bad_request' })
+    const order = await getOrderByRef(reference)
+    if (!order) return sendJson(res, 404, { error: 'order_not_found' })
+    if (order.status === 'delivered' || order.status === 'paid') {
+      return sendJson(res, 200, { status: 'delivered', txid: order.txid || null, amount: Number(order.amount) })
+    }
+
+    if (order.method === 'binance') {
+      const q = await binanceQueryOrder(reference)
+      if (q.ok && q.status === 'paid') {
+        const updated = await markDelivered(order, { txid: q.txid, meta: q.raw })
+        return sendJson(res, 200, { status: 'delivered', txid: updated.txid || q.txid || null, amount: Number(order.amount) })
+      }
+      const status = q.ok ? (q.status === 'detected' ? 'detected' : 'pending') : 'pending'
+      return sendJson(res, 200, { status, providerStatus: q.providerStatus || null })
+    }
+
+    // PayPal: search for a completed transaction whose note carries the reference
+    const found = await paypalFindByReference(reference, Number(order.amount))
+    if (found.ok) {
+      const updated = await markDelivered(order, { txid: found.txid, meta: found.raw })
+      return sendJson(res, 200, { status: 'delivered', txid: updated.txid || found.txid || null, amount: Number(order.amount) })
+    }
+    return sendJson(res, 200, { status: 'pending', reason: found.reason || null })
+  }
+
+  // TXID fallback — buyer pastes a transaction id; verify it against the order.
+  if (url === '/api/checkout/verify-txid' && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const b = await readBody(req)
+    const reference = (b.reference || '').toString()
+    const txid = (b.txid || '').toString().trim()
+    if (!reference || txid.length < 6) return sendJson(res, 400, { error: 'bad_request' })
+    const order = await getOrderByRef(reference)
+    if (!order) return sendJson(res, 404, { error: 'order_not_found' })
+    if (order.status === 'delivered' || order.status === 'paid') {
+      return sendJson(res, 200, { status: 'delivered', txid: order.txid || txid })
+    }
+
+    if (order.method === 'binance') {
+      // re-query by reference; record the txid for manual reconciliation if not yet paid
+      const q = await binanceQueryOrder(reference)
+      if (q.ok && q.status === 'paid') {
+        const updated = await markDelivered(order, { txid: q.txid || txid, meta: q.raw })
+        return sendJson(res, 200, { status: 'delivered', txid: updated.txid || txid })
+      }
+      await updateOrder(reference, { txid })
+      return sendJson(res, 200, { status: 'pending', reason: 'not_confirmed_yet' })
+    }
+
+    const v = await paypalVerifyTxid(txid, Number(order.amount), reference)
+    if (v.ok) {
+      const updated = await markDelivered(order, { txid: v.txid || txid, meta: v.raw })
+      return sendJson(res, 200, { status: 'delivered', txid: updated.txid || txid })
+    }
+    return sendJson(res, 200, { status: 'failed', reason: v.reason || 'verify_failed' })
+  }
+
   // ---- support chat ----
   if (url === '/api/chat/send' && method === 'POST') {
     const b = await readBody(req)
@@ -570,5 +766,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[waslerr] server listening on :${PORT}`)
+  console.log(`[waslerr] payments — PayPal: ${paypalConfigured() ? 'configured' : 'MISSING keys'} · Binance Pay: ${binanceConfigured() ? 'configured' : 'MISSING keys'}`)
   ensureAdminUser()
 })

@@ -3980,7 +3980,7 @@ a {
   font-size: 13px;
   color: var(--wf-mute);
   transition: color 0.4s;
-  animation: wf-fadeup 0.4s var(--wf-ease) both;
+  min-height: 22px;
 }
 .wf-tl-row.done { color: var(--wf-silver); }
 .wf-tl-row.active { color: var(--wf-gold); font-weight: 500; }
@@ -4067,3 +4067,43 @@ a {
   .wf-co-fallback-input .wf-input { width: 100%; }
   .wf-co-fallback-input button { width: 100%; }
 }
+
+/* --- Checkout: create loading / error + Binance instant-pay button --- */
+.wf-co-create-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 60px 20px;
+  font-family: var(--wf-mono);
+  font-size: 13px;
+  color: var(--wf-silver);
+  letter-spacing: 0.05em;
+}
+.wf-co-create-error {
+  text-align: center;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.wf-co-create-error p { color: var(--wf-silver); font-size: 14.5px; margin: 0; max-width: 360px; line-height: 1.55; }
+.wf-co-create-error .wf-form-submit { width: auto; padding: 12px 28px; }
+
+.wf-co-binance-pay-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #F0B90B;
+  color: #1e2026;
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 13px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-family: var(--wf-sans);
+  transition: filter 0.2s, transform 0.2s;
+}
+.wf-co-binance-pay-btn:hover { filter: brightness(1.08); }
