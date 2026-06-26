@@ -2452,6 +2452,29 @@ a {
   align-items: start;
 }
 .wf-convo-list { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; }
+.wf-convo-wrap { position: relative; }
+.wf-convo-wrap .wf-convo { width: 100%; padding-right: 42px; }
+.wf-convo-del {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--wf-mute);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s, border-color 0.2s, background 0.2s;
+}
+.wf-convo-wrap:hover .wf-convo-del { opacity: 1; }
+.wf-convo-del:hover { color: #e0432f; border-color: rgba(224, 67, 47, 0.4); background: rgba(224, 67, 47, 0.08); }
+@media (hover: none) { .wf-convo-del { opacity: 1; } }
 .wf-convo {
   display: flex;
   flex-direction: column;

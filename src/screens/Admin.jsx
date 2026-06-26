@@ -3,9 +3,16 @@ import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { adminMeta, revenueBars } from '../data/content'
 import { Stars } from '../components/StoryCard'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
+
+const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
+const ZERO_STATS = {
+  revenueWeek: 0, revenueMonth: 0, revenueYear: 0, revenueTotal: 0,
+  salesWeek: 0, salesMonth: 0, salesYear: 0, salesTotal: 0,
+  fieldsPublished: 0, freeFields: 0, supportChats: 0,
+  monthly: [], topFields: [],
+}
 
 const TABS = [
   { id: 'stats', label: 'Stats' },
@@ -20,15 +27,6 @@ const TABS = [
 const CAT_LABEL = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
 const phClass = (line) => (line === 'akashic' ? 'wf-card-ph-akashic' : line === 'wealth' ? 'wf-card-ph-wealth' : 'wf-card-ph-desire')
 
-// stable pseudo metrics for demo analytics (no real download tracking yet)
-const hashStr = (s) => {
-  let h = 0
-  for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0
-  return h
-}
-const downloadsFor = (p) => 120 + (hashStr((p.id || '') + (p.title || '')) % 1880)
-const sparkFor = (p) => Array.from({ length: 7 }, (_, i) => 26 + (hashStr((p.id || '') + 'x' + i) % 72))
-
 export default function Admin() {
   const {
     loggedIn,
@@ -41,11 +39,16 @@ export default function Admin() {
     adminTab,
     setAdminTab,
     products,
+    paidProducts,
+    freeFields,
     addProduct,
     deleteProduct,
+    addFreeField,
+    deleteFreeField,
     announcements,
     addAnnouncement,
     deleteAnnouncement,
+    deleteConversation,
     deleteUser,
     setUserRole,
     communityLinks,
@@ -87,6 +90,9 @@ export default function Admin() {
   const [clForm, setClForm] = useState(communityLinks)
   const [clSaved, setClSaved] = useState(false)
 
+  // stats (real, from Supabase orders)
+  const [stats, setStats] = useState(ZERO_STATS)
+
   // support
   const [conversations, setConversations] = useState([])
   const [activeConv, setActiveConv] = useState(null)
@@ -105,6 +111,15 @@ export default function Admin() {
     load()
     if (adminTab === 'support') t = setInterval(load, 6000)
     return () => t && clearInterval(t)
+  }, [isAdmin, adminTab, authedFetch])
+
+  // load real stats when on the stats tab
+  useEffect(() => {
+    if (!isAdmin || adminTab !== 'stats') return
+    ;(async () => {
+      const r = await authedFetch('/api/admin/stats')
+      if (r.ok) setStats({ ...ZERO_STATS, ...(await r.json()) })
+    })()
   }, [isAdmin, adminTab, authedFetch])
 
   // load coupons when on the coupons tab
@@ -178,20 +193,17 @@ export default function Admin() {
     )
   }
 
-  const topAudios = [...products]
-    .map((p) => ({ ...p, dl: downloadsFor(p) }))
-    .sort((a, b) => b.dl - a.dl)
-    .slice(0, 5)
-  const totalDownloads = products.reduce((sum, p) => sum + downloadsFor(p), 0)
-  const stats = [
-    { label: 'Revenue · June', value: adminMeta.revenue },
-    { label: 'Total downloads', value: totalDownloads.toLocaleString('en-US'), badge: '+12%' },
-    { label: 'Fields published', value: String(products.length) },
-    { label: 'Support chats', value: String(conversations.length) },
+  const statCards = [
+    { label: 'Revenue · this month', value: fmtMoney(stats.revenueMonth) },
+    { label: 'Sales · this week', value: String(stats.salesWeek), badge: stats.salesWeek > 0 ? 'live' : undefined },
+    { label: 'Sales · this year', value: String(stats.salesYear) },
+    { label: 'Fields published', value: String(stats.fieldsPublished + stats.freeFields) },
   ]
-  const maxBar = Math.max(...revenueBars.map((b) => b.v))
-  const maxDl = topAudios.length ? topAudios[0].dl : 1
-  const categoryOptions = [...new Set([...products.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
+  const monthly = stats.monthly || []
+  const maxBar = Math.max(1, ...monthly.map((b) => b.v))
+  const topFields = stats.topFields || []
+  const maxUnits = topFields.length ? Math.max(1, topFields[0].units) : 1
+  const categoryOptions = [...new Set([...paidProducts.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
 
   const publishAnnouncement = async (e) => {
     e.preventDefault()
@@ -220,15 +232,23 @@ export default function Admin() {
       return
     }
     setBusy(true)
-    const res = await addProduct(
-      {
-        title: form.title.trim(),
-        line: form.category.toLowerCase(),
-        price: parseFloat(String(form.price).replace(/[^0-9.]/g, '')) || 0,
-        description: form.desc.trim() || 'A new Waslerr field.',
-      },
-      file,
-    )
+    const priceNum = parseFloat(String(form.price).replace(/[^0-9.]/g, '')) || 0
+    // price 0 → goes to the separate free_fields table; otherwise to products
+    const res =
+      priceNum === 0
+        ? await addFreeField(
+            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.' },
+            file,
+          )
+        : await addProduct(
+            {
+              title: form.title.trim(),
+              line: form.category.toLowerCase(),
+              price: priceNum,
+              description: form.desc.trim() || 'A new Waslerr field.',
+            },
+            file,
+          )
     setBusy(false)
     if (res?.error) {
       setErr(res.error)
@@ -293,6 +313,17 @@ export default function Admin() {
     })
   }
 
+  const removeConversation = async (conversationId) => {
+    if (!window.confirm('Delete this conversation? This clears its messages permanently.')) return
+    if (await deleteConversation(conversationId)) {
+      setConversations((prev) => prev.filter((c) => c.conversationId !== conversationId))
+      if (activeConv === conversationId) {
+        setActiveConv(null)
+        setThread([])
+      }
+    }
+  }
+
   return (
     <div className="wf-app" ref={ref}>
       <Background resonanceTop="50%" />
@@ -320,7 +351,7 @@ export default function Admin() {
         {adminTab === 'stats' && (
           <div>
             <div className="wf-stat-grid" data-reveal>
-              {stats.map((s) => (
+              {statCards.map((s) => (
                 <div className="wf-stat-card" key={s.label}>
                   {s.badge && <span className="wf-stat-badge">{s.badge}</span>}
                   <div className="wf-stat-value">{s.value}</div>
@@ -329,14 +360,33 @@ export default function Admin() {
               ))}
             </div>
 
+            <div className="wf-stat-grid" data-reveal style={{ marginTop: 14 }}>
+              <div className="wf-stat-card">
+                <div className="wf-stat-value">{fmtMoney(stats.revenueWeek)}</div>
+                <div className="wf-stat-label">Revenue · this week</div>
+              </div>
+              <div className="wf-stat-card">
+                <div className="wf-stat-value">{fmtMoney(stats.revenueYear)}</div>
+                <div className="wf-stat-label">Revenue · this year</div>
+              </div>
+              <div className="wf-stat-card">
+                <div className="wf-stat-value">{fmtMoney(stats.revenueTotal)}</div>
+                <div className="wf-stat-label">Revenue · all time</div>
+              </div>
+              <div className="wf-stat-card">
+                <div className="wf-stat-value">{String(stats.supportChats)}</div>
+                <div className="wf-stat-label">Support chats</div>
+              </div>
+            </div>
+
             <div className="wf-analytics-split" data-reveal>
               <div className="wf-chart-card">
                 <div className="wf-field-label" style={{ marginBottom: 20 }}>
-                  Revenue · last 6 months (thousands)
+                  Revenue · last 6 months ($)
                 </div>
                 <div className="wf-chart">
-                  {revenueBars.map((b, i) => (
-                    <div className="wf-chart-col" key={b.m}>
+                  {monthly.map((b, i) => (
+                    <div className="wf-chart-col" key={`${b.m}-${i}`}>
                       <div className="wf-chart-bar-track">
                         <div className="wf-chart-bar" style={{ height: `${(b.v / maxBar) * 100}%`, animationDelay: `${i * 0.08}s` }}>
                           <span>{b.v}</span>
@@ -345,29 +395,30 @@ export default function Admin() {
                       <div className="wf-chart-x">{b.m}</div>
                     </div>
                   ))}
+                  {monthly.length === 0 && <p className="wf-detail-desc">No revenue data yet.</p>}
                 </div>
               </div>
 
               <div className="wf-chart-card">
                 <div className="wf-field-label" style={{ marginBottom: 16 }}>
-                  Top downloaded audios
+                  Top fields · by sales
                 </div>
                 <div className="wf-top-list">
-                  {topAudios.map((p) => (
+                  {topFields.map((p) => (
                     <div className="wf-top-row" key={p.id}>
-                      <span className={`wf-top-ico ${phClass(p.line)}`}>W</span>
+                      <span className="wf-top-ico wf-card-ph-desire">W</span>
                       <div className="wf-top-text">
                         <span className="wf-top-title">{p.title}</span>
-                        <span className="wf-top-count">{p.dl.toLocaleString('en-US')} downloads</span>
+                        <span className="wf-top-count">{p.units.toLocaleString('en-US')} sold · {fmtMoney(p.revenue)}</span>
                       </div>
                       <div className="wf-spark" aria-hidden="true">
-                        {sparkFor(p).map((h, i) => (
-                          <span key={i} style={{ height: `${(h / 100) * 100}%`, opacity: 0.4 + (p.dl / maxDl) * 0.6 }} />
+                        {Array.from({ length: 7 }, (_, i) => (
+                          <span key={i} style={{ height: `${Math.max(12, (p.units / maxUnits) * 100)}%`, opacity: 0.4 + (p.units / maxUnits) * 0.6 }} />
                         ))}
                       </div>
                     </div>
                   ))}
-                  {topAudios.length === 0 && <p className="wf-detail-desc">No fields yet.</p>}
+                  {topFields.length === 0 && <p className="wf-detail-desc">No sales yet.</p>}
                 </div>
               </div>
             </div>
@@ -378,19 +429,39 @@ export default function Admin() {
           <div className="wf-admin-fields">
             <div data-reveal>
               <div className="wf-field-label" style={{ marginBottom: 14 }}>
-                Published fields · {products.length}
+                Paid fields · {paidProducts.length}
               </div>
               <div className="wf-admin-list">
-                {products.map((p) => (
+                {paidProducts.length === 0 && <p className="wf-detail-desc">No paid fields yet. Add one →</p>}
+                {paidProducts.map((p) => (
                   <div className="wf-admin-row" key={p.id}>
                     <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
                     <div className="wf-admin-row-text">
                       <span className="wf-admin-row-title">{p.title}</span>
                       <span className="wf-admin-row-meta">
-                        {CAT_LABEL[p.line] || 'Desire'} · {p.price || 'Free'}
+                        {CAT_LABEL[p.line] || 'Desire'} · {p.price || '—'}
                       </span>
                     </div>
                     <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteProduct(p.id)}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="wf-field-label" style={{ margin: '28px 0 14px' }}>
+                Free fields · {freeFields.length}
+              </div>
+              <div className="wf-admin-list">
+                {freeFields.length === 0 && <p className="wf-detail-desc">No free fields yet. Add one with price 0 →</p>}
+                {freeFields.map((p) => (
+                  <div className="wf-admin-row" key={p.id}>
+                    <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
+                    <div className="wf-admin-row-text">
+                      <span className="wf-admin-row-title">{p.title}</span>
+                      <span className="wf-admin-row-meta">{CAT_LABEL[p.line] || 'Desire'} · Free</span>
+                    </div>
+                    <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteFreeField(p.id)}>
                       <TrashIcon />
                     </button>
                   </div>
@@ -734,14 +805,22 @@ export default function Admin() {
               </div>
               {conversations.length === 0 && <p className="wf-detail-desc">No messages yet.</p>}
               {conversations.map((c) => (
-                <button
-                  key={c.conversationId}
-                  className={`wf-convo${activeConv === c.conversationId ? ' active' : ''}`}
-                  onClick={() => setActiveConv(c.conversationId)}
-                >
-                  <span className="wf-convo-name">{c.email || `Guest · ${c.conversationId.slice(0, 6)}`}</span>
-                  <span className="wf-convo-last">{c.lastBody}</span>
-                </button>
+                <div className="wf-convo-wrap" key={c.conversationId}>
+                  <button
+                    className={`wf-convo${activeConv === c.conversationId ? ' active' : ''}`}
+                    onClick={() => setActiveConv(c.conversationId)}
+                  >
+                    <span className="wf-convo-name">{c.email || `Guest · ${c.conversationId.slice(0, 6)}`}</span>
+                    <span className="wf-convo-last">{c.lastBody}</span>
+                  </button>
+                  <button
+                    className="wf-convo-del"
+                    aria-label="Delete conversation"
+                    onClick={() => removeConversation(c.conversationId)}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
               ))}
             </div>
 

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { allFields, freeFields, updates as seedUpdates } from '../data/content'
 import { getSupabase, loadConfig, normalizeProduct, normalizeReview } from '../lib/supabase'
 import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
@@ -12,7 +12,7 @@ const StoreCtx = createContext(null)
 
 // Fallback catalogue used only when Supabase isn't configured (e.g. local dev
 // without keys) so the storefront is never blank.
-const SEED = [...allFields, ...freeFields].map((f) => {
+const toSeed = (f) => {
   const priceNum = f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
   return {
     id: f.id,
@@ -24,6 +24,21 @@ const SEED = [...allFields, ...freeFields].map((f) => {
     image_url: f.img || null,
     freq: f.freq || 200,
   }
+}
+// paid catalogue and free fields are seeded (and stored) separately
+const SEED_PAID = allFields.map(toSeed)
+const SEED_FREE = freeFields.map(toSeed)
+
+// normalize a free_fields row into the storefront product shape
+const normalizeFreeField = (row) => ({
+  id: row.id,
+  title: row.title,
+  line: row.line || 'desire',
+  price: undefined,
+  priceNum: 0,
+  desc: row.description || '',
+  image_url: row.image_url || null,
+  freq: 200,
 })
 
 // fallback journal entries when Supabase isn't configured
@@ -75,8 +90,12 @@ export function StoreProvider({ children }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const [selectedId, setSelectedId] = useState(null)
-  const [products, setProducts] = useState(SEED)
+  const [paidProducts, setPaidProducts] = useState(SEED_PAID)
+  const [freeFieldsList, setFreeFieldsList] = useState(SEED_FREE)
   const [announcements, setAnnouncements] = useState(SEED_ANN)
+
+  // storefront catalogue = paid products + free fields (merged, memoized)
+  const products = useMemo(() => [...paidProducts, ...freeFieldsList], [paidProducts, freeFieldsList])
 
   const [payMethod, setPayMethod] = useState('paypal')
   const [payDone, setPayDone] = useState(false)
@@ -181,18 +200,28 @@ export function StoreProvider({ children }) {
   }, [page, fieldsCat])
 
   // ---- products ----
+  // Once Supabase is reachable it is the source of truth — set even when the
+  // table is empty (so deleting the last row clears the list; the seed only
+  // covers the no-Supabase case).
   const reloadProducts = useCallback(async (client) => {
     const supabase = client || supabaseRef.current
     if (!supabase) return
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
-    if (!error && Array.isArray(data) && data.length) setProducts(data.map(normalizeProduct))
+    if (!error && Array.isArray(data)) setPaidProducts(data.map(normalizeProduct))
+  }, [])
+
+  const loadFreeFields = useCallback(async (client) => {
+    const supabase = client || supabaseRef.current
+    if (!supabase) return
+    const { data, error } = await supabase.from('free_fields').select('*').order('created_at', { ascending: false })
+    if (!error && Array.isArray(data)) setFreeFieldsList(data.map(normalizeFreeField))
   }, [])
 
   const loadAnnouncements = useCallback(async (client) => {
     const supabase = client || supabaseRef.current
     if (!supabase) return
     const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false })
-    if (!error && Array.isArray(data) && data.length) setAnnouncements(data.map(normalizeAnnouncement))
+    if (!error && Array.isArray(data)) setAnnouncements(data.map(normalizeAnnouncement))
   }, [])
 
   // reviews wall — Supabase is the permanent source when configured
@@ -287,6 +316,7 @@ export function StoreProvider({ children }) {
       sub = listener?.subscription
       setAuthReady(true)
       reloadProducts(supabase)
+      loadFreeFields(supabase)
       loadAnnouncements(supabase)
       loadReviews(supabase)
       loadSettings(supabase)
@@ -295,7 +325,7 @@ export function StoreProvider({ children }) {
       cancelled = true
       sub?.unsubscribe?.()
     }
-  }, [applySession, reloadProducts, loadAnnouncements, loadReviews, loadSettings])
+  }, [applySession, reloadProducts, loadFreeFields, loadAnnouncements, loadReviews, loadSettings])
 
   const getToken = useCallback(async () => {
     const supabase = supabaseRef.current
@@ -403,9 +433,60 @@ export function StoreProvider({ children }) {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (res.ok) await reloadProducts()
+      if (res.ok) {
+        setPaidProducts((prev) => prev.filter((p) => p.id !== id)) // optimistic
+        await reloadProducts()
+      }
     },
     [getToken, reloadProducts],
+  )
+
+  // free fields (separate table) ----------------------------------
+  const addFreeField = useCallback(
+    async (form, file) => {
+      const token = await getToken()
+      if (!token) return { error: 'Not authorized.' }
+      try {
+        let image_url = form.image_url || null
+        if (file) {
+          const dataBase64 = await fileToBase64(file)
+          const up = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+          })
+          if (!up.ok) return { error: 'Image upload failed.' }
+          image_url = (await up.json()).url
+        }
+        const res = await fetch('/api/admin/free-fields', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, image_url }),
+        })
+        if (!res.ok) return { error: `Publish failed (${res.status})` }
+        await loadFreeFields()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
+    },
+    [getToken, loadFreeFields],
+  )
+
+  const deleteFreeField = useCallback(
+    async (id) => {
+      const token = await getToken()
+      if (!token) return
+      const res = await fetch('/api/admin/free-fields/' + id, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setFreeFieldsList((prev) => prev.filter((p) => p.id !== id)) // optimistic
+        await loadFreeFields()
+      }
+    },
+    [getToken, loadFreeFields],
   )
 
   const addAnnouncement = useCallback(
@@ -455,9 +536,21 @@ export function StoreProvider({ children }) {
   const deleteAnnouncement = useCallback(
     async (id) => {
       const r = await authedFetch('/api/admin/announcements/' + id, { method: 'DELETE' })
-      if (r.ok) await loadAnnouncements()
+      if (r.ok) {
+        setAnnouncements((prev) => prev.filter((a) => a.id !== id)) // optimistic
+        await loadAnnouncements()
+      }
     },
     [authedFetch, loadAnnouncements],
+  )
+
+  // admin: delete a whole support conversation (clears its messages)
+  const deleteConversation = useCallback(
+    async (conversationId) => {
+      const r = await authedFetch('/api/admin/conversations/' + encodeURIComponent(conversationId), { method: 'DELETE' })
+      return r.ok
+    },
+    [authedFetch],
   )
 
   const deleteUser = useCallback(
@@ -677,12 +770,17 @@ export function StoreProvider({ children }) {
     menuOpen,
     setMenuOpen,
     products,
+    paidProducts,
+    freeFields: freeFieldsList,
     reloadProducts,
     addProduct,
     deleteProduct,
+    addFreeField,
+    deleteFreeField,
     announcements,
     addAnnouncement,
     deleteAnnouncement,
+    deleteConversation,
     deleteUser,
     setUserRole,
     selectedId,

@@ -235,6 +235,84 @@ const markDelivered = async (order, { txid, meta } = {}) => {
   return out.data || { ...order, status: 'delivered' }
 }
 
+// --- free fields (separate table from paid products) ---------------
+const listFreeFields = async () => {
+  const r = await sbRest('free_fields?order=created_at.desc')
+  return r.ok ? r.json() : []
+}
+const insertFreeField = async (row) => {
+  const r = await sbRest('free_fields', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
+}
+const removeFreeField = async (id) => (await sbRest(`free_fields?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+
+// --- conversation delete (clears all messages in a thread) ---------
+const removeConversation = async (conversationId) =>
+  (await sbRest(`support_messages?conversation_id=eq.${encodeURIComponent(conversationId)}`, { method: 'DELETE' })).ok
+
+// --- stats (aggregated from real orders) ---------------------------
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const computeStats = async () => {
+  // delivered/paid orders are the source of truth for revenue + sales
+  const r = await sbRest('orders?status=in.(paid,delivered)&select=amount,field_id,field_title,created_at&order=created_at.desc&limit=5000')
+  const orders = r.ok ? await r.json() : []
+
+  const now = Date.now()
+  const day = 864e5
+  const weekAgo = now - 7 * day
+  const monthStart = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() })()
+  const yearStart = (() => { const d = new Date(); return new Date(d.getFullYear(), 0, 1).getTime() })()
+
+  let revenueWeek = 0, revenueMonth = 0, revenueYear = 0, revenueTotal = 0
+  let salesWeek = 0, salesMonth = 0, salesYear = 0
+  const byField = new Map()
+  // last 6 months buckets
+  const months = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date()
+    d.setMonth(d.getMonth() - i, 1)
+    months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, m: MONTH_NAMES[d.getMonth()], v: 0 })
+  }
+  const monthIndex = new Map(months.map((mm, i) => [mm.key, i]))
+
+  for (const o of orders) {
+    const amt = Number(o.amount) || 0
+    const ts = Date.parse(o.created_at) || 0
+    revenueTotal += amt
+    if (ts >= weekAgo) { revenueWeek += amt; salesWeek++ }
+    if (ts >= monthStart) { revenueMonth += amt; salesMonth++ }
+    if (ts >= yearStart) { revenueYear += amt; salesYear++ }
+    const d = new Date(ts)
+    const mk = `${d.getFullYear()}-${d.getMonth()}`
+    if (monthIndex.has(mk)) months[monthIndex.get(mk)].v += amt
+    const fid = o.field_id || o.field_title || 'unknown'
+    const cur = byField.get(fid) || { id: fid, title: o.field_title || 'Field', units: 0, revenue: 0 }
+    cur.units++
+    cur.revenue += amt
+    byField.set(fid, cur)
+  }
+
+  const topFields = [...byField.values()].sort((a, b) => b.units - a.units).slice(0, 5)
+
+  // counts from catalog + support
+  const pc = await sbRest('products?select=id')
+  const products = pc.ok ? await pc.json() : []
+  const ffc = await sbRest('free_fields?select=id')
+  const free = ffc.ok ? await ffc.json() : []
+  const convs = await getConversations()
+
+  return {
+    revenueWeek, revenueMonth, revenueYear, revenueTotal,
+    salesWeek, salesMonth, salesYear, salesTotal: orders.length,
+    fieldsPublished: products.length,
+    freeFields: free.length,
+    supportChats: convs.length,
+    monthly: months.map((m) => ({ m: m.m, v: m.v })),
+    topFields,
+  }
+}
+
 // --- support chat ---
 const insertMessage = async (row) => {
   const r = await sbRest('support_messages', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
@@ -612,6 +690,42 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { status: 'failed', reason: v.reason || 'verify_failed' })
   }
 
+  // ---- free fields (separate from paid products) ----
+  if (url === '/api/free-fields' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { freeFields: [] })
+    return sendJson(res, 200, { freeFields: await listFreeFields() })
+  }
+  if (url === '/api/admin/free-fields' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const title = (b.title || '').trim()
+    if (!title) return sendJson(res, 400, { error: 'title_required' })
+    const row = {
+      title,
+      line: (b.line || 'desire').toLowerCase(),
+      description: (b.description || '').trim(),
+      image_url: b.image_url || null,
+    }
+    const out = await insertFreeField(row)
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
+    return sendJson(res, 200, { freeField: out.data })
+  }
+  if (url.startsWith('/api/admin/free-fields/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    if (!(await removeFreeField(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+
+  // ---- admin stats (aggregated from real orders) ----
+  if (url === '/api/admin/stats' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    try {
+      return sendJson(res, 200, await computeStats())
+    } catch {
+      return sendJson(res, 502, { error: 'stats_failed' })
+    }
+  }
+
   // ---- support chat ----
   if (url === '/api/chat/send' && method === 'POST') {
     const b = await readBody(req)
@@ -634,6 +748,14 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/admin/conversations' && method === 'GET') {
     if (!(await requireAdmin(req, res))) return
     return sendJson(res, 200, { conversations: await getConversations() })
+  }
+  // admin: delete a whole conversation (clears its messages)
+  if (url.startsWith('/api/admin/conversations/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    const cid = decodeURIComponent(url.split('/').pop() || '')
+    if (!cid) return sendJson(res, 400, { error: 'bad_request' })
+    if (!(await removeConversation(cid))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
   }
 
   // ---- announcements ----
