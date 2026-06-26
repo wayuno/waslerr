@@ -7,7 +7,7 @@ import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { useStore } from '../store/StoreProvider'
-import { lines, reviews, tickerItems } from '../data/content'
+import { lines, tickerItems } from '../data/content'
 import { ArrowRight, ArrowDown } from '../components/icons'
 
 const EMBERS = [
@@ -310,35 +310,6 @@ export default function Home({ onNavigate }) {
           </div>
 
           <CustomForm />
-        </div>
-      </section>
-
-      {/* ===== REVIEWS ===== */}
-      <section className="wf-reviews" id="wf-reviews">
-        <div style={{ maxWidth: 640, margin: '0 auto 56px', textAlign: 'center', padding: '0 28px' }}>
-          <div className="wf-eyebrow" data-reveal>
-            03 · Reviews
-          </div>
-          <h2 className="wf-h2" data-reveal>
-            The quiet difference, felt loudly.
-          </h2>
-        </div>
-        <div className="wf-reviews-mask">
-          <div className="wf-reviews-track">
-            {[...reviews, ...reviews].map((r, i) => (
-              <figure className="wf-review" key={i}>
-                <div className="stars">★★★★★</div>
-                <blockquote>{r.quote}</blockquote>
-                <figcaption>
-                  <span className="wf-avatar">{r.initial}</span>
-                  <span>
-                    <span className="name">{r.name}</span>
-                    <span className="role">{r.role}</span>
-                  </span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
         </div>
       </section>
 
