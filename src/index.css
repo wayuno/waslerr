@@ -4674,6 +4674,14 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-offer-cleared { color: #4bc882; font-size: 13.5px; font-weight: 500; }
 .wf-offer-deliver { padding: 12px 14px; border-radius: 12px; background: rgba(75,200,130,0.06); border: 1px solid rgba(75,200,130,0.28); }
 .wf-offer-done { padding: 11px 14px; border-radius: 11px; background: rgba(75,200,130,0.12); border: 1px solid rgba(75,200,130,0.4); color: #4bc882; font-size: 13.5px; text-align: center; }
+/* transient "order complete" cue — fades in, holds, fades out over ~10s */
+.wf-offer-done--flash { animation: wf-offer-flash 10s ease forwards; }
+@keyframes wf-offer-flash {
+  0% { opacity: 0; transform: translateY(6px); }
+  4% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
 /* admin deliver — chosen file chips + upload progress */
 .wf-deliver-files { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .wf-deliver-file { display: inline-flex; align-items: center; gap: 8px; justify-content: space-between; padding: 7px 11px; font-size: 12.5px; color: var(--wf-silver); background: var(--wf-glass); border: 1px solid var(--wf-rule); border-radius: 9px; }
