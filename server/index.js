@@ -771,16 +771,17 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // upload a field's audio (admin only) → PRIVATE bucket, returns a path token
-  // (the audio is gated; it is served later via /api/fields/:id/audio).
+  // upload a field's audio (admin only) → paid audio goes to the private
+  // `field-audio` bucket, free audio goes to its own `free-audio` bucket.
   if (url === '/api/admin/upload-audio' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
-    const { filename, contentType, dataBase64 } = await readBody(req, 160e6) // ~120MB audio
+    const { filename, contentType, dataBase64, free } = await readBody(req, 160e6) // ~120MB audio
     if (!dataBase64) return sendJson(res, 400, { error: 'no_file', detail: 'No audio received (file may be too large).' })
     if (!String(contentType || '').startsWith('audio/')) return sendJson(res, 400, { error: 'not_audio', detail: 'Please choose an audio file.' })
+    const bucket = free ? 'free-audio' : 'field-audio'
     try {
       const buffer = Buffer.from(dataBase64, 'base64')
-      const out = await uploadPrivate(filename || 'audio', contentType, buffer, 'field-audio')
+      const out = await uploadPrivate(filename || 'audio', contentType, buffer, bucket)
       if (!out.ok) return sendJson(res, 502, { error: 'upload_failed', detail: out.detail || 'storage rejected the file' })
       return sendJson(res, 200, { path: out.path })
     } catch (e) {
@@ -1258,7 +1259,9 @@ const server = http.createServer(async (req, res) => {
       }
       if (!allowed) return sendJson(res, 403, { error: 'not_purchased' })
     }
-    const signed = await signedDownloadUrl(field.audio_url, 'field-audio', 120)
+    // paid audio lives in field-audio, free audio in its own free-audio bucket
+    const bucket = freeF ? 'free-audio' : 'field-audio'
+    const signed = await signedDownloadUrl(field.audio_url, bucket, 120)
     if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
     res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })
     return res.end()

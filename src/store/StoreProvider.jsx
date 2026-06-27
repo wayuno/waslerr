@@ -69,8 +69,9 @@ const uploadImageViaApi = async (file, token) => {
   }
 }
 
-// Upload a (private) audio file through the backend → returns { path } or { error }.
-const uploadAudioViaApi = async (file, token) => {
+// Upload an audio file through the backend → returns { path } or { error }.
+// isFree routes it to the free-audio bucket; otherwise the paid field-audio bucket.
+const uploadAudioViaApi = async (file, token, isFree = false) => {
   if (file && file.size > 120 * 1024 * 1024) return { error: 'Audio is too large (max ~120MB). Please compress it.' }
   if (file && !String(file.type).startsWith('audio/')) return { error: 'Please choose an audio file.' }
   try {
@@ -78,7 +79,7 @@ const uploadAudioViaApi = async (file, token) => {
     const up = await fetch('/api/admin/upload-audio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+      body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64, free: !!isFree }),
     })
     if (!up.ok) {
       const j = await up.json().catch(() => ({}))
@@ -480,7 +481,7 @@ export function StoreProvider({ children }) {
           body.image_url = up.url
         }
         if (audioFile) {
-          const au = await uploadAudioViaApi(audioFile, token)
+          const au = await uploadAudioViaApi(audioFile, token, isFree)
           if (au.error) return { error: au.error }
           body.audio_url = au.path
         }
@@ -534,7 +535,7 @@ export function StoreProvider({ children }) {
         }
         let audio_url = null
         if (audioFile) {
-          const au = await uploadAudioViaApi(audioFile, token)
+          const au = await uploadAudioViaApi(audioFile, token, true) // free → free-audio bucket
           if (au.error) return { error: au.error }
           audio_url = au.path
         }
