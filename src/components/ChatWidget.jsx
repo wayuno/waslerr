@@ -75,6 +75,11 @@ function OfferCard({ offer, onPay }) {
 // ---- delivery reveal card ----
 function DeliveryCard({ offer, onDownload }) {
   if (!offer) return null
+  const files = offer.deliveryFiles?.length
+    ? offer.deliveryFiles
+    : offer.deliveryFileName
+      ? [{ name: offer.deliveryFileName }]
+      : []
   return (
     <div className="wf-delivery-card">
       <div className="wf-delivery-shine" aria-hidden="true" />
@@ -84,10 +89,23 @@ function DeliveryCard({ offer, onDownload }) {
       <div className="wf-delivery-eyebrow">Your field has arrived</div>
       <div className="wf-delivery-name">{offer.name}</div>
       {offer.deliveryNote && <p className="wf-delivery-note">{offer.deliveryNote}</p>}
-      {offer.deliveryFileName && <span className="wf-delivery-file">📄 {offer.deliveryFileName}</span>}
-      <button className="wf-offer-pay wf-mag" onClick={() => onDownload(offer)} style={{ marginTop: 14 }}>
-        <DownloadIcon size={15} /> Download field
-      </button>
+      {files.length <= 1 ? (
+        <>
+          {files[0]?.name && <span className="wf-delivery-file">📄 {files[0].name}</span>}
+          <button className="wf-offer-pay wf-mag" onClick={() => onDownload(offer, 0)} style={{ marginTop: 14 }}>
+            <DownloadIcon size={15} /> Download field
+          </button>
+        </>
+      ) : (
+        <div className="wf-delivery-list">
+          {files.map((f, i) => (
+            <button className="wf-delivery-dl" key={i} onClick={() => onDownload(offer, i)}>
+              <span className="wf-delivery-dl-name">📄 {f.name}</span>
+              <DownloadIcon size={15} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -255,8 +273,8 @@ export default function ChatWidget() {
     }, 2300)
   }
 
-  const downloadOffer = (offer) => {
-    window.open(`/api/offers/${offer.id}/download?conversationId=${encodeURIComponent(conversationId)}`, '_blank')
+  const downloadOffer = (offer, index = 0) => {
+    window.open(`/api/offers/${offer.id}/download?conversationId=${encodeURIComponent(conversationId)}&i=${index}`, '_blank')
   }
 
   return (

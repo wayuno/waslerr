@@ -4645,6 +4645,24 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 .wf-offer-cleared { color: #4bc882; font-size: 13.5px; font-weight: 500; }
 .wf-offer-deliver { padding: 12px 14px; border-radius: 12px; background: rgba(75,200,130,0.06); border: 1px solid rgba(75,200,130,0.28); }
 .wf-offer-done { padding: 11px 14px; border-radius: 11px; background: rgba(75,200,130,0.12); border: 1px solid rgba(75,200,130,0.4); color: #4bc882; font-size: 13.5px; text-align: center; }
+/* admin deliver — chosen file chips + upload progress */
+.wf-deliver-files { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.wf-deliver-file { display: inline-flex; align-items: center; gap: 8px; justify-content: space-between; padding: 7px 11px; font-size: 12.5px; color: var(--wf-silver); background: var(--wf-glass); border: 1px solid var(--wf-rule); border-radius: 9px; }
+.wf-deliver-file button { background: none; border: none; color: var(--wf-mute); cursor: pointer; font-size: 13px; padding: 0 2px; line-height: 1; }
+.wf-deliver-file button:hover { color: #e06b5a; }
+.wf-deliver-progress { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; padding: 12px 14px; border-radius: 11px; background: rgba(75,200,130,0.06); border: 1px solid rgba(75,200,130,0.24); }
+.wf-deliver-bar { height: 7px; border-radius: 20px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.wf-deliver-bar span { display: block; height: 100%; border-radius: 20px; background: linear-gradient(90deg, #4bc882, #7fe0a8); transition: width 0.3s var(--wf-ease); }
+.wf-deliver-bar span.done { background: linear-gradient(90deg, var(--wf-gold), #f0d98a); animation: wf-deliver-pulse 1.2s ease-in-out infinite; }
+@keyframes wf-deliver-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.wf-deliver-prog-row { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #4bc882; font-weight: 500; font-variant-numeric: tabular-nums; }
+.wf-deliver-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(75,200,130,0.3); border-top-color: #4bc882; animation: wf-spin 0.8s linear infinite; flex-shrink: 0; }
+.wf-deliver-hint { font-size: 11px; color: var(--wf-mute); }
+/* customer — multiple delivered files */
+.wf-delivery-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.wf-delivery-dl { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 14px; border-radius: 11px; background: var(--wf-glass-2); border: 1px solid rgba(212,175,55,0.32); color: var(--wf-gold); font-family: var(--wf-sans); font-size: 13px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.wf-delivery-dl:hover { border-color: var(--wf-gold); background: var(--wf-glass); }
+.wf-delivery-dl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .wf-offer-create-btn { width: 100%; margin-top: 4px; background: var(--wf-glass); border: 1px dashed rgba(212,175,55,0.4); color: var(--wf-gold); border-radius: 11px; padding: 11px; font-size: 13.5px; cursor: pointer; font-family: var(--wf-sans); transition: border-color 0.2s, background 0.2s; }
 .wf-offer-create-btn:hover { border-color: var(--wf-gold); background: var(--wf-glass-2); }
 .wf-offer-builder { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid rgba(212,175,55,0.3); border-radius: 12px; margin-top: 4px; background: var(--wf-glass); }
