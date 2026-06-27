@@ -76,6 +76,9 @@ export default function Admin() {
     deleteConversation,
     deleteUser,
     setUserRole,
+    createOffer,
+    deliverOffer,
+    showToast,
     communityLinks,
     setCommunityLinks,
     wall,
@@ -142,7 +145,19 @@ export default function Admin() {
   const [conversations, setConversations] = useState([])
   const [activeConv, setActiveConv] = useState(null)
   const [thread, setThread] = useState([])
+  const [convOffers, setConvOffers] = useState([]) // offers in the active thread
   const [reply, setReply] = useState('')
+
+  // offer builder + delivery composer
+  const [offerForm, setOfferForm] = useState({ name: '', description: '', amount: '', includes: [], includeInput: '' })
+  const [offerBusy, setOfferBusy] = useState(false)
+  const [offerErr, setOfferErr] = useState('')
+  const [showOfferBuilder, setShowOfferBuilder] = useState(false)
+  const [deliverFile, setDeliverFile] = useState(null)
+  const [deliverNote, setDeliverNote] = useState('')
+  const [deliverBusy, setDeliverBusy] = useState(false)
+  const [deliverErr, setDeliverErr] = useState('')
+  const paidSeen = useRef(new Set())
   const threadRef = useRef(null)
 
   // load conversations (for stats + support); poll while on support tab
@@ -190,18 +205,33 @@ export default function Admin() {
     if (isAdmin && adminTab === 'reviews') reloadReviews()
   }, [isAdmin, adminTab, reloadReviews])
 
-  // load + poll the open conversation thread
+  // load + poll the open conversation thread (messages + offers)
   useEffect(() => {
     if (!activeConv) return
     let t
     const load = async () => {
       const r = await fetch('/api/chat/messages?conversationId=' + encodeURIComponent(activeConv))
-      if (r.ok) setThread((await r.json()).messages || [])
+      if (!r.ok) return
+      const d = await r.json()
+      setThread(d.messages || [])
+      const offers = d.offers || []
+      setConvOffers(offers)
+      // payment-landed toast (once per offer)
+      offers.forEach((o) => {
+        if ((o.status === 'paid' || o.status === 'delivered') && !paidSeen.current.has(o.id)) {
+          // skip the first load (don't toast pre-existing paid offers)
+          if (paidSeen.current.size >= 0 && paidSeen.current.has('__init_' + activeConv)) {
+            showToast(`Payment received · $${o.amount}${o.customerEmail ? ' from ' + o.customerEmail : ''}`)
+          }
+          paidSeen.current.add(o.id)
+        }
+      })
+      paidSeen.current.add('__init_' + activeConv)
     }
     load()
     t = setInterval(load, 4000)
     return () => clearInterval(t)
-  }, [activeConv])
+  }, [activeConv, showToast])
 
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
@@ -292,6 +322,15 @@ export default function Admin() {
   const maxUnits = topFields.length ? Math.max(1, topFields[0].units) : 1
   const categoryOptions = [...new Set([...paidProducts.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
   const allFieldOptions = [...paidProducts, ...freeFields]
+  // active offer in the open support thread + a lookup for rendering cards
+  const offerById = Object.fromEntries(convOffers.map((o) => [o.id, o]))
+  const activeOffer = [...convOffers].reverse().find((o) => o.status !== 'cancelled') || null
+  const convStatus =
+    !activeOffer ? 'New request'
+      : activeOffer.status === 'sent' ? 'Awaiting payment'
+      : activeOffer.status === 'paid' ? 'Paid'
+      : activeOffer.status === 'delivered' ? 'Delivered'
+      : 'New request'
 
   const publishAnnouncement = async (e) => {
     e.preventDefault()
@@ -399,6 +438,47 @@ export default function Admin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversationId: activeConv, text }),
     })
+  }
+
+  // ---- offers (create field, deliver) ----
+  const addInclude = () => {
+    const v = offerForm.includeInput.trim()
+    if (!v) return
+    setOfferForm((f) => ({ ...f, includes: [...f.includes, v].slice(0, 12), includeInput: '' }))
+  }
+  const sendOffer = async (e) => {
+    e.preventDefault()
+    setOfferErr('')
+    const amount = parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) || 0
+    if (!offerForm.name.trim()) return setOfferErr('Add a field name.')
+    if (amount <= 0) return setOfferErr('Set a price.')
+    setOfferBusy(true)
+    const res = await createOffer(activeConv, {
+      name: offerForm.name.trim(),
+      description: offerForm.description.trim(),
+      amount,
+      currency: 'USD',
+      deliveryEstimate: '6–7 days',
+      includes: offerForm.includes,
+    })
+    setOfferBusy(false)
+    if (res?.error) return setOfferErr(res.error)
+    setOfferForm({ name: '', description: '', amount: '', includes: [], includeInput: '' })
+    setShowOfferBuilder(false)
+    setConvOffers((prev) => [...prev, res.offer])
+    showToast('Field sent — awaiting payment')
+  }
+  const submitDelivery = async (offerId) => {
+    setDeliverErr('')
+    if (!deliverFile) return setDeliverErr('Choose a file to deliver.')
+    setDeliverBusy(true)
+    const res = await deliverOffer(offerId, { file: deliverFile, note: deliverNote })
+    setDeliverBusy(false)
+    if (res?.error) return setDeliverErr(res.error)
+    setDeliverFile(null)
+    setDeliverNote('')
+    setConvOffers((prev) => prev.map((o) => (o.id === offerId ? res.offer : o)))
+    showToast('Field delivered ✓')
   }
 
   // ---- admin add-review ----
@@ -1066,15 +1146,101 @@ export default function Admin() {
                 <p className="wf-detail-desc" style={{ margin: 0 }}>Select a conversation to reply.</p>
               ) : (
                 <>
-                  <div className="wf-thread" ref={threadRef}>
-                    {thread.map((m, i) => (
-                      <div key={i} className={`wf-msg wf-msg--${m.from}`}>
-                        {m.from === 'admin' && <span className="wf-msg-who">You</span>}
-                        {m.text}
-                      </div>
-                    ))}
+                  <div className="wf-thread-head">
+                    <span className={`wf-conv-pill wf-conv-pill--${convStatus.replace(/\s+/g, '').toLowerCase()}`}>{convStatus}</span>
                   </div>
-                  <form className="wf-chat-input" onSubmit={sendReply}>
+                  <div className="wf-thread" ref={threadRef}>
+                    {thread.map((m, i) => {
+                      if (m.kind === 'offer' && m.meta?.offerId) {
+                        const o = offerById[m.meta.offerId]
+                        return (
+                          <div key={m.id || i} className="wf-msg-offer">
+                            <span className="wf-mo-eyebrow">✦ Field sent</span>
+                            <span className="wf-mo-name">{o?.name || m.text}</span>
+                            <span className="wf-mo-foot">
+                              <span className="wf-mo-amt">${o?.amount ?? ''}</span>
+                              <span className={`wf-mo-status wf-mo-status--${o?.status || 'sent'}`}>{o?.status || 'sent'}</span>
+                            </span>
+                          </div>
+                        )
+                      }
+                      if (m.kind === 'systemPaid') {
+                        return (
+                          <div key={m.id || i} className="wf-msg-sys">✓ {m.text}</div>
+                        )
+                      }
+                      if (m.kind === 'delivery') {
+                        return (
+                          <div key={m.id || i} className="wf-msg-deliv">📦 {m.text}</div>
+                        )
+                      }
+                      return (
+                        <div key={m.id || i} className={`wf-msg wf-msg--${m.from}`}>
+                          {m.from === 'admin' && <span className="wf-msg-who">You</span>}
+                          {m.text}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* offer-aware composer */}
+                  {activeOffer?.status === 'sent' ? (
+                    <div className="wf-offer-await">
+                      <span className="wf-offer-await-dot" /> Awaiting payment · ${activeOffer.amount}
+                    </div>
+                  ) : activeOffer?.status === 'paid' ? (
+                    <div className="wf-offer-deliver">
+                      <div className="wf-offer-cleared">✓ Payment cleared — ready to deliver</div>
+                      <label className="wf-field" style={{ marginTop: 10 }}>
+                        <span className="wf-field-label">Field file {deliverFile ? `· ${deliverFile.name}` : ''}</span>
+                        <input className="wf-input wf-file" type="file" onChange={(e) => setDeliverFile(e.target.files?.[0] || null)} />
+                      </label>
+                      <textarea className="wf-textarea" rows="2" value={deliverNote} onChange={(e) => setDeliverNote(e.target.value)} placeholder="Note to the customer (optional)…" />
+                      {deliverErr && <p className="wf-auth-error" style={{ margin: '4px 0 0' }}>{deliverErr}</p>}
+                      <button className="wf-form-submit wf-mag" style={{ marginTop: 8 }} disabled={deliverBusy} onClick={() => submitDelivery(activeOffer.id)}>
+                        {deliverBusy ? 'Delivering…' : 'Deliver field →'}
+                      </button>
+                    </div>
+                  ) : activeOffer?.status === 'delivered' ? (
+                    <div className="wf-offer-done">✓ Field delivered — order complete</div>
+                  ) : null}
+
+                  {/* create-field builder (when no active unpaid/paid offer) */}
+                  {(!activeOffer || activeOffer.status === 'delivered') && (
+                    showOfferBuilder ? (
+                      <form className="wf-offer-builder" onSubmit={sendOffer}>
+                        <div className="wf-eyebrow" style={{ marginBottom: 2 }}>✦ Create field</div>
+                        <input className="wf-input" value={offerForm.name} onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })} placeholder="Field name (e.g. Focus & productivity field)" />
+                        <textarea className="wf-textarea" rows="2" value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="Short description…" />
+                        <div className="wf-form-row">
+                          <input className="wf-input" value={offerForm.amount} onChange={(e) => setOfferForm({ ...offerForm, amount: e.target.value })} placeholder="$ amount" />
+                          <span className="wf-offer-chip">Delivery · 6–7 days</span>
+                        </div>
+                        <div className="wf-offer-inc-row">
+                          <input className="wf-input" value={offerForm.includeInput} onChange={(e) => setOfferForm({ ...offerForm, includeInput: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInclude() } }} placeholder="Add an 'includes' point + Enter" />
+                          <button type="button" className="wf-coupon-apply" onClick={addInclude}>Add</button>
+                        </div>
+                        {offerForm.includes.length > 0 && (
+                          <div className="wf-offer-inc-chips">
+                            {offerForm.includes.map((it, i) => (
+                              <span key={i} className="wf-offer-inc-chip" onClick={() => setOfferForm((f) => ({ ...f, includes: f.includes.filter((_, j) => j !== i) }))}>
+                                {it} ✕
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {offerErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{offerErr}</p>}
+                        <div className="wf-form-row" style={{ marginTop: 6 }}>
+                          <button type="button" className="wf-back" onClick={() => setShowOfferBuilder(false)}>Cancel</button>
+                          <button type="submit" className="wf-form-submit wf-mag" disabled={offerBusy}>{offerBusy ? 'Sending…' : 'Send field →'}</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <button className="wf-offer-create-btn" onClick={() => setShowOfferBuilder(true)}>✦ Create field</button>
+                    )
+                  )}
+
+                  <form className="wf-chat-input" onSubmit={sendReply} style={{ marginTop: 10 }}>
                     <input className="wf-input" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply as Waslerr admin…" />
                     <button className="wf-chat-send" type="submit" aria-label="Send reply">
                       <SendIcon />

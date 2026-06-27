@@ -28,6 +28,7 @@ import {
   binanceCreateOrder,
   binanceQueryOrder,
 } from './payments.js'
+import { canCheckout, canDeliver } from './offer-state.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(__dirname, '..', 'dist')
@@ -433,11 +434,126 @@ const computeStats = async () => {
 // --- support chat ---
 const insertMessage = async (row) => {
   const r = await sbRest('support_messages', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
-  return { ok: r.ok }
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, data: Array.isArray(d) ? d[0] : d }
 }
 const getMessages = async (conversationId) => {
   const r = await sbRest(`support_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`)
   return r.ok ? r.json() : []
+}
+
+// --- offers (field offered in chat → pay → deliver) ----------------
+const insertOffer = async (row) => {
+  const r = await sbRest('offers', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
+}
+const getOffer = async (id) => {
+  const r = await sbRest(`offers?id=eq.${encodeURIComponent(id)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
+const updateOffer = async (id, patch) => {
+  const r = await sbRest(`offers?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(patch),
+  })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, data: Array.isArray(d) ? d[0] : d }
+}
+const listOffersForConversation = async (conversationId) => {
+  const r = await sbRest(`offers?conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`)
+  return r.ok ? r.json() : []
+}
+// client-safe shape (no storage path; download goes through the gated endpoint)
+const publicOffer = (o) => ({
+  id: o.id,
+  conversationId: o.conversation_id,
+  name: o.name,
+  description: o.description || '',
+  amount: Number(o.amount),
+  currency: o.currency || 'USD',
+  deliveryEstimate: o.delivery_estimate || '6–7 days',
+  includes: Array.isArray(o.includes) ? o.includes : [],
+  status: o.status,
+  paymentMethod: o.payment_method || null,
+  deliveryFileName: o.delivery_file_name || null,
+  deliveryNote: o.delivery_note || null,
+  hasFile: !!o.delivery_file_url,
+  createdAt: o.created_at,
+  paidAt: o.paid_at || null,
+  deliveredAt: o.delivered_at || null,
+})
+
+// Idempotent: when an offer's order is confirmed paid, flip the offer to `paid`
+// once and append the systemPaid pill + the admin auto-reply. Safe to call on
+// every status poll — does nothing if already paid/delivered.
+const PAID_REPLY =
+  'Payment confirmed — your field has entered production. Expect delivery within 6–7 days; we’ll notify you right here the moment it’s ready.'
+const confirmOfferPaid = async (offer, { txid, method } = {}) => {
+  if (!offer || offer.status !== 'sent') return offer
+  const out = await updateOffer(offer.id, {
+    status: 'paid',
+    paid_at: new Date().toISOString(),
+    payment_method: method || offer.payment_method || null,
+  })
+  const updated = out.data || { ...offer, status: 'paid' }
+  // append the system pill + admin auto-reply (guarded so retries don't dupe)
+  const existing = await getMessages(offer.conversation_id)
+  const hasPaidPill = existing.some((m) => m.kind === 'systemPaid' && m.meta && m.meta.offerId === offer.id)
+  if (!hasPaidPill) {
+    await insertMessage({
+      conversation_id: offer.conversation_id,
+      sender: 'system',
+      kind: 'systemPaid',
+      body: `Payment received · $${Number(offer.amount)} ${offer.currency || 'USD'}`,
+      meta: { offerId: offer.id, txid: txid || null },
+    })
+    await insertMessage({
+      conversation_id: offer.conversation_id,
+      sender: 'admin',
+      kind: 'text',
+      body: PAID_REPLY,
+    })
+  }
+  return updated
+}
+
+// private storage upload (deliveries bucket) + signed URL for download
+const uploadPrivate = async (filename, contentType, buffer, bucket = 'deliveries') => {
+  const safe = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+  const put = () =>
+    fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${encodeURIComponent(safe)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': contentType || 'application/octet-stream', 'x-upsert': 'true' },
+      body: buffer,
+    })
+  let r = await put()
+  if (!r.ok && (r.status === 404 || r.status === 400)) {
+    // create the private bucket then retry
+    await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: bucket, name: bucket, public: false, file_size_limit: 104857600 }),
+    }).catch(() => {})
+    r = await put()
+  }
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '')
+    return { ok: false, status: r.status, detail: detail.slice(0, 300) }
+  }
+  return { ok: true, path: safe }
+}
+const signedDownloadUrl = async (path, bucket = 'deliveries', expiresIn = 120) => {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encodeURIComponent(path)}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expiresIn }),
+  })
+  if (!r.ok) return null
+  const d = await r.json().catch(() => null)
+  return d && d.signedURL ? `${SUPABASE_URL}/storage/v1${d.signedURL}` : null
 }
 // --- announcements ---
 const listAnnouncements = async () => {
@@ -828,6 +944,206 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { status: 'failed', reason: v.reason || 'verify_failed' })
   }
 
+  // ---- offers (field offered in chat → pay → deliver) ----
+  // 1) admin creates an offer + appends an `offer` card to the thread
+  if (/^\/api\/admin\/conversations\/[^/]+\/offers$/.test(url) && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const conversationId = decodeURIComponent(url.split('/')[4] || '')
+    const b = await readBody(req)
+    const name = (b.name || '').toString().trim()
+    const amount = Math.max(0, Number(b.amount) || 0)
+    if (!conversationId || !name || amount <= 0) return sendJson(res, 400, { error: 'bad_request', detail: 'name and amount > 0 required' })
+    // find the customer email from the thread (best effort)
+    const convMsgs = await getMessages(conversationId)
+    const customerEmail = (convMsgs.find((m) => m.email)?.email) || null
+    const offerRow = {
+      conversation_id: conversationId,
+      customer_email: customerEmail,
+      name: name.slice(0, 120),
+      description: (b.description || '').toString().trim().slice(0, 2000),
+      amount,
+      currency: (b.currency || 'USD').toString().toUpperCase().slice(0, 8),
+      delivery_estimate: (b.deliveryEstimate || '6–7 days').toString().slice(0, 40),
+      includes: Array.isArray(b.includes) ? b.includes.slice(0, 12).map((s) => String(s).slice(0, 120)) : [],
+      status: 'sent',
+    }
+    const out = await insertOffer(offerRow)
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.status })
+    await insertMessage({
+      conversation_id: conversationId,
+      sender: 'admin',
+      kind: 'offer',
+      body: `Field offered: ${offerRow.name} · $${amount}`,
+      meta: { offerId: out.data.id },
+    })
+    return sendJson(res, 200, { offer: publicOffer(out.data) })
+  }
+
+  // 2) customer starts payment for an offer — reuses the crypto checkout (orders)
+  if (/^\/api\/offers\/[^/]+\/checkout$/.test(url) && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const offerId = url.split('/')[3]
+    const b = await readBody(req)
+    const methodSel = b.method === 'binance' ? 'binance' : 'paypal'
+    const offer = await getOffer(offerId)
+    if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
+    if (!canCheckout(offer)) return sendJson(res, 409, { error: 'not_payable', detail: `offer is ${offer.status}` })
+    const amount = Number(offer.amount) || 0
+    if (amount <= 0) return sendJson(res, 400, { error: 'bad_amount' })
+
+    // reuse an existing pending order for this offer+method if present (retry-safe)
+    let reference = offer.reference
+    let binance = null
+    let existing = reference ? await getOrderByRef(reference) : null
+    if (!existing || existing.method !== methodSel || existing.status === 'failed') {
+      reference = genReference(offer.name)
+      const orderRow = {
+        reference,
+        field_id: 'offer:' + offer.id,
+        field_title: offer.name,
+        method: methodSel,
+        amount,
+        currency: offer.currency || 'USD',
+        status: 'pending',
+        buyer_email: offer.customer_email || null,
+      }
+      if (methodSel === 'binance' && binanceConfigured()) {
+        const created = await binanceCreateOrder({ reference, amount, goodsName: offer.name })
+        if (created.ok) {
+          orderRow.prepay_id = created.prepayId || null
+          binance = { checkoutUrl: created.checkoutUrl, deeplink: created.deeplink, qrcodeLink: created.qrcodeLink, universalUrl: created.universalUrl }
+        }
+      }
+      const ins = await insertOrder(orderRow)
+      if (!ins.ok) return sendJson(res, 502, { error: 'order_failed' })
+      await updateOffer(offer.id, { reference, payment_method: methodSel })
+    }
+    return sendJson(res, 200, {
+      reference,
+      amount,
+      method: methodSel,
+      offerName: offer.name,
+      payee: methodSel === 'binance' ? { binanceId: BINANCE_PAY_ID } : { paypalEmail: PAYPAL_EMAIL },
+      binance,
+      providerReady: methodSel === 'binance' ? binanceConfigured() : paypalConfigured(),
+    })
+  }
+
+  // 3) poll offer status (replaces the webhook in this poll-based stack).
+  // Confirms payment via the provider, then flips the offer to paid idempotently.
+  if (/^\/api\/offers\/[^/]+\/status$/.test(url) && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 400, { error: 'bad_request' })
+    const offerId = url.split('/')[3]
+    const offer = await getOffer(offerId)
+    if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
+    if (offer.status === 'paid' || offer.status === 'delivered') {
+      return sendJson(res, 200, { status: offer.status, offer: publicOffer(offer) })
+    }
+    if (!offer.reference) return sendJson(res, 200, { status: 'sent', offer: publicOffer(offer) })
+    const order = await getOrderByRef(offer.reference)
+    if (!order) return sendJson(res, 200, { status: 'sent', offer: publicOffer(offer) })
+
+    let paid = order.status === 'paid' || order.status === 'delivered'
+    let txid = order.txid || null
+    if (!paid) {
+      if (order.method === 'binance') {
+        const q = await binanceQueryOrder(offer.reference)
+        if (q.ok && q.status === 'paid') { await markDelivered(order, { txid: q.txid, meta: q.raw }); paid = true; txid = q.txid }
+      } else {
+        const found = await paypalFindByReference(offer.reference, Number(order.amount))
+        if (found.ok) { await markDelivered(order, { txid: found.txid, meta: found.raw }); paid = true; txid = found.txid }
+      }
+    }
+    if (paid) {
+      const updated = await confirmOfferPaid(offer, { txid, method: order.method })
+      return sendJson(res, 200, { status: 'paid', offer: publicOffer(updated) })
+    }
+    return sendJson(res, 200, { status: 'sent', offer: publicOffer(offer) })
+  }
+
+  // 3b) TXID fallback for an offer (mirrors /api/checkout/verify-txid)
+  if (/^\/api\/offers\/[^/]+\/verify-txid$/.test(url) && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const offerId = url.split('/')[3]
+    const b = await readBody(req)
+    const txid = (b.txid || '').toString().trim()
+    const offer = await getOffer(offerId)
+    if (!offer || !offer.reference) return sendJson(res, 404, { error: 'offer_not_found' })
+    if (offer.status !== 'sent') return sendJson(res, 200, { status: offer.status, offer: publicOffer(offer) })
+    if (txid.length < 6) return sendJson(res, 400, { error: 'bad_request' })
+    const order = await getOrderByRef(offer.reference)
+    if (!order) return sendJson(res, 404, { error: 'order_not_found' })
+    let ok = false
+    if (order.method === 'binance') {
+      const q = await binanceQueryOrder(offer.reference)
+      if (q.ok && q.status === 'paid') { await markDelivered(order, { txid: q.txid || txid, meta: q.raw }); ok = true }
+      else await updateOrder(offer.reference, { txid })
+    } else {
+      const v = await paypalVerifyTxid(txid, Number(order.amount), offer.reference)
+      if (v.ok) { await markDelivered(order, { txid: v.txid || txid, meta: v.raw }); ok = true }
+    }
+    if (ok) {
+      const updated = await confirmOfferPaid(offer, { txid, method: order.method })
+      return sendJson(res, 200, { status: 'paid', offer: publicOffer(updated) })
+    }
+    return sendJson(res, 200, { status: 'sent', reason: 'not_confirmed_yet', offer: publicOffer(offer) })
+  }
+
+  // 4) admin delivers the field (JSON: fileName, contentType, dataBase64, note)
+  if (/^\/api\/admin\/offers\/[^/]+\/deliver$/.test(url) && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const offerId = url.split('/')[4]
+    const b = await readBody(req, 120e6) // up to ~90MB delivery file
+    const offer = await getOffer(offerId)
+    if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
+    if (!canDeliver(offer)) return sendJson(res, 409, { error: 'not_paid', detail: 'cannot deliver before payment' })
+    if (offer.status === 'delivered') return sendJson(res, 200, { offer: publicOffer(offer) }) // idempotent
+    if (!b.dataBase64) return sendJson(res, 400, { error: 'no_file' })
+    let path = null
+    try {
+      const buffer = Buffer.from(b.dataBase64, 'base64')
+      const up = await uploadPrivate(b.fileName || 'field', b.contentType, buffer, 'deliveries')
+      if (!up.ok) return sendJson(res, 502, { error: 'upload_failed', detail: up.detail })
+      path = up.path
+    } catch (e) {
+      return sendJson(res, 500, { error: 'upload_error', detail: e?.message })
+    }
+    const out = await updateOffer(offerId, {
+      status: 'delivered',
+      delivered_at: new Date().toISOString(),
+      delivery_file_url: path,
+      delivery_file_name: (b.fileName || 'field').toString().slice(0, 200),
+      delivery_note: (b.note || '').toString().slice(0, 1000),
+    })
+    await insertMessage({
+      conversation_id: offer.conversation_id,
+      sender: 'admin',
+      kind: 'delivery',
+      body: `Delivery sent · ${b.fileName || 'field'}`,
+      meta: { offerId },
+    })
+    return sendJson(res, 200, { offer: publicOffer(out.data || { ...offer, status: 'delivered' }) })
+  }
+
+  // 5) customer (or admin) downloads the delivered file — gated by conversationId
+  if (/^\/api\/offers\/[^/]+\/download$/.test(url) && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const offerId = url.split('/')[3]
+    const conv = parsedUrl.searchParams.get('conversationId') || ''
+    const offer = await getOffer(offerId)
+    if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
+    if (offer.status !== 'delivered' || !offer.delivery_file_url) return sendJson(res, 409, { error: 'not_delivered' })
+    // auth: the owning conversation (chat guests hold the secret id) OR an admin token
+    const isOwner = conv && conv === offer.conversation_id
+    const admin = isOwner ? null : await getAuthedUser(req)
+    const isAdminUser = admin && (admin.email === ADMIN_EMAIL || admin.role === 'admin')
+    if (!isOwner && !isAdminUser) return sendJson(res, 403, { error: 'forbidden' })
+    const signed = await signedDownloadUrl(offer.delivery_file_url, 'deliveries', 120)
+    if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
+    res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })
+    return res.end()
+  }
+
   // ---- free fields (separate from paid products) ----
   if (url === '/api/free-fields' && method === 'GET') {
     if (!sbReady()) return sendJson(res, 200, { freeFields: [] })
@@ -890,9 +1206,13 @@ const server = http.createServer(async (req, res) => {
   }
   if (url === '/api/chat/messages' && method === 'GET') {
     const cid = parsedUrl.searchParams.get('conversationId') || ''
-    if (!cid || !sbReady()) return sendJson(res, 200, { messages: [] })
+    if (!cid || !sbReady()) return sendJson(res, 200, { messages: [], offers: [] })
     const msgs = await getMessages(cid)
-    return sendJson(res, 200, { messages: msgs.map((m) => ({ id: m.id, from: m.sender, text: m.body, at: m.created_at })) })
+    const offers = await listOffersForConversation(cid)
+    return sendJson(res, 200, {
+      messages: msgs.map((m) => ({ id: m.id, from: m.sender, text: m.body, at: m.created_at, kind: m.kind || 'text', meta: m.meta || null })),
+      offers: offers.map(publicOffer),
+    })
   }
   if (url === '/api/admin/conversations' && method === 'GET') {
     if (!(await requireAdmin(req, res))) return

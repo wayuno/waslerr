@@ -760,6 +760,45 @@ export function StoreProvider({ children }) {
   }, [])
   const clearChatRequest = useCallback(() => setChatRequest(null), [])
 
+  // ---- offers (chat: field offered → pay → deliver) ----
+  // admin: create an offer in a conversation
+  const createOffer = useCallback(
+    async (conversationId, payload) => {
+      const r = await authedFetch(`/api/admin/conversations/${encodeURIComponent(conversationId)}/offers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        return { error: j.detail || j.error || 'Could not send field.' }
+      }
+      return { ok: true, offer: (await r.json()).offer }
+    },
+    [authedFetch],
+  )
+  // admin: deliver the file (base64 through the backend, stored privately)
+  const deliverOffer = useCallback(
+    async (offerId, { file, note }) => {
+      try {
+        const dataBase64 = await fileToBase64(file)
+        const r = await authedFetch(`/api/admin/offers/${offerId}/deliver`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: file.name, contentType: file.type, dataBase64, note: note || '' }),
+        })
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          return { error: j.detail || j.error || 'Delivery failed.' }
+        }
+        return { ok: true, offer: (await r.json()).offer }
+      } catch {
+        return { error: 'Delivery failed — network error. Try a smaller file.' }
+      }
+    },
+    [authedFetch],
+  )
+
   // ---- reviews wall navigation ----
   const openReviews = useCallback(
     (fieldId = null, share = false) => {
@@ -871,6 +910,8 @@ export function StoreProvider({ children }) {
     chatRequest,
     requestViaChat,
     clearChatRequest,
+    createOffer,
+    deliverOffer,
     notifications,
     unreadCount,
     notifReadAt,
