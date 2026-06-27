@@ -505,8 +505,8 @@ const publicOffer = (o) => ({
   status: o.status,
   paymentMethod: o.payment_method || null,
   deliveryFileName: o.delivery_file_name || null,
-  // names only — downloads go through the gated endpoint by index
-  deliveryFiles: Array.isArray(o.delivery_files) ? o.delivery_files.map((f) => ({ name: f.name })) : [],
+  // names + sizes only — downloads go through the gated endpoint by index
+  deliveryFiles: Array.isArray(o.delivery_files) ? o.delivery_files.map((f) => ({ name: f.name, size: f.size || 0 })) : [],
   deliveryNote: o.delivery_note || null,
   hasFile: !!o.delivery_file_url || (Array.isArray(o.delivery_files) && o.delivery_files.length > 0),
   createdAt: o.created_at,
@@ -1231,7 +1231,7 @@ const server = http.createServer(async (req, res) => {
         const buffer = Buffer.from(f.dataBase64, 'base64')
         const up = await uploadPrivate(f.fileName || 'field', f.contentType, buffer, 'deliveries')
         if (!up.ok) return sendJson(res, 502, { error: 'upload_failed', detail: up.detail })
-        stored.push({ path: up.path, name: (f.fileName || 'field').toString().slice(0, 200) })
+        stored.push({ path: up.path, name: (f.fileName || 'field').toString().slice(0, 200), size: Math.max(0, Number(f.size) || buffer.length) })
       }
     } catch (e) {
       return sendJson(res, 500, { error: 'upload_error', detail: e?.message })

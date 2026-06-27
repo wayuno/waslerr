@@ -930,7 +930,7 @@ export function StoreProvider({ children }) {
       try {
         const payloadFiles = []
         for (const f of list) {
-          payloadFiles.push({ fileName: f.name, contentType: f.type, dataBase64: await fileToBase64(f) })
+          payloadFiles.push({ fileName: f.name, contentType: f.type, size: f.size, dataBase64: await fileToBase64(f) })
         }
         const body = JSON.stringify({ files: payloadFiles, note: note || '' })
         const send = (token) =>
