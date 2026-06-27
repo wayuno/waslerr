@@ -1,59 +1,117 @@
 import { useEffect, useRef, useState } from 'react'
 import { BinanceMark, CheckIcon, ArrowRight } from './icons'
 
-// Stages checked off one at a time during verification.
+// Stages shown while the REAL verification runs in the background.
+// Steps 0–2 advance on a timer for feel; step 3 ("verified") only fills when
+// the server actually confirms the payment — never on a timer.
 const STEPS = ['Locating transaction', 'Matching payment reference', 'Confirming on-chain', 'Transaction verified']
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /**
- * Manual transaction-ID verification screen.
+ * Manual transaction-ID verification.
  *
  * State 1 — submit a TxID.
- * State 2 — animated "verifying" scanner + 4-step stepper.
- * On completion it hands the verified TxID back via onVerified — the caller
- * grants instant access (the "Your field is unlocked" screen).
+ * State 2 — verifying: animation plays WHILE the server checks the TxID against
+ *           Binance (amount + id must match an unused transfer). Access is only
+ *           granted when the server confirms.
+ * State 3 — cancelled: if nothing is confirmed within `timeoutMs`, the attempt
+ *           is cancelled and the buyer is routed to support. No field is
+ *           delivered unless payment is verified.
  *
  * Props:
- *  - reference      order reference pill (e.g. WF-VAL-SY748)
- *  - stageDuration  ms per verification stage (default 1400)
- *  - glow           ambient gold glow on/off (default true)
- *  - onSubmit(txid) fired the moment a TxID is submitted (record server-side)
- *  - onVerified(txid) fired when the animation completes — grant access
- *  - onClose        return to the previous screen
+ *  - reference            order reference (shown in pills)
+ *  - onVerify(txid)       async → server result { status, txid? } (POST verify-txid)
+ *  - onPoll()             async → latest order status { status, txid? }
+ *  - onVerified(txid)     called ONLY on a real server confirmation — grant access
+ *  - onContactSupport()   open support chat
+ *  - onClose()            back to automatic check
+ *  - timeoutMs            give up + cancel after this long (default 60000)
+ *  - pollMs               status poll interval while verifying (default 5000)
+ *  - stageDuration        ms between the first visual steps (default 1400)
+ *  - glow                 ambient gold glow on/off (default true)
  */
-export default function ManualVerify({ reference, stageDuration = 1400, glow = true, onSubmit, onVerified, onClose }) {
-  const [state, setState] = useState('submit') // 'submit' | 'verifying'
+export default function ManualVerify({
+  reference,
+  onVerify,
+  onPoll,
+  onVerified,
+  onContactSupport,
+  onClose,
+  timeoutMs = 60000,
+  pollMs = 5000,
+  stageDuration = 1400,
+  glow = true,
+}) {
+  const [state, setState] = useState('submit') // 'submit' | 'verifying' | 'cancelled'
   const [txid, setTxid] = useState('')
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(0) // 0..3 visual progress; 3 = confirmed
   const submitted = useRef('')
+  const runId = useRef(0)
 
-  // Keep the latest callback in a ref so the stepper timer below never depends
-  // on the parent's callback identity — the checkout re-renders every second
-  // (countdown), which would otherwise reset the timer and freeze the stepper.
-  const onVerifiedRef = useRef(onVerified)
-  useEffect(() => { onVerifiedRef.current = onVerified }, [onVerified])
+  // latest callbacks in a ref — the verifying effect runs once and must not
+  // capture stale closures or be restarted by the parent's re-renders.
+  const cbs = useRef({ onVerify, onPoll, onVerified })
+  useEffect(() => { cbs.current = { onVerify, onPoll, onVerified } })
 
   const value = txid.trim()
-  const canSubmit = value.length > 0
+  const canSubmit = value.length >= 6
 
   const start = () => {
     if (!canSubmit) return
     submitted.current = value
-    onSubmit?.(value)
     setStep(0)
     setState('verifying')
   }
 
-  // Advance the stepper on a timer, then grant access after the last stage.
-  // Deps are intentionally limited to state/step/stageDuration.
+  const retry = () => {
+    setTxid('')
+    setStep(0)
+    setState('submit')
+  }
+
+  // Drive the real verification while the animation plays. Runs once per entry
+  // into the 'verifying' state (deps: [state]).
   useEffect(() => {
     if (state !== 'verifying') return
-    if (step >= STEPS.length - 1) {
-      const t = setTimeout(() => onVerifiedRef.current?.(submitted.current), stageDuration)
-      return () => clearTimeout(t)
+    const myRun = ++runId.current
+    const alive = () => myRun === runId.current
+
+    setStep(0)
+    const t1 = setTimeout(() => alive() && setStep((s) => (s < 1 ? 1 : s)), stageDuration)
+    const t2 = setTimeout(() => alive() && setStep((s) => (s < 2 ? 2 : s)), stageDuration * 2)
+
+    const succeed = async (confTxid) => {
+      if (!alive()) return
+      setStep(3)
+      await sleep(900) // let the "verified" check land before handing off
+      if (alive()) cbs.current.onVerified?.(confTxid || submitted.current)
     }
-    const t = setTimeout(() => setStep((s) => s + 1), stageDuration)
-    return () => clearTimeout(t)
-  }, [state, step, stageDuration])
+
+    ;(async () => {
+      const deadline = Date.now() + timeoutMs
+      const done = (r) => r && (r.status === 'delivered' || r.status === 'paid')
+      // immediate server check (records the TxID + tries to confirm now)
+      const first = await cbs.current.onVerify?.(submitted.current)
+      if (!alive()) return
+      if (done(first)) return succeed(first.txid)
+      // keep checking until the server confirms or the deadline passes
+      while (alive() && Date.now() < deadline) {
+        await sleep(pollMs)
+        if (!alive()) return
+        const s = await cbs.current.onPoll?.()
+        if (!alive()) return
+        if (done(s)) return succeed(s.txid)
+      }
+      if (alive()) setState('cancelled') // not confirmed in time — no access
+    })()
+
+    return () => {
+      runId.current++ // invalidate this run on unmount / state change
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
 
   const last = STEPS.length - 1
   const stepStatus = (i) => {
@@ -64,7 +122,8 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
 
   return (
     <div className={`wf-mv${glow ? ' glow' : ''}`}>
-      {state === 'submit' ? (
+      {/* ---- State 1: submit ---- */}
+      {state === 'submit' && (
         <div className="wf-mv-card">
           <div className="wf-mv-head">
             <span className="wf-mv-eyebrow">Manual verification</span>
@@ -73,8 +132,8 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
 
           <h2 className="wf-mv-title">Submit your transaction ID.</h2>
           <p className="wf-mv-body">
-            Paste the Transaction ID (TxID) or order number from your Binance Pay receipt. We match it against
-            your reference and confirm the amount automatically.
+            Paste the Transaction ID (TxID) or order number from your Binance Pay receipt. We check it against
+            Binance — the amount and ID must match your payment — and unlock your field the moment it's confirmed.
           </p>
 
           <input
@@ -101,7 +160,10 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
             <button className="wf-back wf-mv-cancel" onClick={onClose}>← Back to automatic check</button>
           )}
         </div>
-      ) : (
+      )}
+
+      {/* ---- State 2: verifying ---- */}
+      {state === 'verifying' && (
         <div className="wf-mv-card verifying">
           <div className="wf-mv-scanner" aria-hidden="true">
             <span className="wf-mv-pulse wf-mv-pulse-1" />
@@ -140,8 +202,33 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
 
           <div className="wf-mv-foot">
             <span className="wf-co-spin-glyph" aria-hidden="true">◌</span>
-            Auto-checking · verified on the server
+            Checking Binance · this can take up to a minute
           </div>
+        </div>
+      )}
+
+      {/* ---- State 3: cancelled (not confirmed in time) ---- */}
+      {state === 'cancelled' && (
+        <div className="wf-mv-card">
+          <div className="wf-mv-warn" aria-hidden="true">!</div>
+
+          <h2 className="wf-mv-title" style={{ textAlign: 'center' }}>Couldn't verify this payment.</h2>
+          <p className="wf-mv-body" style={{ textAlign: 'center' }}>
+            We couldn't match this transaction to your order automatically within a minute, so the attempt was
+            cancelled. Nothing is delivered until a payment is confirmed. If you've paid, contact support with your
+            details below and an admin will verify it manually.
+          </p>
+
+          <div className="wf-mv-cancel-meta">
+            <div className="wf-mv-meta-row"><span>Reference</span><span className="mono">{reference || '—'}</span></div>
+            <div className="wf-mv-meta-row"><span>Transaction ID</span><span className="mono">{submitted.current || '—'}</span></div>
+          </div>
+
+          <button className="wf-mv-submit wf-mag" onClick={() => onContactSupport?.()}>
+            <span>Contact support</span>
+            <ArrowRight size={15} />
+          </button>
+          <button className="wf-back wf-mv-cancel" onClick={retry}>← Try a different transaction ID</button>
         </div>
       )}
     </div>
