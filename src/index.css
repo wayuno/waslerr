@@ -3371,6 +3371,10 @@ a {
   .wf-cursor,
   .wf-particles { display: none !important; }
 
+  /* hide the floating chat button on mobile — chat opens from the menu
+     ("Chat with support"); the open panel closes via its own header ✕ */
+  .wf-fab { display: none !important; }
+
   /* backdrop-filter blur is the biggest mobile jank source — drop it and use
      solid-enough backgrounds so panels stay legible */
   .wf-nav,
