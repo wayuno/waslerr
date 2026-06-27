@@ -249,6 +249,21 @@ const insertCoupon = async (row) => {
   return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
 }
 const removeCoupon = async (id) => (await sbRest(`coupons?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+// validate a coupon for a given field. Returns { ok } or { ok:false, reason }.
+const validateCoupon = (c, fieldId) => {
+  if (!c || c.active === false) return { ok: false, reason: 'invalid' }
+  if (c.expires_at && Date.parse(c.expires_at) <= Date.now()) return { ok: false, reason: 'expired' }
+  if (c.max_uses != null && Number(c.uses || 0) >= Number(c.max_uses)) return { ok: false, reason: 'used_up' }
+  if (c.field_id && fieldId && c.field_id !== fieldId) return { ok: false, reason: 'wrong_field' }
+  return { ok: true }
+}
+// increment redemption count once a coupon-bearing order is confirmed paid
+const incrementCouponUse = async (code) => {
+  if (!code) return
+  const c = await getCoupon(code)
+  if (!c) return
+  await sbRest(`coupons?id=eq.${encodeURIComponent(c.id)}`, { method: 'PATCH', body: JSON.stringify({ uses: Number(c.uses || 0) + 1 }) })
+}
 
 // --- payments / orders ---------------------------------------------
 // Merchant payee config (shown to the buyer). Override via env if needed.
@@ -300,6 +315,8 @@ const markDelivered = async (order, { txid, meta } = {}) => {
     txid: txid || order.txid || null,
     meta: meta || order.meta || null,
   })
+  // count the coupon redemption now that payment is confirmed (once)
+  if (order.coupon) incrementCouponUse(order.coupon).catch(() => {})
   return out.data || { ...order, status: 'delivered' }
 }
 
@@ -780,19 +797,32 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ---- coupons ----
-  // validate/apply a coupon (public; used at checkout)
+  // validate/apply a coupon for a specific field (public; used at checkout)
   if (url.startsWith('/api/coupons/') && method === 'GET') {
     const code = decodeURIComponent(url.split('/').pop() || '').toUpperCase()
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const fieldId = parsedUrl.searchParams.get('field') || ''
     const c = await getCoupon(code)
     if (!c) return sendJson(res, 404, { error: 'invalid_coupon' })
-    return sendJson(res, 200, { code: c.code, type: c.type, value: Number(c.value) })
+    const v = validateCoupon(c, fieldId)
+    if (!v.ok) return sendJson(res, 400, { error: v.reason }) // expired | used_up | wrong_field | invalid
+    return sendJson(res, 200, { code: c.code, type: c.type, value: Number(c.value), fieldId: c.field_id || null })
   }
   if (url === '/api/admin/coupons' && method === 'GET') {
     if (!(await requireAdmin(req, res))) return
     const list = await listCoupons()
     return sendJson(res, 200, {
-      coupons: (list || []).map((c) => ({ id: c.id, code: c.code, type: c.type, value: Number(c.value), active: c.active })),
+      coupons: (list || []).map((c) => ({
+        id: c.id,
+        code: c.code,
+        type: c.type,
+        value: Number(c.value),
+        active: c.active,
+        fieldId: c.field_id || null,
+        maxUses: c.max_uses != null ? Number(c.max_uses) : null,
+        uses: Number(c.uses || 0),
+        expiresAt: c.expires_at || null,
+      })),
     })
   }
   if (url === '/api/admin/coupons' && method === 'POST') {
@@ -800,7 +830,16 @@ const server = http.createServer(async (req, res) => {
     const b = await readBody(req)
     const code = (b.code || '').trim().toUpperCase()
     if (!code) return sendJson(res, 400, { error: 'code_required' })
-    const out = await insertCoupon({ code, type: b.type === 'fixed' ? 'fixed' : 'percent', value: Number(b.value) || 0, active: true })
+    const row = {
+      code,
+      type: b.type === 'fixed' ? 'fixed' : 'percent',
+      value: Number(b.value) || 0,
+      active: true,
+      field_id: b.fieldId ? String(b.fieldId) : null, // null = all paid fields
+      max_uses: b.maxUses != null && b.maxUses !== '' ? Math.max(1, parseInt(b.maxUses, 10) || 0) || null : null,
+      expires_at: b.expiresAt ? new Date(b.expiresAt).toISOString() : null,
+    }
+    const out = await insertCoupon(row)
     if (!out.ok) return sendJson(res, out.status === 409 ? 409 : 502, { error: out.status === 409 ? 'duplicate' : 'insert_failed' })
     return sendJson(res, 200, { coupon: out.data })
   }
@@ -827,13 +866,16 @@ const server = http.createServer(async (req, res) => {
     let amount = Number(product.price) || 0
     if (amount <= 0) return sendJson(res, 400, { error: 'free_field', detail: 'free fields need no checkout' })
 
-    // server-side coupon application
+    // server-side coupon application — validate scope (field) + limits + expiry
     let couponCode = null
     if (b.coupon) {
       const c = await getCoupon((b.coupon || '').toUpperCase())
-      if (c) {
+      const v = c ? validateCoupon(c, fieldId) : { ok: false, reason: 'invalid' }
+      if (c && v.ok) {
         couponCode = c.code
         amount = c.type === 'percent' ? amount - Math.round((amount * Number(c.value)) / 100) : Math.max(0, amount - Number(c.value))
+      } else {
+        return sendJson(res, 400, { error: 'coupon_' + (v.reason || 'invalid') })
       }
     }
     amount = Math.max(0, amount)

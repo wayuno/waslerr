@@ -683,13 +683,20 @@ export function StoreProvider({ children }) {
   )
 
   // ---- coupons ----
-  const applyCoupon = useCallback(async (code) => {
+  const applyCoupon = useCallback(async (code, fieldId) => {
     const c = (code || '').trim()
     if (!c) return { error: 'Enter a code.' }
+    const COUPON_ERR = {
+      expired: 'This code has expired.',
+      used_up: 'This code has reached its usage limit.',
+      wrong_field: "This code doesn't apply to this field.",
+      invalid: 'Invalid code.',
+      invalid_coupon: 'Invalid code.',
+    }
     try {
-      const r = await fetch('/api/coupons/' + encodeURIComponent(c))
-      if (!r.ok) return { error: 'Invalid or expired code.' }
-      const data = await r.json()
+      const r = await fetch('/api/coupons/' + encodeURIComponent(c) + (fieldId ? '?field=' + encodeURIComponent(fieldId) : ''))
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) return { error: COUPON_ERR[data.error] || 'Invalid or expired code.' }
       setAppliedCoupon(data)
       return { ok: true, coupon: data }
     } catch {

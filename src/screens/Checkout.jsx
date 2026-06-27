@@ -8,12 +8,6 @@ import { PayPalMark, BinanceMark, CloseIcon, CheckIcon } from '../components/ico
 const PAYPAL_EMAIL = 'ck806180@gmail.com'
 const BINANCE_ID = '767314103'
 
-const LOCAL_COUPONS = {
-  WASLERR10: { type: 'percent', value: 10 },
-  FIELD15: { type: 'percent', value: 15 },
-  AURA20: { type: 'percent', value: 20 },
-}
-
 const METHODS = [
   { id: 'paypal', label: 'PayPal', desc: 'Pay with your PayPal balance or any card.' },
   { id: 'binance', label: 'Binance Pay', desc: 'Pay with crypto — BTC, USDT or BNB.' },
@@ -68,7 +62,7 @@ function CopyRow({ label, value, copyKey, mono, copying, onCopy }) {
 }
 
 export default function Checkout() {
-  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered } = useStore()
+  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon } = useStore()
 
   const [stage, setStage] = useState('method')
 
@@ -76,6 +70,7 @@ export default function Checkout() {
   const [couponInput, setCouponInput] = useState('')
   const [couponMsg, setCouponMsg] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [couponBusy, setCouponBusy] = useState(false)
 
   // Verify stage
   const [creating, setCreating] = useState(false)
@@ -250,12 +245,15 @@ export default function Checkout() {
     await createOrder()
   }
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase()
-    const found = LOCAL_COUPONS[code]
-    if (!found) { setCouponMsg('Invalid code.'); return }
-    setAppliedCoupon({ code, ...found })
+    if (!code) return
+    setCouponBusy(true)
     setCouponMsg('')
+    const res = await applyCoupon(code, f.id) // validated against this field server-side
+    setCouponBusy(false)
+    if (res?.error) { setCouponMsg(res.error); return }
+    setAppliedCoupon({ code, type: res.coupon.type, value: res.coupon.value })
   }
 
   const copyField = async (text, key) => {
@@ -368,7 +366,7 @@ export default function Checkout() {
                       onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
                       placeholder="Enter code"
                     />
-                    <button type="button" className="wf-coupon-apply wf-mag" onClick={handleApplyCoupon}>Apply</button>
+                    <button type="button" className="wf-coupon-apply wf-mag" onClick={handleApplyCoupon} disabled={couponBusy}>{couponBusy ? '…' : 'Apply'}</button>
                   </div>
                 )}
                 {couponMsg && <p className="wf-auth-error" style={{ marginTop: 10 }}>{couponMsg}</p>}

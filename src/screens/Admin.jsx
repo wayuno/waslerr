@@ -102,7 +102,7 @@ export default function Admin() {
 
   // coupons
   const [coupons, setCoupons] = useState([])
-  const [cForm, setCForm] = useState({ code: '', type: 'percent', value: '' })
+  const [cForm, setCForm] = useState({ code: '', type: 'percent', value: '', fieldId: '', maxUses: '', expiresAt: '' })
   const [cErr, setCErr] = useState('')
   const [cBusy, setCBusy] = useState(false)
 
@@ -398,7 +398,14 @@ export default function Admin() {
     const r = await authedFetch('/api/admin/coupons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, type: cForm.type, value: Number(cForm.value) || 0 }),
+      body: JSON.stringify({
+        code,
+        type: cForm.type,
+        value: Number(cForm.value) || 0,
+        fieldId: cForm.fieldId || null, // '' = all paid fields
+        maxUses: cForm.maxUses || null,
+        expiresAt: cForm.expiresAt || null,
+      }),
     })
     setCBusy(false)
     if (!r.ok) {
@@ -406,7 +413,7 @@ export default function Admin() {
       setCErr(j.error === 'duplicate' ? 'That code already exists.' : 'Could not create coupon.')
       return
     }
-    setCForm({ code: '', type: 'percent', value: '' })
+    setCForm({ code: '', type: 'percent', value: '', fieldId: '', maxUses: '', expiresAt: '' })
     const lr = await authedFetch('/api/admin/coupons')
     if (lr.ok) setCoupons((await lr.json()).coupons || [])
   }
@@ -951,18 +958,29 @@ export default function Admin() {
               </div>
               <div className="wf-admin-list">
                 {coupons.length === 0 && <p className="wf-detail-desc">No coupons yet. Create one →</p>}
-                {coupons.map((c) => (
-                  <div className="wf-admin-row" key={c.id}>
-                    <span className="wf-admin-ico wf-card-ph-desire">%</span>
-                    <div className="wf-admin-row-text">
-                      <span className="wf-admin-row-title">{c.code}</span>
-                      <span className="wf-admin-row-meta">{c.type === 'percent' ? `${c.value}% off` : `$${c.value} off`}</span>
+                {coupons.map((c) => {
+                  const scope = c.fieldId ? (allFieldOptions.find((p) => p.id === c.fieldId)?.title || 'a field') : 'All fields'
+                  const usesStr = c.maxUses != null ? `${c.uses}/${c.maxUses} used` : `${c.uses} used`
+                  const exp = c.expiresAt ? new Date(c.expiresAt) : null
+                  const expired = exp && exp.getTime() <= Date.now()
+                  return (
+                    <div className="wf-admin-row" key={c.id}>
+                      <span className="wf-admin-ico wf-card-ph-desire">%</span>
+                      <div className="wf-admin-row-text">
+                        <span className="wf-admin-row-title">
+                          {c.code} {expired && <span className="wf-coupon-expired">expired</span>}
+                        </span>
+                        <span className="wf-admin-row-meta">
+                          {c.type === 'percent' ? `${c.value}% off` : `$${c.value} off`} · {scope} · {usesStr}
+                          {exp ? ` · until ${exp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                        </span>
+                      </div>
+                      <button className="wf-del" aria-label={`Delete ${c.code}`} onClick={() => removeCoupon(c.id)}>
+                        <TrashIcon />
+                      </button>
                     </div>
-                    <button className="wf-del" aria-label={`Delete ${c.code}`} onClick={() => removeCoupon(c.id)}>
-                      <TrashIcon />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -985,6 +1003,26 @@ export default function Admin() {
                 <label className="wf-field">
                   <span className="wf-field-label">Value</span>
                   <input className="wf-input" value={cForm.value} onChange={(e) => setCForm({ ...cForm, value: e.target.value })} placeholder={cForm.type === 'percent' ? '20' : '50'} />
+                </label>
+              </div>
+              <label className="wf-field">
+                <span className="wf-field-label">Applies to</span>
+                <select className="wf-select" value={cForm.fieldId} onChange={(e) => setCForm({ ...cForm, fieldId: e.target.value })}>
+                  <option value="">All paid fields</option>
+                  {paidProducts.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+                <span className="wf-field-hint">Choose one field, or apply to every paid field.</span>
+              </label>
+              <div className="wf-form-row">
+                <label className="wf-field">
+                  <span className="wf-field-label">Max uses (blank = unlimited)</span>
+                  <input className="wf-input" type="number" min="1" value={cForm.maxUses} onChange={(e) => setCForm({ ...cForm, maxUses: e.target.value })} placeholder="e.g. 50" />
+                </label>
+                <label className="wf-field">
+                  <span className="wf-field-label">Expires (blank = never)</span>
+                  <input className="wf-input" type="date" value={cForm.expiresAt} onChange={(e) => setCForm({ ...cForm, expiresAt: e.target.value })} />
                 </label>
               </div>
               {cErr && <p className="wf-auth-error" style={{ margin: 0 }}>{cErr}</p>}
