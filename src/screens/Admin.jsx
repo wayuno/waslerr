@@ -59,7 +59,7 @@ export default function Admin() {
     user,
     adminEmail,
     logout,
-    requireAdmin,
+    signIn,
     navigate,
     adminTab,
     setAdminTab,
@@ -119,6 +119,12 @@ export default function Admin() {
 
   // stats (real, from Supabase orders)
   const [stats, setStats] = useState(ZERO_STATS)
+
+  // admin sign-in (inline at the secret path — sign-in only, no account creation)
+  const [adminEmailIn, setAdminEmailIn] = useState('')
+  const [adminPassIn, setAdminPassIn] = useState('')
+  const [adminLoginErr, setAdminLoginErr] = useState('')
+  const [adminLoginBusy, setAdminLoginBusy] = useState(false)
 
   // admin add-review form
   const [rvForm, setRvForm] = useState({ field: '', name: '', rating: 5, text: '', featured: false })
@@ -201,32 +207,74 @@ export default function Admin() {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
   }, [thread])
 
+  const submitAdminSignIn = async (e) => {
+    e.preventDefault()
+    setAdminLoginErr('')
+    if (!adminEmailIn.trim() || !adminPassIn) {
+      setAdminLoginErr('Enter the admin email and password.')
+      return
+    }
+    setAdminLoginBusy(true)
+    const res = await signIn(adminEmailIn, adminPassIn)
+    setAdminLoginBusy(false)
+    if (res?.error) setAdminLoginErr(res.error)
+    // on success the store sets isAdmin (only if the email matches ADMIN_EMAIL),
+    // and this gate re-renders as the dashboard or the "restricted" notice.
+  }
+
   if (!loggedIn || !isAdmin) {
     return (
       <div className="wf-app" ref={ref}>
         <Background resonanceTop="50%" />
         <section className="wf-auth" style={{ minHeight: '100vh' }}>
-          <div className="wf-auth-card" data-reveal>
-            <h1 className="wf-auth-title">Admin panel</h1>
+          <form className="wf-auth-card" data-reveal onSubmit={submitAdminSignIn}>
+            <span className="wf-monogram" style={{ width: 46, height: 46, fontSize: 26, marginBottom: 18 }}>
+              W
+            </span>
+            <h1 className="wf-auth-title">Admin access</h1>
             {!loggedIn ? (
               <>
-                <p className="wf-auth-sub">Sign in with the Waslerr admin account to manage fields, stats and support.</p>
-                <button className="wf-form-submit wf-mag" style={{ width: '100%' }} onClick={requireAdmin}>
-                  Sign in to continue
+                <p className="wf-auth-sub">Restricted area. Sign in with the Waslerr admin account.</p>
+                <label className="wf-field" style={{ width: '100%' }}>
+                  <span className="wf-field-label">Email</span>
+                  <input
+                    className="wf-input"
+                    type="email"
+                    value={adminEmailIn}
+                    onChange={(e) => setAdminEmailIn(e.target.value)}
+                    placeholder="admin email"
+                    autoComplete="email"
+                  />
+                </label>
+                <label className="wf-field" style={{ width: '100%' }}>
+                  <span className="wf-field-label">Password</span>
+                  <input
+                    className="wf-input"
+                    type="password"
+                    value={adminPassIn}
+                    onChange={(e) => setAdminPassIn(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                </label>
+                {adminLoginErr && <p className="wf-auth-error">{adminLoginErr}</p>}
+                <button type="submit" className="wf-form-submit wf-mag" style={{ width: '100%', marginTop: 6 }} disabled={adminLoginBusy}>
+                  {adminLoginBusy ? 'Signing in…' : 'Sign in'}
                 </button>
+                {/* No account creation here — admin is provisioned from Railway env only. */}
               </>
             ) : (
               <>
-                <p className="wf-auth-sub">This dashboard is restricted to the Waslerr admin. You&apos;re signed in as {user}.</p>
-                <button className="wf-form-submit wf-mag" style={{ width: '100%' }} onClick={() => navigate('home')}>
+                <p className="wf-auth-sub">This dashboard is restricted to the Waslerr admin. You&apos;re signed in as {user}, which isn&apos;t the admin account.</p>
+                <button type="button" className="wf-form-submit wf-mag" style={{ width: '100%' }} onClick={() => navigate('home')}>
                   Back to home
                 </button>
-                <button className="wf-back" style={{ marginTop: 6 }} onClick={logout}>
+                <button type="button" className="wf-back" style={{ marginTop: 6 }} onClick={logout}>
                   Sign out
                 </button>
               </>
             )}
-          </div>
+          </form>
         </section>
       </div>
     )
