@@ -117,6 +117,7 @@ export function StoreProvider({ children }) {
   const [userName, setUserName] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [authReady, setAuthReady] = useState(false)
+  const [purchasedIds, setPurchasedIds] = useState([]) // field ids this user has paid for
   const [adminTab, setAdminTab] = useState('stats')
 
   const [chatOpen, setChatOpen] = useState(false)
@@ -428,6 +429,43 @@ export function StoreProvider({ children }) {
     },
     [getToken],
   )
+
+  // Which fields has this user actually paid for? Used to gate posting a story
+  // to the wall (only buyers may post; everyone may read). Merges the local
+  // post-checkout flags (instant) with the server's paid/delivered orders
+  // (authoritative).
+  const refreshPurchases = useCallback(async () => {
+    const ids = new Set()
+    try {
+      const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
+      orders.forEach((o) => {
+        const id = o.fieldId != null ? o.fieldId : o.id
+        if (id != null) ids.add(String(id))
+      })
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('wf_purchased_') && localStorage.getItem(k) === '1') ids.add(k.slice(13))
+      }
+    } catch {
+      /* ignore */
+    }
+    if (loggedIn) {
+      try {
+        const r = await authedFetch('/api/orders')
+        if (r.ok) {
+          const d = await r.json().catch(() => ({}))
+          ;(d.orders || []).forEach((o) => { if (o.fieldId != null) ids.add(String(o.fieldId)) })
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    setPurchasedIds(Array.from(ids))
+  }, [loggedIn, authedFetch])
+
+  useEffect(() => {
+    if (authReady) refreshPurchases()
+  }, [authReady, loggedIn, refreshPurchases])
 
   const signIn = useCallback(
     async (email, password) => {
@@ -1119,6 +1157,9 @@ export function StoreProvider({ children }) {
     reviewShare,
     openReviews,
     clearReviewShare,
+    purchasedIds,
+    hasPurchased: purchasedIds.length > 0,
+    refreshPurchases,
     authedFetch,
     appliedCoupon,
     applyCoupon,
