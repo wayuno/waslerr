@@ -36,6 +36,7 @@ export default function Profile() {
   const [msg, setMsg] = useState(null) // { type:'ok'|'err', text }
   const [busy, setBusy] = useState(false)
   const [orders, setOrders] = useState([]) // real, confirmed orders from Supabase
+  const [customFields, setCustomFields] = useState([]) // delivered custom fields (chat offers)
 
   // not signed in → send to login
   useEffect(() => {
@@ -49,10 +50,15 @@ export default function Profile() {
     let cancelled = false
     ;(async () => {
       try {
-        const r = await authedFetch('/api/orders')
-        if (!r.ok) return
-        const d = await r.json()
-        if (!cancelled) setOrders(Array.isArray(d.orders) ? d.orders : [])
+        const [ro, rc] = await Promise.all([authedFetch('/api/orders'), authedFetch('/api/my/offers')])
+        if (ro.ok) {
+          const d = await ro.json()
+          if (!cancelled) setOrders(Array.isArray(d.orders) ? d.orders : [])
+        }
+        if (rc.ok) {
+          const d = await rc.json()
+          if (!cancelled) setCustomFields(Array.isArray(d.offers) ? d.offers : [])
+        }
       } catch {
         /* ignore */
       }
@@ -62,6 +68,13 @@ export default function Profile() {
     }
   }, [loggedIn, authedFetch])
 
+  // permanent download of a delivered custom field (gated by the owner's
+  // conversation secret, returned only to the authenticated owner)
+  const downloadCustom = (cf, i = 0) => {
+    const url = `/api/offers/${cf.id}/download?conversationId=${encodeURIComponent(cf.conversationId || '')}&i=${i}`
+    window.open(url, '_blank', 'noopener')
+  }
+
   if (!loggedIn) return null
 
   const displayName = (userName && userName.trim()) || (user ? user.split('@')[0] : 'Friend')
@@ -69,11 +82,13 @@ export default function Profile() {
   // owned fields = catalog products that appear in the customer's real orders
   const ownedIds = new Set(orders.map((o) => o.fieldId).filter(Boolean))
   const owned = products.filter((p) => ownedIds.has(p.id))
-  const invested = orders.reduce((s, o) => s + (Number(o.amount) || 0), 0)
+  const invested =
+    orders.reduce((s, o) => s + (Number(o.amount) || 0), 0) +
+    customFields.reduce((s, o) => s + (Number(o.amount) || 0), 0)
 
   const stats = [
-    { label: 'Fields owned', value: String(owned.length) },
-    { label: 'Orders', value: String(orders.length) },
+    { label: 'Fields owned', value: String(owned.length + customFields.length) },
+    { label: 'Orders', value: String(orders.length + customFields.length) },
     { label: 'Invested', value: `$${invested.toLocaleString('en-US')}` },
   ]
 
@@ -150,7 +165,7 @@ export default function Profile() {
         {tab === 'overview' && (
           <div className="wf-pf-panel" key="overview">
             <div className="wf-field-label wf-pf-section-label">Your library</div>
-            {owned.length === 0 ? (
+            {owned.length + customFields.length === 0 ? (
               <div className="wf-pf-empty">
                 <p>Your owned fields will live here. Buy a field and it’s yours for life.</p>
                 <button className="wf-btn wf-btn-gold wf-mag" onClick={() => navigate('fields')}>
@@ -174,6 +189,31 @@ export default function Profile() {
                     <span className="wf-pf-owned">Owned</span>
                   </button>
                 ))}
+
+                {customFields.map((cf, i) => (
+                  <div className="wf-pf-libcard wf-pf-libcard-custom" key={cf.id} style={{ '--d': `${(owned.length + i) * 0.05}s` }}>
+                    <span className="wf-pf-thumb ph">
+                      <span className="wf-pf-thumb-mono">W</span>
+                    </span>
+                    <div className="wf-pf-libtext">
+                      <span className="wf-pf-libtitle">{cf.name || 'Custom field'}</span>
+                      <span className="wf-pf-libline">Custom field</span>
+                    </div>
+                    <div className="wf-pf-libactions">
+                      {(cf.files && cf.files.length ? cf.files : [{ name: 'Field', i: 0 }]).map((file) => (
+                        <button
+                          key={file.i}
+                          className="wf-pf-dl wf-mag"
+                          onClick={() => downloadCustom(cf, file.i)}
+                          title={`Download ${file.name}`}
+                        >
+                          <DownloadIcon size={15} />
+                          {cf.files && cf.files.length > 1 ? file.name : 'Download'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -183,7 +223,7 @@ export default function Profile() {
         {tab === 'orders' && (
           <div className="wf-pf-panel" key="orders">
             <div className="wf-field-label wf-pf-section-label">Order history</div>
-            {orders.length === 0 ? (
+            {orders.length + customFields.length === 0 ? (
               <div className="wf-pf-empty">
                 <p>No orders yet. When you buy a field, your receipt shows up here.</p>
                 <button className="wf-btn wf-btn-gold wf-mag" onClick={() => navigate('fields')}>
@@ -205,6 +245,27 @@ export default function Profile() {
                     </div>
                     <span className="wf-pf-order-amt">${Number(o.amount) || 0}</span>
                   </div>
+                ))}
+
+                {customFields.map((cf, i) => (
+                  <button
+                    className="wf-pf-order wf-pf-order-custom"
+                    key={cf.id}
+                    style={{ '--d': `${(orders.length + i) * 0.05}s` }}
+                    onClick={() => downloadCustom(cf, 0)}
+                    title="Download your custom field"
+                  >
+                    <span className="wf-pf-order-disc" aria-hidden="true">
+                      <DownloadIcon size={16} />
+                    </span>
+                    <div className="wf-pf-order-text">
+                      <span className="wf-pf-order-name">{cf.name || 'Custom field'}</span>
+                      <span className="wf-pf-order-meta">
+                        {fmtDate(cf.ts)} · Custom field · {cf.method === 'binance' ? 'Binance Pay' : cf.method === 'paypal' ? 'PayPal' : 'Delivered'}
+                      </span>
+                    </div>
+                    <span className="wf-pf-order-amt">${Number(cf.amount) || 0}</span>
+                  </button>
                 ))}
               </div>
             )}
