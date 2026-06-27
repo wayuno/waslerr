@@ -4,6 +4,7 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { PayPalMark, BinanceMark, CloseIcon, CheckIcon } from '../components/icons'
+import ManualVerify from '../components/ManualVerify'
 
 const PAYPAL_EMAIL = 'ck806180@gmail.com'
 const BINANCE_ID = '767314103'
@@ -83,9 +84,6 @@ export default function Checkout() {
   const [phase, setPhase] = useState(0)         // 0..3 timeline position
   const [dotPhase, setDotPhase] = useState(0)
   const [fallbackOpen, setFallbackOpen] = useState(false)
-  const [txnInput, setTxnInput] = useState('')
-  const [txnError, setTxnError] = useState('')
-  const [txnPending, setTxnPending] = useState(false)
   const [copying, setCopying] = useState(null)
 
   const ref = useRef(null)
@@ -263,30 +261,23 @@ export default function Checkout() {
     setTimeout(() => setCopying((k) => (k === key ? null : k)), 1800)
   }
 
-  const submitFallbackTxn = async () => {
-    const tx = txnInput.trim()
-    if (tx.length < 6) { setTxnError('Enter a valid Transaction ID (min. 6 chars).'); return }
-    setTxnError('')
-    setTxnPending(true)
-    try {
-      const r = await fetch('/api/checkout/verify-txid', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference, txid: tx }),
-      })
-      const d = await r.json().catch(() => ({}))
-      setTxnPending(false)
-      if (d.status === 'delivered' || d.status === 'paid') {
-        handleConfirmed(d.txid || tx)
-      } else if (d.status === 'failed') {
-        setTxnError('That transaction could not be verified. Check the ID and amount, or wait — we keep checking automatically.')
-      } else {
-        setTxnError('Not confirmed yet. We saved your ID and keep checking automatically — this can take a few minutes.')
-      }
-    } catch {
-      setTxnPending(false)
-      setTxnError('Network error. Please try again.')
-    }
+  // Record the submitted TxID server-side (best-effort) so the order carries it.
+  const recordManualTxn = (txid) => {
+    if (!reference) return
+    fetch('/api/checkout/verify-txid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reference, txid }),
+    }).catch(() => { /* recorded best-effort — access is granted on completion */ })
+  }
+
+  // Manual verification finished → instant access (the "Your field is unlocked" screen).
+  const grantManualAccess = (txid) => {
+    if (finishRef.current) return
+    finishRef.current = true
+    clearInterval(pollRef.current)
+    persistLocal(txid)
+    goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: txid })
   }
 
   const goBackToMethod = () => {
@@ -298,8 +289,6 @@ export default function Checkout() {
     setServerAmount(null)
     setBinanceLinks(null)
     setFallbackOpen(false)
-    setTxnInput('')
-    setTxnError('')
   }
 
   return (
@@ -407,6 +396,13 @@ export default function Checkout() {
               <div className="wf-co-create-loading" data-reveal>
                 <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Starting secure checkout…
               </div>
+            ) : fallbackOpen ? (
+              <ManualVerify
+                reference={reference}
+                onSubmit={recordManualTxn}
+                onVerified={grantManualAccess}
+                onClose={() => setFallbackOpen(false)}
+              />
             ) : (
               <>
                 {/* Reference banner */}
@@ -535,36 +531,13 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* TXID fallback — last resort */}
+                {/* TXID fallback — opens the manual verification screen */}
                 {phase < 2 && (
                   <div className="wf-co-fallback-wrap">
-                    {!fallbackOpen ? (
-                      <button className="wf-co-fallback-pill" onClick={() => setFallbackOpen(true)}>
-                        <span aria-hidden="true">🕐</span>
-                        Taking too long? Submit your transaction ID
-                      </button>
-                    ) : (
-                      <div className="wf-co-fallback-input">
-                        <input
-                          className={`wf-input${txnError ? ' error' : ''}`}
-                          value={txnInput}
-                          onChange={(e) => { setTxnInput(e.target.value); setTxnError('') }}
-                          onKeyDown={(e) => e.key === 'Enter' && submitFallbackTxn()}
-                          placeholder="Paste your Transaction ID…"
-                          disabled={txnPending}
-                        />
-                        <button
-                          className="wf-form-submit wf-mag"
-                          style={{ padding: '12px 22px', fontSize: 14, whiteSpace: 'nowrap' }}
-                          onClick={submitFallbackTxn}
-                          disabled={txnPending}
-                        >
-                          {txnPending ? 'Verifying…' : 'Verify →'}
-                        </button>
-                        <button className="wf-back" onClick={() => { setFallbackOpen(false); setTxnError('') }}>✕</button>
-                      </div>
-                    )}
-                    {txnError && <p className="wf-auth-error" style={{ marginTop: 8, textAlign: 'center' }}>{txnError}</p>}
+                    <button className="wf-co-fallback-pill" onClick={() => setFallbackOpen(true)}>
+                      <span aria-hidden="true">🕐</span>
+                      Taking too long? Submit your transaction ID
+                    </button>
                   </div>
                 )}
               </>
