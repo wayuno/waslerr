@@ -27,6 +27,10 @@ import {
   paypalVerifyTxid,
   binanceCreateOrder,
   binanceQueryOrder,
+  binanceDiagnose,
+  binanceApiConfigured,
+  binanceIncomingMatches,
+  binanceFindTxid,
 } from './payments.js'
 import { canCheckout, canDeliver } from './offer-state.js'
 
@@ -301,6 +305,14 @@ const getOrderByRef = async (reference) => {
   const d = await r.json().catch(() => [])
   return Array.isArray(d) && d[0] ? d[0] : null
 }
+// find any order already tagged with a given txid (so one Binance transfer can't
+// confirm two different orders during amount-based auto-matching)
+const getOrderByTxid = async (txid) => {
+  if (!txid) return null
+  const r = await sbRest(`orders?txid=eq.${encodeURIComponent(txid)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
 const updateOrder = async (reference, patch) => {
   const r = await sbRest(`orders?reference=eq.${encodeURIComponent(reference)}`, {
     method: 'PATCH',
@@ -322,6 +334,35 @@ const markDelivered = async (order, { txid, meta } = {}) => {
   // count the coupon redemption now that payment is confirmed (once)
   if (order.coupon) incrementCouponUse(order.coupon).catch(() => {})
   return out.data || { ...order, status: 'delivered' }
+}
+
+// Confirm a Binance order with whatever works — no merchant account required:
+//   1) merchant order/query (instant, only if they ARE a Binance Pay merchant)
+//   2) pay-history by the buyer's transaction id (strong, manual)
+//   3) pay-history auto-match by amount + time window (deduped vs used txids)
+// Returns { ok, txid?, raw?, via? }.
+const confirmBinancePayment = async (order, { txid } = {}) => {
+  const q = await binanceQueryOrder(order.reference)
+  if (q.ok && q.status === 'paid') return { ok: true, txid: q.txid, raw: q.raw, via: 'merchant' }
+  if (txid) {
+    const v = await binanceFindTxid({ txid, amount: Number(order.amount) })
+    if (v.ok) {
+      const used = await getOrderByTxid(v.txid)
+      if (!used || used.reference === order.reference) return { ok: true, txid: v.txid, raw: v.raw, via: 'txid' }
+    }
+    return { ok: false }
+  }
+  if (binanceApiConfigured()) {
+    const sinceMs = Date.parse(order.created_at) || 0
+    const m = await binanceIncomingMatches({ amount: Number(order.amount), sinceMs })
+    if (m.ok) {
+      for (const c of m.matches) {
+        const used = c.txid ? await getOrderByTxid(c.txid) : null
+        if (!used || used.reference === order.reference) return { ok: true, txid: c.txid, raw: c.raw, via: 'auto' }
+      }
+    }
+  }
+  return { ok: false }
 }
 
 // --- free fields (separate table from paid products) ---------------
@@ -963,7 +1004,7 @@ const server = http.createServer(async (req, res) => {
       fieldTitle: product.title,
       payee: methodSel === 'binance' ? { binanceId: BINANCE_PAY_ID } : { paypalEmail: PAYPAL_EMAIL },
       binance,
-      providerReady: methodSel === 'binance' ? binanceConfigured() : paypalConfigured(),
+      providerReady: methodSel === 'binance' ? (binanceConfigured() || binanceApiConfigured()) : paypalConfigured(),
     })
   }
 
@@ -979,13 +1020,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (order.method === 'binance') {
-      const q = await binanceQueryOrder(reference)
-      if (q.ok && q.status === 'paid') {
-        const updated = await markDelivered(order, { txid: q.txid, meta: q.raw })
-        return sendJson(res, 200, { status: 'delivered', txid: updated.txid || q.txid || null, amount: Number(order.amount) })
+      const c = await confirmBinancePayment(order)
+      if (c.ok) {
+        const updated = await markDelivered(order, { txid: c.txid, meta: c.raw })
+        return sendJson(res, 200, { status: 'delivered', txid: updated.txid || c.txid || null, amount: Number(order.amount) })
       }
-      const status = q.ok ? (q.status === 'detected' ? 'detected' : 'pending') : 'pending'
-      return sendJson(res, 200, { status, providerStatus: q.providerStatus || null })
+      return sendJson(res, 200, { status: 'pending' })
     }
 
     // PayPal: search for a completed transaction whose note carries the reference
@@ -1011,13 +1051,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (order.method === 'binance') {
-      // re-query by reference; record the txid for manual reconciliation if not yet paid
-      const q = await binanceQueryOrder(reference)
-      if (q.ok && q.status === 'paid') {
-        const updated = await markDelivered(order, { txid: q.txid || txid, meta: q.raw })
+      // confirm the buyer-supplied transaction id against our Pay history
+      const c = await confirmBinancePayment(order, { txid })
+      if (c.ok) {
+        const updated = await markDelivered(order, { txid: c.txid || txid, meta: c.raw })
         return sendJson(res, 200, { status: 'delivered', txid: updated.txid || txid })
       }
-      await updateOrder(reference, { txid })
+      await updateOrder(reference, { txid }) // record for manual reconciliation
       return sendJson(res, 200, { status: 'pending', reason: 'not_confirmed_yet' })
     }
 
@@ -1145,7 +1185,7 @@ const server = http.createServer(async (req, res) => {
       offerName: offer.name,
       payee: methodSel === 'binance' ? { binanceId: BINANCE_PAY_ID } : { paypalEmail: PAYPAL_EMAIL },
       binance,
-      providerReady: methodSel === 'binance' ? binanceConfigured() : paypalConfigured(),
+      providerReady: methodSel === 'binance' ? (binanceConfigured() || binanceApiConfigured()) : paypalConfigured(),
     })
   }
 
@@ -1167,8 +1207,8 @@ const server = http.createServer(async (req, res) => {
     let txid = order.txid || null
     if (!paid) {
       if (order.method === 'binance') {
-        const q = await binanceQueryOrder(offer.reference)
-        if (q.ok && q.status === 'paid') { await markDelivered(order, { txid: q.txid, meta: q.raw }); paid = true; txid = q.txid }
+        const c = await confirmBinancePayment(order)
+        if (c.ok) { await markDelivered(order, { txid: c.txid, meta: c.raw }); paid = true; txid = c.txid }
       } else {
         const found = await paypalFindByReference(offer.reference, Number(order.amount))
         if (found.ok) { await markDelivered(order, { txid: found.txid, meta: found.raw }); paid = true; txid = found.txid }
@@ -1195,8 +1235,8 @@ const server = http.createServer(async (req, res) => {
     if (!order) return sendJson(res, 404, { error: 'order_not_found' })
     let ok = false
     if (order.method === 'binance') {
-      const q = await binanceQueryOrder(offer.reference)
-      if (q.ok && q.status === 'paid') { await markDelivered(order, { txid: q.txid || txid, meta: q.raw }); ok = true }
+      const c = await confirmBinancePayment(order, { txid })
+      if (c.ok) { await markDelivered(order, { txid: c.txid || txid, meta: c.raw }); ok = true }
       else await updateOrder(offer.reference, { txid })
     } else {
       const v = await paypalVerifyTxid(txid, Number(order.amount), offer.reference)
@@ -1395,6 +1435,12 @@ const server = http.createServer(async (req, res) => {
     if (!(await requireAdmin(req, res))) return
     return sendJson(res, 200, { conversations: await getConversations() })
   }
+  // Binance Pay self-test (admin) — reveals whether the keys are valid Binance
+  // Pay MERCHANT credentials. Bad keys / a non-merchant account fail here.
+  if (url === '/api/admin/binance-check' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    return sendJson(res, 200, { configured: binanceConfigured(), diagnose: await binanceDiagnose() })
+  }
   // admin: delete a whole conversation (clears its messages)
   if (url.startsWith('/api/admin/conversations/') && method === 'DELETE') {
     if (!(await requireAdmin(req, res))) return
@@ -1571,7 +1617,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[waslerr] server listening on :${PORT}`)
-  console.log(`[waslerr] payments — PayPal: ${paypalConfigured() ? 'configured' : 'MISSING keys'} · Binance Pay: ${binanceConfigured() ? 'configured' : 'MISSING keys'}`)
+  console.log(`[waslerr] payments — PayPal: ${paypalConfigured() ? 'configured' : 'MISSING keys'} · Binance merchant: ${binanceConfigured() ? 'configured' : 'off'} · Binance API (pay history): ${binanceApiConfigured() ? 'configured' : 'MISSING keys'}`)
   ensureAdminUser()
   if (sbReady()) ensureBucket() // make sure the product-images storage bucket exists
 })

@@ -31,8 +31,19 @@ const BINANCE_PAY_API_KEY = process.env.BINANCE_PAY_API_KEY || ''
 const BINANCE_PAY_SECRET_KEY = process.env.BINANCE_PAY_SECRET_KEY || ''
 const BINANCE_PAY_BASE = process.env.BINANCE_PAY_BASE || 'https://bpay.binanceapi.com'
 
+// Regular Binance API keys (Binance → API Management, "Enable Reading" only).
+// These let a PERSONAL account read its own Binance Pay transfer history via
+// /sapi/v1/pay/transactions — no merchant account required. Falls back to the
+// Pay keys if dedicated ones aren't set.
+const BINANCE_API_KEY = process.env.BINANCE_API_KEY || BINANCE_PAY_API_KEY
+const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET || BINANCE_PAY_SECRET_KEY
+const BINANCE_API_BASE = process.env.BINANCE_API_BASE || 'https://api.binance.com'
+// stablecoins we treat as 1:1 with the USD order amount
+const USD_STABLES = new Set(['USDT', 'USDC', 'BUSD', 'FDUSD', 'USD', 'TUSD', 'DAI'])
+
 export const paypalConfigured = () => !!(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET)
 export const binanceConfigured = () => !!(BINANCE_PAY_API_KEY && BINANCE_PAY_SECRET_KEY)
+export const binanceApiConfigured = () => !!(BINANCE_API_KEY && BINANCE_API_SECRET)
 
 const money = (n) => Number(n).toFixed(2)
 const amountsMatch = (a, b, tol = 0.01) => Math.abs(Number(a) - Number(b)) <= tol
@@ -221,6 +232,7 @@ export async function binanceCreateOrder({ reference, amount, goodsName }) {
   try {
     const { httpOk, data } = await binanceCall('/binancepay/openapi/v3/order', bodyObj)
     if (httpOk && data.status === 'SUCCESS' && data.data) {
+      console.log('[binance] order created · merchantTradeNo=%s prepayId=%s', reference, data.data.prepayId)
       return {
         ok: true,
         prepayId: data.data.prepayId,
@@ -230,10 +242,105 @@ export async function binanceCreateOrder({ reference, amount, goodsName }) {
         universalUrl: data.data.universalUrl,
       }
     }
+    // surface the real reason — almost always "account is not a Binance Pay
+    // merchant" or "invalid signature / API key" or an IP-whitelist error.
+    console.error('[binance] createOrder FAILED · code=%s msg=%s', data.code || '?', data.errorMessage || JSON.stringify(data).slice(0, 300))
     return { ok: false, reason: data.errorMessage || data.code || 'create_failed', raw: data }
   } catch (e) {
+    console.error('[binance] createOrder ERROR ·', e.message)
     return { ok: false, reason: e.message }
   }
+}
+
+// Lightweight auth/merchant self-test: query a dummy order. With valid merchant
+// credentials this returns a SUCCESS/known error; with bad keys/signature or a
+// non-merchant account it returns the specific Binance error code.
+export async function binanceDiagnose() {
+  const out = { merchant: { configured: binanceConfigured() }, api: { configured: binanceApiConfigured() } }
+  if (binanceConfigured()) {
+    try {
+      const { httpOk, data } = await binanceCall('/binancepay/openapi/v3/order/query', { merchantTradeNo: 'WF-DIAG-TEST' })
+      out.merchant = { configured: true, httpOk, status: data.status || null, code: data.code || null, errorMessage: data.errorMessage || null }
+    } catch (e) {
+      out.merchant = { configured: true, error: e.message }
+    }
+  }
+  // the path that matters for "verify without a merchant account"
+  const h = await binancePayHistory({})
+  out.api = h.ok
+    ? { configured: true, ok: true, recentCount: h.list.length }
+    : { configured: binanceApiConfigured(), ok: false, reason: h.reason, code: h.raw?.code || null }
+  return out
+}
+
+// =====================================================================
+// Binance Pay verification WITHOUT a merchant account.
+// Uses the regular signed API GET /sapi/v1/pay/transactions (HMAC-SHA256) to
+// read this account's own Binance Pay transfer history, then matches an
+// incoming transfer to an order by transactionId (manual) or amount+time (auto).
+// =====================================================================
+async function binanceSpotSigned(pathname, params = {}) {
+  const qs = new URLSearchParams({ ...params, recvWindow: '60000', timestamp: Date.now().toString() })
+  const signature = crypto.createHmac('sha256', BINANCE_API_SECRET).update(qs.toString()).digest('hex')
+  qs.append('signature', signature)
+  const r = await fetch(`${BINANCE_API_BASE}${pathname}?${qs.toString()}`, {
+    headers: { 'X-MBX-APIKEY': BINANCE_API_KEY },
+  })
+  const data = await r.json().catch(() => ({}))
+  return { httpOk: r.ok, data }
+}
+
+// Raw Binance Pay transaction history for this account (most recent first).
+export async function binancePayHistory({ startTime, endTime } = {}) {
+  if (!binanceApiConfigured()) return { ok: false, reason: 'not_configured' }
+  try {
+    const params = { limit: '100' }
+    if (startTime) params.startTime = String(Math.floor(startTime))
+    if (endTime) params.endTime = String(Math.floor(endTime))
+    const { httpOk, data } = await binanceSpotSigned('/sapi/v1/pay/transactions', params)
+    // success body: { code: "000000", data: [...], success: true }
+    if (!httpOk || (data.code && data.code !== '000000')) {
+      console.error('[binance] pay/transactions FAILED · code=%s msg=%s', data.code || '?', data.msg || data.message || JSON.stringify(data).slice(0, 200))
+      return { ok: false, reason: data.msg || data.message || data.code || 'history_failed', raw: data }
+    }
+    return { ok: true, list: Array.isArray(data.data) ? data.data : [] }
+  } catch (e) {
+    console.error('[binance] pay/transactions ERROR ·', e.message)
+    return { ok: false, reason: e.message }
+  }
+}
+
+// Does a history row's amount/currency match the USD order amount?
+const isAmountMatch = (t, amount) => {
+  const cur = String(t.currency || '').toUpperCase()
+  return USD_STABLES.has(cur) && amountsMatch(Math.abs(Number(t.amount)), amount)
+}
+// received funds are positive from our account's point of view
+const isIncoming = (t) => Number(t.amount) > 0
+const rowTxid = (t) => String(t.transactionId || t.orderId || t.id || '')
+
+// AUTO: list incoming transfers matching the amount, created at/after `sinceMs`.
+// The caller dedupes against txids already used by other orders.
+export async function binanceIncomingMatches({ amount, sinceMs }) {
+  const h = await binancePayHistory({ startTime: sinceMs ? sinceMs - 6 * 3600 * 1000 : undefined })
+  if (!h.ok) return { ok: false, reason: h.reason }
+  const floor = sinceMs ? sinceMs - 6 * 3600 * 1000 : 0
+  const matches = h.list
+    .filter((t) => isIncoming(t) && isAmountMatch(t, amount) && (Number(t.transactionTime) || 0) >= floor)
+    .map((t) => ({ txid: rowTxid(t), amount: Math.abs(Number(t.amount)), currency: t.currency, time: Number(t.transactionTime) || 0, raw: t }))
+  return { ok: true, matches }
+}
+
+// MANUAL: the buyer pasted a transaction id — confirm it exists in our history,
+// is incoming, and the amount matches.
+export async function binanceFindTxid({ txid, amount }) {
+  const h = await binancePayHistory({})
+  if (!h.ok) return { ok: false, reason: h.reason }
+  const want = String(txid).trim()
+  const t = h.list.find((x) => rowTxid(x) === want)
+  if (!t) return { ok: false, reason: 'not_found' }
+  if (!isAmountMatch(t, amount)) return { ok: false, reason: 'amount_or_currency_mismatch' }
+  return { ok: true, txid: rowTxid(t), raw: t }
 }
 
 // Query a Binance Pay order by reference (merchantTradeNo).
@@ -243,6 +350,7 @@ export async function binanceQueryOrder(reference) {
   try {
     const { httpOk, data } = await binanceCall('/binancepay/openapi/v3/order/query', { merchantTradeNo: reference })
     if (!httpOk || data.status !== 'SUCCESS' || !data.data) {
+      console.error('[binance] query FAILED · ref=%s code=%s msg=%s', reference, data.code || '?', data.errorMessage || JSON.stringify(data).slice(0, 200))
       return { ok: false, reason: data.errorMessage || data.code || 'query_failed', raw: data }
     }
     const d = data.data
