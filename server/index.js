@@ -1027,6 +1027,30 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { status: 'failed', reason: v.reason || 'verify_failed' })
   }
 
+  // the signed-in customer's real, confirmed orders (paid/delivered), by email.
+  // Auth-gated: the email is taken from the verified token, never the client.
+  if (url === '/api/orders' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { orders: [] })
+    const u = await getAuthedUser(req)
+    if (!u || !u.email) return sendJson(res, 200, { orders: [] })
+    const r = await sbRest(
+      `orders?buyer_email=eq.${encodeURIComponent(u.email)}&status=in.(paid,delivered)&order=created_at.desc&limit=200`,
+    )
+    const rows = r.ok ? await r.json() : []
+    return sendJson(res, 200, {
+      orders: rows.map((o) => ({
+        id: o.reference,
+        name: o.field_title,
+        method: o.method,
+        amount: Number(o.amount) || 0,
+        ref: o.reference,
+        txn: o.txid || null,
+        ts: Date.parse(o.created_at) || 0,
+        fieldId: o.field_id,
+      })),
+    })
+  }
+
   // ---- offers (field offered in chat → pay → deliver) ----
   // 1) admin creates an offer + appends an `offer` card to the thread
   if (/^\/api\/admin\/conversations\/[^/]+\/offers$/.test(url) && method === 'POST') {

@@ -211,6 +211,15 @@ export default function Nav() {
         <div className="wf-notif-mobile">
           <NotificationBell />
           <CartButton />
+          {authReady && loggedIn && (
+            <button
+              className={`wf-profile-btn${page === 'profile' ? ' active' : ''}`}
+              aria-label={t('nav.profile')}
+              onClick={() => go({ page: 'profile' })}
+            >
+              <IcUser />
+            </button>
+          )}
         </div>
         <button
           className={`wf-burger${menuOpen ? ' open' : ''}`}

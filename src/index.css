@@ -5025,3 +5025,22 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
   .wf-pf-avatar::before, .wf-pf-avatar::after { opacity: 0; }
   .wf-pf-tab-underline { transition: none; }
 }
+
+/* profile icon button in the top bar (matches bell/cart) */
+.wf-profile-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--wf-rule);
+  background: var(--wf-glass);
+  color: var(--wf-silver);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s, background 0.3s;
+}
+.wf-profile-btn svg { width: 18px; height: 18px; }
+.wf-profile-btn:hover { color: var(--wf-gold); border-color: rgba(212, 175, 55, 0.35); }
+.wf-profile-btn.active { color: var(--wf-gold); border-color: rgba(212, 175, 55, 0.45); background: var(--wf-glass-2); }

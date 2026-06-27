@@ -62,7 +62,7 @@ function CopyRow({ label, value, copyKey, mono, copying, onCopy }) {
 }
 
 export default function Checkout() {
-  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon } = useStore()
+  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user } = useStore()
 
   const [stage, setStage] = useState('method')
 
@@ -200,7 +200,7 @@ export default function Checkout() {
       const r = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fieldId: f.id, method: payMethod, coupon: appliedCoupon?.code || null }),
+        body: JSON.stringify({ fieldId: f.id, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.reference) {

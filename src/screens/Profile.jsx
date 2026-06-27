@@ -9,21 +9,6 @@ const LINE_LABEL = { desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'W
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 const lineLabel = (l) => LINE_LABEL[l] || cap(l) || 'Field'
 
-const readOrders = () => {
-  try {
-    const o = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-    return Array.isArray(o) ? o : []
-  } catch {
-    return []
-  }
-}
-const isOwned = (id) => {
-  try {
-    return localStorage.getItem(`wf_purchased_${id}`) === '1'
-  } catch {
-    return false
-  }
-}
 const fmtDate = (ts) => {
   try {
     return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -39,7 +24,7 @@ const TABS = [
 ]
 
 export default function Profile() {
-  const { user, userName, loggedIn, authReady, products, navigate, openDetail, updateProfile, logout, showToast } = useStore()
+  const { user, userName, loggedIn, authReady, products, navigate, openDetail, updateProfile, logout, showToast, authedFetch } = useStore()
   const ref = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
@@ -50,6 +35,7 @@ export default function Profile() {
   const [pass2, setPass2] = useState('')
   const [msg, setMsg] = useState(null) // { type:'ok'|'err', text }
   const [busy, setBusy] = useState(false)
+  const [orders, setOrders] = useState([]) // real, confirmed orders from Supabase
 
   // not signed in → send to login
   useEffect(() => {
@@ -57,12 +43,32 @@ export default function Profile() {
   }, [authReady, loggedIn, navigate])
   useEffect(() => setNameInput(userName || ''), [userName])
 
+  // fetch the customer's real orders (auth-gated by email server-side)
+  useEffect(() => {
+    if (!loggedIn) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await authedFetch('/api/orders')
+        if (!r.ok) return
+        const d = await r.json()
+        if (!cancelled) setOrders(Array.isArray(d.orders) ? d.orders : [])
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [loggedIn, authedFetch])
+
   if (!loggedIn) return null
 
   const displayName = (userName && userName.trim()) || (user ? user.split('@')[0] : 'Friend')
   const initial = (displayName || '?').charAt(0).toUpperCase()
-  const owned = products.filter((p) => isOwned(p.id))
-  const orders = readOrders()
+  // owned fields = catalog products that appear in the customer's real orders
+  const ownedIds = new Set(orders.map((o) => o.fieldId).filter(Boolean))
+  const owned = products.filter((p) => ownedIds.has(p.id))
   const invested = orders.reduce((s, o) => s + (Number(o.amount) || 0), 0)
 
   const stats = [
