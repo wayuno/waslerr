@@ -4437,3 +4437,24 @@ a {
 .wf-offer-inc-chip { font-size: 11.5px; color: #cbb988; background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.28); border-radius: 16px; padding: 3px 10px; cursor: pointer; }
 
 .wf-coupon-expired { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #e0432f; border: 1px solid rgba(224,67,47,0.4); border-radius: 14px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+
+/* ---------- Admin: field edit button + audio tag + edit panel ---------- */
+.wf-edit-btn {
+  flex: none;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--wf-rule);
+  background: var(--wf-glass);
+  color: var(--wf-gold);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.wf-edit-btn:hover { border-color: rgba(212,175,55,0.45); background: var(--wf-glass-2); }
+.wf-audio-tag { font-size: 10px; letter-spacing: 0.04em; color: var(--wf-gold); border: 1px solid rgba(212,175,55,0.35); border-radius: 14px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+.wf-field-edit {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px; margin: 4px 0 8px;
+  border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;
+  background: var(--wf-glass);
+}

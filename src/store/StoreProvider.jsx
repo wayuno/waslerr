@@ -18,6 +18,7 @@ const normalizeFreeField = (row) => ({
   desc: row.description || '',
   image_url: row.image_url || null,
   sold: Number(row.sold_count) || 0,
+  hasAudio: !!row.audio_url,
   freq: 200,
 })
 
@@ -65,6 +66,27 @@ const uploadImageViaApi = async (file, token) => {
     return { url: (await up.json()).url }
   } catch {
     return { error: 'Image upload failed — network error. Try a smaller image.' }
+  }
+}
+
+// Upload a (private) audio file through the backend → returns { path } or { error }.
+const uploadAudioViaApi = async (file, token) => {
+  if (file && file.size > 120 * 1024 * 1024) return { error: 'Audio is too large (max ~120MB). Please compress it.' }
+  if (file && !String(file.type).startsWith('audio/')) return { error: 'Please choose an audio file.' }
+  try {
+    const dataBase64 = await fileToBase64(file)
+    const up = await fetch('/api/admin/upload-audio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+    })
+    if (!up.ok) {
+      const j = await up.json().catch(() => ({}))
+      return { error: `Audio upload failed${j.detail ? ': ' + j.detail : j.status ? ' (' + j.status + ')' : ''}` }
+    }
+    return { path: (await up.json()).path }
+  } catch {
+    return { error: 'Audio upload failed — network error. Try a smaller file.' }
   }
 }
 
@@ -410,7 +432,7 @@ export function StoreProvider({ children }) {
 
   // ---- admin product CRUD (via backend, service-role) ----
   const addProduct = useCallback(
-    async (form, file) => {
+    async (form, file, audioFile) => {
       const token = await getToken()
       if (!token) return { error: 'Not authorized.' }
       try {
@@ -420,10 +442,16 @@ export function StoreProvider({ children }) {
           if (up.error) return { error: up.error }
           image_url = up.url
         }
+        let audio_url = null
+        if (audioFile) {
+          const au = await uploadAudioViaApi(audioFile, token)
+          if (au.error) return { error: au.error }
+          audio_url = au.path
+        }
         const res = await fetch('/api/admin/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ ...form, image_url }),
+          body: JSON.stringify({ ...form, image_url, audio_url }),
         })
         if (!res.ok) {
           const j = await res.json().catch(() => ({}))
@@ -436,6 +464,44 @@ export function StoreProvider({ children }) {
       }
     },
     [getToken, reloadProducts],
+  )
+
+  // edit a field (paid or free): change any of title/line/price/description and
+  // optionally replace the image and/or audio.
+  const updateProduct = useCallback(
+    async (id, isFree, patch, imageFile, audioFile) => {
+      const token = await getToken()
+      if (!token) return { error: 'Not authorized.' }
+      try {
+        const body = { ...patch }
+        if (imageFile) {
+          const up = await uploadImageViaApi(imageFile, token)
+          if (up.error) return { error: up.error }
+          body.image_url = up.url
+        }
+        if (audioFile) {
+          const au = await uploadAudioViaApi(audioFile, token)
+          if (au.error) return { error: au.error }
+          body.audio_url = au.path
+        }
+        const path = isFree ? '/api/admin/free-fields/' + id : '/api/admin/products/' + id
+        const res = await fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          return { error: `Save failed (${res.status})${j.detail ? ': ' + j.detail : ''}` }
+        }
+        if (isFree) await loadFreeFields()
+        else await reloadProducts()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
+    },
+    [getToken, reloadProducts, loadFreeFields],
   )
 
   const deleteProduct = useCallback(
@@ -456,7 +522,7 @@ export function StoreProvider({ children }) {
 
   // free fields (separate table) ----------------------------------
   const addFreeField = useCallback(
-    async (form, file) => {
+    async (form, file, audioFile) => {
       const token = await getToken()
       if (!token) return { error: 'Not authorized.' }
       try {
@@ -466,10 +532,16 @@ export function StoreProvider({ children }) {
           if (up.error) return { error: up.error }
           image_url = up.url
         }
+        let audio_url = null
+        if (audioFile) {
+          const au = await uploadAudioViaApi(audioFile, token)
+          if (au.error) return { error: au.error }
+          audio_url = au.path
+        }
         const res = await fetch('/api/admin/free-fields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, image_url }),
+          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, image_url, audio_url }),
         })
         if (!res.ok) return { error: `Publish failed (${res.status})` }
         await loadFreeFields()
@@ -866,6 +938,7 @@ export function StoreProvider({ children }) {
     reloadProducts,
     addProduct,
     deleteProduct,
+    updateProduct,
     addFreeField,
     deleteFreeField,
     announcements,

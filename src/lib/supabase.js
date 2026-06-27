@@ -58,6 +58,7 @@ export function normalizeProduct(row) {
     desc: row.description || '',
     image_url: row.image_url || null,
     sold: Number(row.sold_count) || 0,
+    hasAudio: !!row.audio_url,
     freq: 200,
   }
 }

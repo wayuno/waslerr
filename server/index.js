@@ -329,6 +329,11 @@ const listFreeFields = async () => {
   const r = await sbRest('free_fields?order=created_at.desc')
   return r.ok ? r.json() : []
 }
+const getFreeFieldById = async (id) => {
+  const r = await sbRest(`free_fields?id=eq.${encodeURIComponent(id)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
 const insertFreeField = async (row) => {
   const r = await sbRest('free_fields', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
   const d = await r.json().catch(() => null)
@@ -766,6 +771,23 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // upload a field's audio (admin only) → PRIVATE bucket, returns a path token
+  // (the audio is gated; it is served later via /api/fields/:id/audio).
+  if (url === '/api/admin/upload-audio' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const { filename, contentType, dataBase64 } = await readBody(req, 160e6) // ~120MB audio
+    if (!dataBase64) return sendJson(res, 400, { error: 'no_file', detail: 'No audio received (file may be too large).' })
+    if (!String(contentType || '').startsWith('audio/')) return sendJson(res, 400, { error: 'not_audio', detail: 'Please choose an audio file.' })
+    try {
+      const buffer = Buffer.from(dataBase64, 'base64')
+      const out = await uploadPrivate(filename || 'audio', contentType, buffer, 'field-audio')
+      if (!out.ok) return sendJson(res, 502, { error: 'upload_failed', detail: out.detail || 'storage rejected the file' })
+      return sendJson(res, 200, { path: out.path })
+    } catch (e) {
+      return sendJson(res, 500, { error: 'upload_error', detail: e?.message })
+    }
+  }
+
   // create a product (admin only)
   if (url === '/api/admin/products' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
@@ -774,10 +796,11 @@ const server = http.createServer(async (req, res) => {
     if (!title) return sendJson(res, 400, { error: 'title_required' })
     const row = {
       title,
-      line: ['desire', 'akashic', 'wealth'].includes((b.line || '').toLowerCase()) ? b.line.toLowerCase() : 'desire',
+      line: (b.line || 'desire').toString().toLowerCase().trim() || 'desire',
       price: Number(b.price) || 0,
       description: (b.description || '').trim(),
       image_url: b.image_url || null,
+      audio_url: b.audio_url || null,
       sold_count: Math.max(0, parseInt(b.sold_count, 10) || 0),
     }
     const out = await insertProduct(row)
@@ -785,13 +808,19 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { product: out.data })
   }
 
-  // update a product (admin only) — currently the editable sold count
+  // update a product (admin only) — sold count + edit (title/price/image/audio/…)
   if (url.startsWith('/api/admin/products/') && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
     const id = url.split('/').pop()
     const b = await readBody(req)
     const patch = {}
     if (b.sold_count != null) patch.sold_count = Math.max(0, parseInt(b.sold_count, 10) || 0)
+    if (b.title != null && b.title.trim()) patch.title = b.title.trim()
+    if (b.line != null) patch.line = (b.line || 'desire').toString().toLowerCase().trim() || 'desire'
+    if (b.price != null) patch.price = Number(b.price) || 0
+    if (b.description != null) patch.description = b.description.trim()
+    if (b.image_url !== undefined) patch.image_url = b.image_url || null
+    if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateProductRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
@@ -1202,6 +1231,38 @@ const server = http.createServer(async (req, res) => {
     if (!sbReady()) return sendJson(res, 200, { freeFields: [] })
     return sendJson(res, 200, { freeFields: await listFreeFields() })
   }
+
+  // gated field audio: free fields are open; a paid field needs a valid paid
+  // order reference for that field (the buyer's secret) or an admin token.
+  if (/^\/api\/fields\/[^/]+\/audio$/.test(url) && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    const id = url.split('/')[3]
+    const ref = parsedUrl.searchParams.get('ref') || ''
+    const paid = await getProductById(id)
+    const freeF = paid ? null : await getFreeFieldById(id)
+    const field = paid || freeF
+    if (!field) return sendJson(res, 404, { error: 'field_not_found' })
+    if (!field.audio_url) return sendJson(res, 404, { error: 'no_audio' })
+
+    const isFree = !!freeF || Number(field.price) === 0
+    if (!isFree) {
+      // must prove purchase (paid order ref for this field) — or be admin
+      let allowed = false
+      if (ref) {
+        const order = await getOrderByRef(ref)
+        if (order && order.field_id === id && (order.status === 'paid' || order.status === 'delivered')) allowed = true
+      }
+      if (!allowed) {
+        const u = await getAuthedUser(req)
+        if (u && (u.email === ADMIN_EMAIL || u.role === 'admin')) allowed = true
+      }
+      if (!allowed) return sendJson(res, 403, { error: 'not_purchased' })
+    }
+    const signed = await signedDownloadUrl(field.audio_url, 'field-audio', 120)
+    if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
+    res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })
+    return res.end()
+  }
   if (url === '/api/admin/free-fields' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
     const b = await readBody(req)
@@ -1212,6 +1273,7 @@ const server = http.createServer(async (req, res) => {
       line: (b.line || 'desire').toLowerCase(),
       description: (b.description || '').trim(),
       image_url: b.image_url || null,
+      audio_url: b.audio_url || null,
     }
     const out = await insertFreeField(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
@@ -1223,6 +1285,11 @@ const server = http.createServer(async (req, res) => {
     const b = await readBody(req)
     const patch = {}
     if (b.sold_count != null) patch.sold_count = Math.max(0, parseInt(b.sold_count, 10) || 0)
+    if (b.title != null && b.title.trim()) patch.title = b.title.trim()
+    if (b.line != null) patch.line = (b.line || 'desire').toString().toLowerCase().trim() || 'desire'
+    if (b.description != null) patch.description = b.description.trim()
+    if (b.image_url !== undefined) patch.image_url = b.image_url || null
+    if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateFreeFieldRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })

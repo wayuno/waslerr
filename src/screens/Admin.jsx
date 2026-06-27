@@ -68,6 +68,7 @@ export default function Admin() {
     freeFields,
     addProduct,
     deleteProduct,
+    updateProduct,
     addFreeField,
     deleteFreeField,
     announcements,
@@ -96,9 +97,19 @@ export default function Admin() {
   // product add form
   const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '' })
   const [file, setFile] = useState(null)
+  const [audioFile, setAudioFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const fileInputRef = useRef(null)
+  const audioInputRef = useRef(null)
+
+  // per-field edit panel
+  const [editId, setEditId] = useState(null)
+  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', isFree: false })
+  const [editImg, setEditImg] = useState(null)
+  const [editAudio, setEditAudio] = useState(null)
+  const [editBusy, setEditBusy] = useState(false)
+  const [editErr, setEditErr] = useState('')
 
   // coupons
   const [coupons, setCoupons] = useState([])
@@ -366,6 +377,7 @@ export default function Admin() {
         ? await addFreeField(
             { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.' },
             file,
+            audioFile,
           )
         : await addProduct(
             {
@@ -375,6 +387,7 @@ export default function Admin() {
               description: form.desc.trim() || 'A new Waslerr field.',
             },
             file,
+            audioFile,
           )
     setBusy(false)
     if (res?.error) {
@@ -383,8 +396,74 @@ export default function Admin() {
     }
     setForm({ title: '', category: 'DESIRE', price: '', desc: '' })
     setFile(null)
+    setAudioFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (audioInputRef.current) audioInputRef.current.value = ''
   }
+
+  // open/save the per-field edit panel
+  const openEdit = (p, isFree) => {
+    setEditErr('')
+    setEditImg(null)
+    setEditAudio(null)
+    setEditId(p.id)
+    setEditForm({
+      title: p.title || '',
+      category: (p.line || 'desire').toUpperCase(),
+      price: isFree ? '' : String(p.priceNum ?? ''),
+      desc: p.desc || '',
+      isFree,
+    })
+  }
+  const saveEdit = async () => {
+    setEditErr('')
+    if (!editForm.title.trim()) return setEditErr('Title is required.')
+    setEditBusy(true)
+    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc }
+    if (!editForm.isFree) patch.price = parseFloat(String(editForm.price).replace(/[^0-9.]/g, '')) || 0
+    const res = await updateProduct(editId, editForm.isFree, patch, editImg, editAudio)
+    setEditBusy(false)
+    if (res?.error) return setEditErr(res.error)
+    setEditId(null)
+  }
+  const renderEditPanel = (p) => (
+    <div className="wf-field-edit" key={p.id + '-edit'}>
+      <div className="wf-eyebrow" style={{ marginBottom: 2 }}>Edit field</div>
+      <label className="wf-field">
+        <span className="wf-field-label">Title</span>
+        <input className="wf-input" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+      </label>
+      <div className="wf-form-row">
+        <label className="wf-field">
+          <span className="wf-field-label">Category</span>
+          <input className="wf-input" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value.toUpperCase() })} />
+        </label>
+        {!editForm.isFree && (
+          <label className="wf-field">
+            <span className="wf-field-label">Price</span>
+            <input className="wf-input" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} placeholder="$" />
+          </label>
+        )}
+      </div>
+      <label className="wf-field">
+        <span className="wf-field-label">Description</span>
+        <textarea className="wf-textarea" rows="2" value={editForm.desc} onChange={(e) => setEditForm({ ...editForm, desc: e.target.value })} />
+      </label>
+      <label className="wf-field">
+        <span className="wf-field-label">Replace image {editImg ? `· ${editImg.name}` : '(keep current)'}</span>
+        <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
+      </label>
+      <label className="wf-field">
+        <span className="wf-field-label">Replace audio {editAudio ? `· ${editAudio.name}` : p.hasAudio ? '(audio set — keep current)' : '(no audio yet)'}</span>
+        <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setEditAudio(e.target.files?.[0] || null)} />
+      </label>
+      {editErr && <p className="wf-auth-error" style={{ margin: 0 }}>{editErr}</p>}
+      <div className="wf-form-row" style={{ marginTop: 4 }}>
+        <button type="button" className="wf-back" onClick={() => setEditId(null)}>Cancel</button>
+        <button type="button" className="wf-form-submit wf-mag" onClick={saveEdit} disabled={editBusy}>{editBusy ? 'Saving…' : 'Save changes'}</button>
+      </div>
+    </div>
+  )
 
   const createCoupon = async (e) => {
     e.preventDefault()
@@ -673,18 +752,24 @@ export default function Admin() {
               <div className="wf-admin-list">
                 {paidProducts.length === 0 && <p className="wf-detail-desc">No paid fields yet. Add one →</p>}
                 {paidProducts.map((p) => (
-                  <div className="wf-admin-row" key={p.id}>
-                    <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
-                    <div className="wf-admin-row-text">
-                      <span className="wf-admin-row-title">{p.title}</span>
-                      <span className="wf-admin-row-meta">
-                        {CAT_LABEL[p.line] || 'Desire'} · {p.price || '—'}
-                      </span>
+                  <div key={p.id}>
+                    <div className="wf-admin-row">
+                      <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
+                      <div className="wf-admin-row-text">
+                        <span className="wf-admin-row-title">
+                          {p.title} {p.hasAudio && <span className="wf-audio-tag">♪ audio</span>}
+                        </span>
+                        <span className="wf-admin-row-meta">
+                          {CAT_LABEL[p.line] || (p.line ? p.line[0].toUpperCase() + p.line.slice(1) : 'Desire')} · {p.price || '—'}
+                        </span>
+                      </div>
+                      <SoldEditor item={p} isFree={false} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
+                      <button className="wf-edit-btn" aria-label={`Edit ${p.title}`} onClick={() => openEdit(p, false)}>✎</button>
+                      <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteProduct(p.id)}>
+                        <TrashIcon />
+                      </button>
                     </div>
-                    <SoldEditor item={p} isFree={false} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
-                    <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteProduct(p.id)}>
-                      <TrashIcon />
-                    </button>
+                    {editId === p.id && renderEditPanel(p)}
                   </div>
                 ))}
               </div>
@@ -695,16 +780,22 @@ export default function Admin() {
               <div className="wf-admin-list">
                 {freeFields.length === 0 && <p className="wf-detail-desc">No free fields yet. Add one with price 0 →</p>}
                 {freeFields.map((p) => (
-                  <div className="wf-admin-row" key={p.id}>
-                    <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
-                    <div className="wf-admin-row-text">
-                      <span className="wf-admin-row-title">{p.title}</span>
-                      <span className="wf-admin-row-meta">{CAT_LABEL[p.line] || 'Desire'} · Free</span>
+                  <div key={p.id}>
+                    <div className="wf-admin-row">
+                      <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
+                      <div className="wf-admin-row-text">
+                        <span className="wf-admin-row-title">
+                          {p.title} {p.hasAudio && <span className="wf-audio-tag">♪ audio</span>}
+                        </span>
+                        <span className="wf-admin-row-meta">{CAT_LABEL[p.line] || (p.line ? p.line[0].toUpperCase() + p.line.slice(1) : 'Desire')} · Free</span>
+                      </div>
+                      <SoldEditor item={p} isFree={true} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
+                      <button className="wf-edit-btn" aria-label={`Edit ${p.title}`} onClick={() => openEdit(p, true)}>✎</button>
+                      <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteFreeField(p.id)}>
+                        <TrashIcon />
+                      </button>
                     </div>
-                    <SoldEditor item={p} isFree={true} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
-                    <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteFreeField(p.id)}>
-                      <TrashIcon />
-                    </button>
+                    {editId === p.id && renderEditPanel(p)}
                   </div>
                 ))}
               </div>
@@ -744,8 +835,13 @@ export default function Admin() {
                 <textarea className="wf-textarea" rows="3" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="What does this field encode?" />
               </label>
               <label className="wf-field">
-                <span className="wf-field-label">Artwork {file ? `· ${file.name}` : '(optional)'}</span>
+                <span className="wf-field-label">Artwork image {file ? `· ${file.name}` : '(optional)'}</span>
                 <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Audio file {audioFile ? `· ${audioFile.name}` : '(the product — gated)'}</span>
+                <input ref={audioInputRef} className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
+                <span className="wf-field-hint">Paid fields: only unlocked after the customer pays. Free fields: open to all.</span>
               </label>
               {err && <p className="wf-auth-error" style={{ margin: 0 }}>{err}</p>}
               <button type="submit" className="wf-form-submit wf-mag" disabled={busy}>

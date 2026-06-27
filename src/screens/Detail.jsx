@@ -7,7 +7,7 @@ import { useMagnetic } from '../hooks/useMagnetic'
 import StoryCard, { Stars } from '../components/StoryCard'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 import { averageOf } from '../lib/wall'
-import { ChatIconBubble, DownloadIcon, CartIcon, CheckIcon, ArrowRight } from '../components/icons'
+import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight } from '../components/icons'
 
 const CATS = {
   desire: { label: 'Desire', cls: '', ph: 'wf-card-ph-desire' },
@@ -43,6 +43,21 @@ export default function Detail() {
   const benefits = benefitsById[f.id] || (free ? freeBenefits : genericBenefits)
   const sold = Number(f.sold) || 0
   const soldStr = sold.toLocaleString('en-US')
+
+  // has this visitor purchased this field? (localStorage flag + order reference)
+  let purchaseRef = ''
+  let isPurchased = false
+  try {
+    isPurchased = localStorage.getItem(`wf_purchased_${f.id}`) === '1'
+    const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
+    purchaseRef = (orders.find((o) => o.id === f.id || o.fieldId === f.id || o.name === f.title)?.ref) || ''
+  } catch {
+    /* ignore */
+  }
+  const downloadAudio = () => {
+    const base = `/api/fields/${f.id}/audio`
+    window.open(free ? base : `${base}?ref=${encodeURIComponent(purchaseRef)}`, '_blank')
+  }
 
   const fieldStories = wall.filter((r) => r.field === f.id)
   const featured = [...fieldStories].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts).slice(0, 3)
@@ -120,24 +135,20 @@ export default function Detail() {
             <div className="wf-detail-cta" data-reveal>
               {free ? (
                 <button
-                  className={`wf-btn wf-btn-gold wf-mag${saved ? ' is-saved' : ''}`}
-                  onClick={() => setSaved(true)}
-                  disabled={saved}
+                  className="wf-btn wf-btn-gold wf-mag"
+                  onClick={() => { setSaved(true); downloadAudio() }}
+                  disabled={!f.hasAudio}
                 >
-                  {saved ? (
-                    <>
-                      <CheckIcon size={16} /> Saved to your library
-                    </>
-                  ) : (
-                    <>
-                      <DownloadIcon /> Download free audio
-                    </>
-                  )}
+                  <DownloadIcon /> {f.hasAudio ? (saved ? 'Download again' : 'Download free audio') : 'Audio coming soon'}
+                </button>
+              ) : isPurchased ? (
+                <button className="wf-btn wf-btn-gold wf-mag" onClick={downloadAudio} disabled={!f.hasAudio}>
+                  <DownloadIcon /> {f.hasAudio ? 'Download your audio' : 'Audio coming soon'}
                 </button>
               ) : (
                 <>
                   <button className="wf-btn wf-btn-gold wf-mag" onClick={() => goCheckout(f.id)}>
-                    Checkout — {f.price || `$${total}`}
+                    Buy now — {f.price || `$${total}`}
                   </button>
                   <button className="wf-btn wf-btn-glass wf-mag" onClick={() => addToCart(f)}>
                     <CartIcon size={16} /> Add to cart
