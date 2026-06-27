@@ -114,6 +114,7 @@ export function StoreProvider({ children }) {
 
   const [loggedIn, setLoggedIn] = useState(false)
   const [user, setUser] = useState(null)
+  const [userName, setUserName] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [adminTab, setAdminTab] = useState('stats')
@@ -327,11 +328,13 @@ export function StoreProvider({ children }) {
       const role = (u.app_metadata && u.app_metadata.role) || 'customer'
       userRef.current = email
       setUser(email)
+      setUserName((u.user_metadata && u.user_metadata.name) || '')
       setLoggedIn(true)
       setIsAdmin(role === 'admin' || (!!adminEmailRef.current && email === adminEmailRef.current))
     } else {
       userRef.current = null
       setUser(null)
+      setUserName('')
       setLoggedIn(false)
       setIsAdmin(false)
     }
@@ -455,10 +458,25 @@ export function StoreProvider({ children }) {
     const supabase = supabaseRef.current
     if (supabase) await supabase.auth.signOut()
     setUser(null)
+    setUserName('')
     setLoggedIn(false)
     setIsAdmin(false)
     navigate('home')
   }, [navigate])
+
+  // update display name and/or password (Supabase auth.updateUser)
+  const updateProfile = useCallback(async ({ name, password } = {}) => {
+    const supabase = supabaseRef.current
+    if (!supabase) return { error: 'Account updates aren’t available right now.' }
+    const payload = {}
+    if (name != null) payload.data = { name: String(name).trim() }
+    if (password) payload.password = password
+    if (!Object.keys(payload).length) return { error: 'Nothing to update.' }
+    const { error } = await supabase.auth.updateUser(payload)
+    if (error) return { error: error.message }
+    if (name != null) setUserName(String(name).trim())
+    return { ok: true }
+  }, [])
 
   const requireAdmin = useCallback(() => {
     if (loggedIn && isAdmin) navigate('admin')
@@ -996,12 +1014,14 @@ export function StoreProvider({ children }) {
     goDelivered,
     loggedIn,
     user,
+    userName,
     isAdmin,
     adminEmail: adminEmailRef.current,
     authReady,
     signIn,
     signUp,
     logout,
+    updateProfile,
     requireAdmin,
     adminTab,
     setAdminTab,

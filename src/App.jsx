@@ -13,6 +13,7 @@ import Checkout from './screens/Checkout'
 import Delivered from './screens/Delivered'
 import Login from './screens/Login'
 import Admin from './screens/Admin'
+import Profile from './screens/Profile'
 import Updates from './screens/Updates'
 import Reviews from './screens/Reviews'
 
@@ -54,6 +55,7 @@ function Shell() {
       {page === 'delivered' && <Delivered />}
       {page === 'login' && <Login />}
       {page === 'admin' && <Admin />}
+      {page === 'profile' && <Profile />}
       {page === 'updates' && <Updates />}
       {page === 'reviews' && <Reviews />}
 

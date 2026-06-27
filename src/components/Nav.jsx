@@ -179,6 +179,11 @@ export default function Nav() {
                 {t('nav.signin')}
               </button>
             )}
+            {authReady && loggedIn && (
+              <button className={`wf-navlink${page === 'profile' ? ' active' : ''}`} onClick={() => go({ page: 'profile' })}>
+                {t('nav.profile')}
+              </button>
+            )}
             {authReady && loggedIn && isAdmin && (
               <button className={`wf-navlink${page === 'admin' ? ' active' : ''}`} onClick={() => go({ page: 'admin' })}>
                 {t('nav.admin')}
@@ -244,6 +249,14 @@ export default function Nav() {
             ))}
 
             <div className="wf-mm-label">{t('menu.account')}</div>
+            {authReady && loggedIn && (
+              <button className={`wf-mlink${page === 'profile' ? ' active' : ''}`} onClick={() => go({ page: 'profile' })}>
+                <span className="wf-mlink-ic">
+                  <IcUser />
+                </span>
+                <span className="wf-mlink-label">{t('nav.profile')}</span>
+              </button>
+            )}
             <button className="wf-mlink" onClick={() => go({ page: 'home', section: 'wf-custom' })}>
               <span className="wf-mlink-ic">
                 <IcCustom />

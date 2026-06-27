@@ -28,6 +28,7 @@ const DICT = {
   'nav.signout':    { en: 'Sign out',         ru: 'Выйти',                 zh: '退出' },
   'nav.admin':      { en: 'Admin',            ru: 'Админ',                 zh: '管理' },
   'nav.adminPanel': { en: 'Admin panel',      ru: 'Панель администратора', zh: '管理面板' },
+  'nav.profile':    { en: 'Profile',          ru: 'Профиль',               zh: '个人资料' },
   'nav.begin':      { en: 'Begin',            ru: 'Начать',                zh: '开始' },
   'nav.chat':       { en: 'Chat with support', ru: 'Чат с поддержкой',     zh: '联系客服' },
   'menu.browse':    { en: 'Browse',           ru: 'Обзор',                 zh: '浏览' },
