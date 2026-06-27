@@ -144,6 +144,10 @@ export default function Nav() {
   }
   const isActive = (target) => !!target && target.page === page && !target.section
 
+  // What's new + Reviews are members-only — hidden from guests everywhere.
+  const memberOnly = (key) => key === 'nav.updates' || key === 'nav.reviews'
+  const canSee = (key) => loggedIn || !memberOnly(key)
+
   // grouped sections for the mobile drawer
   const browse = [
     { key: 'nav.fields', icon: <IcFields />, onClick: () => go({ page: 'fields' }), active: page === 'fields' },
@@ -151,7 +155,7 @@ export default function Nav() {
     { key: 'nav.updates', icon: <IcNew />, onClick: () => go({ page: 'updates' }), active: page === 'updates' },
     { key: 'nav.reviews', icon: <IcReviews />, onClick: () => go({ page: 'reviews' }), active: page === 'reviews' },
     { key: 'nav.community', icon: <IcCommunity />, onClick: () => go({ page: 'community' }), active: page === 'community' },
-  ]
+  ].filter((r) => canSee(r.key))
 
   return (
     <nav className={`wf-nav${scrolled ? ' scrolled' : ''}`}>
@@ -163,7 +167,7 @@ export default function Nav() {
 
         <div className="wf-nav-desktop">
           <div className="wf-navlinks">
-            {NAV_LINKS.map((l) => (
+            {NAV_LINKS.filter((l) => canSee(l.key)).map((l) => (
               <button
                 key={l.key}
                 className={`wf-navlink${isActive(l.target) ? ' active' : ''}`}

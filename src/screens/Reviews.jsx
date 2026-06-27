@@ -41,11 +41,16 @@ function WallEmpty({ isAll, onShare }) {
 }
 
 export default function Reviews() {
-  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast } = useStore()
+  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady } = useStore()
   const ref = useRef(null)
   const formRef = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
+
+  // The wall is members-only — guests can't read or post reviews.
+  useEffect(() => {
+    if (authReady && !loggedIn) navigate('login')
+  }, [authReady, loggedIn, navigate])
 
   const [filter, setFilter] = useState('all')
   const [form, setForm] = useState({ name: '', field: reviewField || products[0]?.id || '', rating: 0, text: '' })
@@ -150,6 +155,8 @@ export default function Reviews() {
     setFilter('all')
     showToast('Thanks — your story is on the wall')
   }
+
+  if (!loggedIn) return null
 
   return (
     <div className="wf-app" ref={ref}>

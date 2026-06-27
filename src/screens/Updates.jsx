@@ -1,12 +1,18 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 
 export default function Updates() {
-  const { navigate, announcements } = useStore()
+  const { navigate, announcements, loggedIn, authReady } = useStore()
   const ref = useRef(null)
   useReveal(ref)
+
+  // What's new is members-only — bounce guests to sign-in.
+  useEffect(() => {
+    if (authReady && !loggedIn) navigate('login')
+  }, [authReady, loggedIn, navigate])
+  if (!loggedIn) return null
 
   return (
     <div className="wf-app" ref={ref}>

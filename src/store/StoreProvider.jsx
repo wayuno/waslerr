@@ -945,11 +945,16 @@ export function StoreProvider({ children }) {
   // ---- reviews wall navigation ----
   const openReviews = useCallback(
     (fieldId = null, share = false) => {
+      if (!loggedIn) {
+        showToast('Please sign in to view the reviews wall')
+        navigate('login')
+        return
+      }
       setReviewField(fieldId)
       setReviewShare(share)
       navigate('reviews')
     },
-    [navigate],
+    [navigate, loggedIn, showToast],
   )
   const clearReviewShare = useCallback(() => setReviewShare(false), [])
 
