@@ -99,15 +99,10 @@ const uploadImageViaApi = async (file, token) => {
 }
 
 export function StoreProvider({ children }) {
-  // deep-link: /admin opens the admin screen (its gate shows your signed-in
-  // email, so a wrong-email login is obvious).
-  const [page, setPage] = useState(() => {
-    try {
-      return window.location.pathname.replace(/\/+$/, '').toLowerCase() === '/admin' ? 'admin' : 'home'
-    } catch {
-      return 'home'
-    }
-  })
+  // The admin panel is reachable ONLY via the secret ADMIN_PATH (set in Railway)
+  // — resolved after /api/config loads. /admin no longer opens it. We start on
+  // home; the config effect deep-links to admin if the URL matches the secret.
+  const [page, setPage] = useState('home')
   const [fieldsCat, setFieldsCat] = useState('all')
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -322,6 +317,16 @@ export function StoreProvider({ children }) {
       const cfg = await loadConfig()
       if (cancelled) return
       adminEmailRef.current = (cfg.adminEmail || '').toLowerCase()
+      // secret admin deep-link: open the panel only when the URL matches ADMIN_PATH
+      const secret = (cfg.adminPath || '').toLowerCase()
+      if (secret) {
+        try {
+          const here = window.location.pathname.replace(/\/+$/, '').toLowerCase()
+          if (here === secret) setPage('admin')
+        } catch {
+          /* ignore */
+        }
+      }
       const supabase = await getSupabase()
       if (cancelled) return
       supabaseRef.current = supabase

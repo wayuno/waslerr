@@ -47,6 +47,14 @@ try {
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
+// Secret deep-link path to reach the admin panel (e.g. "/control-7xk2q").
+// When set, /admin no longer opens the panel — only this private path does.
+const ADMIN_PATH = (() => {
+  let p = (process.env.ADMIN_PATH || '').trim().toLowerCase()
+  if (!p) return ''
+  if (!p.startsWith('/')) p = '/' + p
+  return p.replace(/\/+$/, '') || ''
+})()
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/$/, '')
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -595,6 +603,7 @@ const server = http.createServer(async (req, res) => {
       supabaseUrl: SUPABASE_URL,
       supabaseAnonKey: ANON_KEY,
       adminEmail: ADMIN_EMAIL,
+      adminPath: ADMIN_PATH,
     })
   }
 
