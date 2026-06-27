@@ -37,6 +37,7 @@ function OfferCard({ offer, onPay }) {
   const paid = offer.status === 'paid'
   const delivered = offer.status === 'delivered'
   const cancelled = offer.status === 'cancelled'
+  const free = Number(offer.amount) === 0
   return (
     <div className={`wf-offer-card${paid || delivered ? ' is-paid' : ''}${cancelled ? ' is-cancelled' : ''}`}>
       <div className="wf-offer-shine" aria-hidden="true" />
@@ -54,9 +55,9 @@ function OfferCard({ offer, onPay }) {
       )}
       <div className="wf-offer-row">
         <span className="wf-offer-delivery">Delivery · {offer.deliveryEstimate}</span>
-        <span className="wf-offer-price">${offer.amount}</span>
+        <span className="wf-offer-price">{free ? 'Free' : `$${offer.amount}`}</span>
       </div>
-      {offer.status === 'sent' ? (
+      {offer.status === 'sent' && !free ? (
         <button className="wf-offer-pay wf-mag" onClick={() => onPay(offer)}>
           Pay ${offer.amount} →
         </button>
@@ -64,7 +65,7 @@ function OfferCard({ offer, onPay }) {
         <div className="wf-offer-state wf-offer-state--cancelled">Replaced by a newer offer below</div>
       ) : (
         <div className="wf-offer-state">
-          {delivered ? '✓ Field delivered' : '✓ Payment complete · field in production'}
+          {delivered ? '✓ Field delivered' : free ? '✓ It’s free for you · field in production' : '✓ Payment complete · field in production'}
         </div>
       )}
     </div>

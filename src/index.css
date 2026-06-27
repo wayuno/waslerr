@@ -4625,6 +4625,8 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 .wf-conv-pill--awaitingpayment { color: #e3b341; border-color: rgba(227,179,65,0.4); background: rgba(227,179,65,0.08); }
 .wf-conv-pill--paid { color: #4bc882; border-color: rgba(75,200,130,0.4); background: rgba(75,200,130,0.08); }
 .wf-conv-pill--delivered { color: #4bc882; border-color: rgba(75,200,130,0.5); background: rgba(75,200,130,0.14); }
+.wf-conv-pill--free { color: var(--wf-gold); border-color: rgba(212,175,55,0.45); background: rgba(212,175,55,0.1); }
+.wf-offer-free-note { margin: 2px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--wf-gold); }
 
 .wf-msg-offer { align-self: flex-start; max-width: 80%; background: linear-gradient(180deg, rgba(40,33,14,0.7), rgba(20,18,12,0.85)); border: 1px solid rgba(212,175,55,0.35); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
 .wf-mo-eyebrow { font-family: var(--wf-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--wf-gold); }
