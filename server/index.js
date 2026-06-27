@@ -29,7 +29,7 @@ import {
   binanceQueryOrder,
   binanceDiagnose,
   binanceApiConfigured,
-  binanceIncomingMatches,
+  binanceMatchOrder,
   binanceFindTxid,
 } from './payments.js'
 import { canCheckout, canDeliver } from './offer-state.js'
@@ -354,11 +354,17 @@ const confirmBinancePayment = async (order, { txid } = {}) => {
   }
   if (binanceApiConfigured()) {
     const sinceMs = Date.parse(order.created_at) || 0
-    const m = await binanceIncomingMatches({ amount: Number(order.amount), sinceMs })
+    const m = await binanceMatchOrder({ reference: order.reference, amount: Number(order.amount), sinceMs })
     if (m.ok) {
-      for (const c of m.matches) {
+      // 1) note carries our unique reference + amount matches → collision-proof
+      if (m.byNote) {
+        const used = m.byNote.txid ? await getOrderByTxid(m.byNote.txid) : null
+        if (!used || used.reference === order.reference) return { ok: true, txid: m.byNote.txid, raw: m.byNote.raw, via: 'note' }
+      }
+      // 2) fallback: exact-amount incoming transfer, deduped against used txids
+      for (const c of m.byAmount || []) {
         const used = c.txid ? await getOrderByTxid(c.txid) : null
-        if (!used || used.reference === order.reference) return { ok: true, txid: c.txid, raw: c.raw, via: 'auto' }
+        if (!used || used.reference === order.reference) return { ok: true, txid: c.txid, raw: c.raw, via: 'amount' }
       }
     }
   }

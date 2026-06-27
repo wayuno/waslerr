@@ -267,9 +267,20 @@ export async function binanceDiagnose() {
   }
   // the path that matters for "verify without a merchant account"
   const h = await binancePayHistory({})
-  out.api = h.ok
-    ? { configured: true, ok: true, recentCount: h.list.length }
-    : { configured: binanceApiConfigured(), ok: false, reason: h.reason, code: h.raw?.code || null }
+  if (h.ok) {
+    // redacted sample so we can confirm the sender's note actually comes through
+    const sample = h.list.slice(0, 5).map((t) => ({
+      orderType: t.orderType,
+      amount: t.amount,
+      currency: t.currency,
+      transactionId: rowTxid(t),
+      hasNote: !!(t.note || t.remark),
+      notePreview: String(t.note || t.remark || '').slice(0, 48),
+    }))
+    out.api = { configured: true, ok: true, recentCount: h.list.length, sample }
+  } else {
+    out.api = { configured: binanceApiConfigured(), ok: false, reason: h.reason, code: h.raw?.code || null }
+  }
   return out
 }
 
@@ -319,16 +330,26 @@ const isAmountMatch = (t, amount) => {
 const isIncoming = (t) => Number(t.amount) > 0
 const rowTxid = (t) => String(t.transactionId || t.orderId || t.id || '')
 
-// AUTO: list incoming transfers matching the amount, created at/after `sinceMs`.
-// The caller dedupes against txids already used by other orders.
-export async function binanceIncomingMatches({ amount, sinceMs }) {
+// the free-text note the sender typed, across the field names Binance uses
+const noteOf = (t) => `${t.note || ''} ${t.remark || ''} ${t.orderId || ''}`.toUpperCase()
+
+// Match an order against this account's incoming Binance Pay history.
+// Returns { ok, byNote, byAmount[] }:
+//   byNote   — an incoming transfer whose note carries our unique reference AND
+//              whose amount matches (collision-proof — the preferred match).
+//   byAmount — incoming transfers with the exact amount (fallback; the caller
+//              dedupes these against txids already used by other orders).
+export async function binanceMatchOrder({ reference, amount, sinceMs }) {
   const h = await binancePayHistory({ startTime: sinceMs ? sinceMs - 6 * 3600 * 1000 : undefined })
   if (!h.ok) return { ok: false, reason: h.reason }
   const floor = sinceMs ? sinceMs - 6 * 3600 * 1000 : 0
-  const matches = h.list
-    .filter((t) => isIncoming(t) && isAmountMatch(t, amount) && (Number(t.transactionTime) || 0) >= floor)
+  const refUp = String(reference || '').toUpperCase()
+  const recent = h.list.filter((t) => (Number(t.transactionTime) || 0) >= floor && isIncoming(t))
+  const byNoteRow = refUp ? recent.find((t) => noteOf(t).includes(refUp) && isAmountMatch(t, amount)) || null : null
+  const byAmount = recent
+    .filter((t) => isAmountMatch(t, amount))
     .map((t) => ({ txid: rowTxid(t), amount: Math.abs(Number(t.amount)), currency: t.currency, time: Number(t.transactionTime) || 0, raw: t }))
-  return { ok: true, matches }
+  return { ok: true, byNote: byNoteRow ? { txid: rowTxid(byNoteRow), raw: byNoteRow } : null, byAmount }
 }
 
 // MANUAL: the buyer pasted a transaction id — confirm it exists in our history,
