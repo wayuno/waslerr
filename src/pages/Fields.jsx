@@ -10,6 +10,42 @@ import { YouTubeIcon, DiscordIcon, ChatIcon } from '../components/icons'
 const KNOWN_LABELS = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'Wealth' }
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 
+// Empty state shown when the catalogue is empty or a filter returns 0.
+function FieldsEmpty({ filtered, onRequest, onReset }) {
+  return (
+    <div className="wf-empty" data-empty>
+      <div className="wf-empty-card">
+        <div className="wf-empty-iconwrap" aria-hidden="true">
+          <span className="wf-empty-blob" />
+          <span className="wf-empty-ring" />
+          <span className="wf-empty-ring" style={{ animationDelay: '1.8s' }} />
+          <span className="wf-empty-tile">
+            <svg className="wf-empty-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9.5" />
+              <circle cx="12" cy="12" r="5.5" />
+              <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+        </div>
+        <h2 className="wf-empty-title">New fields are on the way.</h2>
+        <p className="wf-empty-sub">
+          The library is being tuned. Request a Custom Code made for your intention — or check back shortly.
+        </p>
+        <div className="wf-empty-cta">
+          <button className="wf-btn wf-btn-gold wf-mag" onClick={onRequest}>
+            Request a Custom Code
+          </button>
+          {filtered && (
+            <button className="wf-btn wf-btn-glass wf-mag" onClick={onReset}>
+              View all fields
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Fields({ onNavigate, initialCat = 'all' }) {
   const { products } = useStore()
   const ref = useRef(null)
@@ -19,8 +55,16 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
   const CHIPS = [{ cat: 'all', label: 'All fields' }, ...cats.map((c) => ({ cat: c, label: KNOWN_LABELS[c] || cap(c) }))]
   const [cat, setCat] = useState(cats.includes(initialCat) ? initialCat : 'all')
   const [count, setCount] = useState(products.length)
+  // small grace so the empty card never flashes before the catalogue loads
+  const [settled, setSettled] = useState(false)
   useReveal(ref)
   useMagnetic(ref)
+
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 600)
+    return () => clearTimeout(t)
+  }, [])
+  const showEmpty = settled && count === 0
 
   // faithful filter: fade + scale out, then hide; reveal shown cards
   useEffect(() => {
@@ -86,7 +130,14 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
       </section>
 
       <section className="wf-section" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 28px 100px' }}>
-        <div className="wf-grid" ref={gridRef}>
+        {showEmpty && (
+          <FieldsEmpty
+            filtered={products.length > 0}
+            onRequest={() => onNavigate({ page: 'home', section: 'wf-custom' })}
+            onReset={() => setCat('all')}
+          />
+        )}
+        <div className="wf-grid" ref={gridRef} style={showEmpty ? { display: 'none' } : undefined}>
           {products.map((f) => (
             <ProductCard key={f.id} field={f} />
           ))}
