@@ -5542,6 +5542,7 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   border-radius: 20px;
   padding: 28px 28px 24px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: wf-mv-up 0.6s var(--wf-ease) both;
 }
 .wf-co-pp-sub {
   font-size: 13.5px;
