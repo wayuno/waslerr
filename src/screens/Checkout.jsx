@@ -63,7 +63,7 @@ function CopyRow({ label, value, copyKey, mono, copying, onCopy }) {
 }
 
 export default function Checkout() {
-  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady } = useStore()
+  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady, openChat } = useStore()
 
   const [stage, setStage] = useState('method')
 
@@ -261,23 +261,47 @@ export default function Checkout() {
     setTimeout(() => setCopying((k) => (k === key ? null : k)), 1800)
   }
 
-  // Record the submitted TxID server-side (best-effort) so the order carries it.
-  const recordManualTxn = (txid) => {
-    if (!reference) return
-    fetch('/api/checkout/verify-txid', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reference, txid }),
-    }).catch(() => { /* recorded best-effort — access is granted on completion */ })
+  // Real server check of a buyer-supplied TxID (matches amount + id on Binance).
+  const verifyTxnOnce = async (txid) => {
+    if (!reference) return { status: 'error' }
+    try {
+      const r = await fetch('/api/checkout/verify-txid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference, txid }),
+      })
+      return await r.json().catch(() => ({ status: 'error' }))
+    } catch {
+      return { status: 'error' }
+    }
   }
 
-  // Manual verification finished → instant access (the "Your field is unlocked" screen).
+  // Poll the live order status (server confirms against the provider).
+  const pollStatusOnce = async () => {
+    if (!reference) return { status: 'pending' }
+    try {
+      const r = await fetch(`/api/checkout/status?reference=${encodeURIComponent(reference)}`)
+      if (!r.ok) return { status: 'pending' }
+      return await r.json().catch(() => ({ status: 'pending' }))
+    } catch {
+      return { status: 'pending' }
+    }
+  }
+
+  // Called ONLY when the server confirms the payment → instant access.
   const grantManualAccess = (txid) => {
     if (finishRef.current) return
     finishRef.current = true
     clearInterval(pollRef.current)
     persistLocal(txid)
     goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: txid })
+  }
+
+  // Couldn't auto-verify in time → hand off to support (admin verifies manually).
+  const contactSupport = () => {
+    clearInterval(pollRef.current)
+    setFallbackOpen(false)
+    openChat()
   }
 
   const goBackToMethod = () => {
@@ -399,8 +423,10 @@ export default function Checkout() {
             ) : fallbackOpen ? (
               <ManualVerify
                 reference={reference}
-                onSubmit={recordManualTxn}
+                onVerify={verifyTxnOnce}
+                onPoll={pollStatusOnce}
                 onVerified={grantManualAccess}
+                onContactSupport={contactSupport}
                 onClose={() => setFallbackOpen(false)}
               />
             ) : (
