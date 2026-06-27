@@ -8,9 +8,11 @@ export default function Background({ particles = false, resonanceTop = '46%' }) 
   const dotRef = useRef(null)
   const trailRef = useRef(null)
 
-  // particle constellation
+  // particle constellation (desktop only — the O(n²) link draw is too heavy for
+  // phones and causes scroll lag)
   useEffect(() => {
     if (!particles) return
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return
     const cv = canvasRef.current
     if (!cv) return
     const ctx = cv.getContext('2d')

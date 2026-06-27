@@ -3209,6 +3209,61 @@ a {
   .wf-disc.playing { animation: none; }
 }
 
+/* ================================================================
+   MOBILE / TOUCH PERFORMANCE
+   Phones choke on the spinning conic-gradient orbits, the looping
+   resonance rings, the particle canvas, and (worst of all) the many
+   backdrop-filter blurs that re-composite every scroll frame. On touch
+   devices we drop those and show all scroll-reveal content immediately,
+   so nothing lags or "disappears".
+   ================================================================ */
+@media (hover: none), (max-width: 640px) {
+  /* heavy hero orbit layers off; keep resonance rings but static */
+  .wf-orbit-conic,
+  .wf-orbit-blue,
+  .wf-orbit-spin,
+  .wf-orbit-dash { display: none !important; }
+  .wf-orbit-ring,
+  .wf-orbit-flat { animation: none !important; }
+  .wf-resonance .r1,
+  .wf-resonance .r2,
+  .wf-resonance .r3 { animation: none !important; opacity: 0.4; }
+  .wf-resonance .core { animation: none !important; }
+  .wf-glow,
+  .wf-trail,
+  .wf-cursor,
+  .wf-particles { display: none !important; }
+
+  /* backdrop-filter blur is the biggest mobile jank source — drop it and use
+     solid-enough backgrounds so panels stay legible */
+  .wf-nav,
+  .wf-nav.scrolled,
+  .wf-mobile-menu,
+  .wf-chat-panel,
+  .wf-notif-panel,
+  .wf-cocheckout,
+  .wf-form-card,
+  .wf-order-card,
+  .wf-card,
+  .wf-product-card,
+  .wf-join-card,
+  .wf-journal-card,
+  .wf-story-card,
+  .wf-cmt-card,
+  .wf-more-card,
+  .wf-pill {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .wf-nav.scrolled { background: rgba(8, 10, 16, 0.94); }
+  .wf-chat-panel { background: rgba(12, 14, 20, 0.98); }
+  .wf-notif-panel { background: rgba(12, 14, 20, 0.98); }
+
+  /* never keep content hidden behind scroll-reveal on mobile */
+  [data-reveal],
+  [data-anim] { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
