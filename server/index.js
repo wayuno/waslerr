@@ -48,6 +48,10 @@ try {
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
+// Resetting the admin password on every boot invalidates the logged-in session
+// (logs you out + 403s on every deploy). So we only sync it when explicitly
+// asked via ADMIN_FORCE_PASSWORD=1 (e.g. right after you change the password).
+const ADMIN_FORCE_PASSWORD = /^(1|true|yes)$/i.test(process.env.ADMIN_FORCE_PASSWORD || '')
 // Secret deep-link path to reach the admin panel (e.g. "/control-7xk2q").
 // When set, /admin no longer opens the panel — only this private path does.
 const ADMIN_PATH = (() => {
@@ -708,12 +712,19 @@ const ensureAdminUser = async () => {
       const users = data.users || data || []
       const u = users.find((x) => (x.email || '').toLowerCase() === ADMIN_EMAIL)
       if (u) {
-        const upd = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${u.id}`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify({ password: ADMIN_PASSWORD, email_confirm: true }),
-        })
-        console.log('[waslerr] admin user password synced:', upd.ok)
+        // Only reset the password when explicitly forced — resetting it on every
+        // boot would invalidate the admin's active session (logout + 403 after
+        // each deploy, which also made deletes silently fail server-side).
+        if (ADMIN_FORCE_PASSWORD) {
+          const upd = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${u.id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({ password: ADMIN_PASSWORD, email_confirm: true }),
+          })
+          console.log('[waslerr] admin password force-synced:', upd.ok)
+        } else {
+          console.log('[waslerr] admin user present — password preserved (set ADMIN_FORCE_PASSWORD=1 to reset)')
+        }
       } else {
         console.warn('[waslerr] admin create failed and user not found:', create.status)
       }

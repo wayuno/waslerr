@@ -1,33 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { allFields, freeFields, updates as seedUpdates } from '../data/content'
 import { getSupabase, loadConfig, normalizeProduct, normalizeReview } from '../lib/supabase'
 import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
 import { WALL_KEY, loadWall, saveWall } from '../lib/wall'
 
 // Single source of truth for routing, catalogue, auth, payment and the support
-// thread. Auth + products are REAL (Supabase): sessions persist across reloads,
-// admin is gated to ADMIN_EMAIL, and product writes go through the backend.
-// (Coupons + persistent chat arrive in Phase 2.)
+// thread. The catalogue is 100% Supabase-driven — there is no hardcoded seed, so
+// what the admin publishes/deletes is permanent and nothing reappears on deploy.
 const StoreCtx = createContext(null)
-
-// Fallback catalogue used only when Supabase isn't configured (e.g. local dev
-// without keys) so the storefront is never blank.
-const toSeed = (f) => {
-  const priceNum = f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
-  return {
-    id: f.id,
-    title: f.title,
-    line: f.line,
-    price: priceNum > 0 ? `$${priceNum}` : undefined,
-    priceNum,
-    desc: f.desc,
-    image_url: f.img || null,
-    freq: f.freq || 200,
-  }
-}
-// paid catalogue and free fields are seeded (and stored) separately
-const SEED_PAID = allFields.map(toSeed)
-const SEED_FREE = freeFields.map(toSeed)
 
 // normalize a free_fields row into the storefront product shape
 const normalizeFreeField = (row) => ({
@@ -42,15 +21,6 @@ const normalizeFreeField = (row) => ({
   freq: 200,
 })
 
-// fallback journal entries when Supabase isn't configured
-const SEED_ANN = seedUpdates.map((u, i) => ({
-  id: 'seed-' + i,
-  tag: u.tag,
-  title: u.title,
-  body: u.body,
-  date: u.date,
-  ts: Date.parse(u.date) || Date.now() - i * 6 * 864e5,
-}))
 const normalizeAnnouncement = (row) => ({
   id: row.id,
   tag: row.tag,
@@ -107,9 +77,9 @@ export function StoreProvider({ children }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const [selectedId, setSelectedId] = useState(null)
-  const [paidProducts, setPaidProducts] = useState(SEED_PAID)
-  const [freeFieldsList, setFreeFieldsList] = useState(SEED_FREE)
-  const [announcements, setAnnouncements] = useState(SEED_ANN)
+  const [paidProducts, setPaidProducts] = useState([])
+  const [freeFieldsList, setFreeFieldsList] = useState([])
+  const [announcements, setAnnouncements] = useState([])
 
   // storefront catalogue = paid products + free fields (merged, memoized)
   const products = useMemo(() => [...paidProducts, ...freeFieldsList], [paidProducts, freeFieldsList])
@@ -357,18 +327,39 @@ export function StoreProvider({ children }) {
   const getToken = useCallback(async () => {
     const supabase = supabaseRef.current
     if (!supabase) return null
-    const { data } = await supabase.auth.getSession()
-    return data.session?.access_token || accessTokenRef.current
+    let { data } = await supabase.auth.getSession()
+    let token = data.session?.access_token
+    // access token expired but refresh token still valid → refresh in place
+    if (!token) {
+      try {
+        const { data: r } = await supabase.auth.refreshSession()
+        token = r.session?.access_token
+      } catch {
+        /* ignore */
+      }
+    }
+    return token || accessTokenRef.current
   }, [])
 
-  // fetch helper that attaches the admin's Supabase token
+  // fetch helper that attaches the admin's Supabase token, and recovers from an
+  // expired token by refreshing the session once and retrying (so a stale token
+  // no longer forces a manual sign-out/sign-in).
   const authedFetch = useCallback(
     async (path, opts = {}) => {
       const token = await getToken()
-      return fetch(path, {
-        ...opts,
-        headers: { ...(opts.headers || {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      })
+      const run = (t) =>
+        fetch(path, { ...opts, headers: { ...(opts.headers || {}), ...(t ? { Authorization: `Bearer ${t}` } : {}) } })
+      let res = await run(token)
+      if ((res.status === 401 || res.status === 403) && supabaseRef.current) {
+        try {
+          const { data } = await supabaseRef.current.auth.refreshSession()
+          const t2 = data.session?.access_token
+          if (t2) res = await run(t2)
+        } catch {
+          /* ignore */
+        }
+      }
+      return res
     },
     [getToken],
   )
