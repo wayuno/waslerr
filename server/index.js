@@ -22,6 +22,10 @@ import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import {
   paypalConfigured,
+  paypalClientId,
+  paypalMode,
+  paypalCreateOrder,
+  paypalCaptureOrder,
   binanceConfigured,
   paypalFindByReference,
   paypalVerifyTxid,
@@ -802,6 +806,9 @@ const server = http.createServer(async (req, res) => {
       supabaseAnonKey: ANON_KEY,
       adminEmail: ADMIN_EMAIL,
       adminPath: ADMIN_PATH,
+      // public PayPal SDK config (client id is safe to expose to the browser)
+      paypalClientId: paypalClientId(),
+      paypalMode: paypalMode(),
     })
   }
 
@@ -1073,6 +1080,51 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { status: 'delivered', txid: updated.txid || txid })
     }
     return sendJson(res, 200, { status: 'failed', reason: v.reason || 'verify_failed' })
+  }
+
+  // PayPal SDK — create a server-side order for the buttons' createOrder().
+  if (url === '/api/checkout/paypal/create-order' && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    if (!paypalConfigured()) return sendJson(res, 503, { error: 'paypal_not_configured' })
+    const b = await readBody(req)
+    const reference = (b.reference || '').toString()
+    if (!reference) return sendJson(res, 400, { error: 'bad_request' })
+    const order = await getOrderByRef(reference)
+    if (!order) return sendJson(res, 404, { error: 'order_not_found' })
+    if (order.method !== 'paypal') return sendJson(res, 400, { error: 'wrong_method' })
+    if (order.status === 'delivered' || order.status === 'paid') {
+      return sendJson(res, 409, { error: 'already_paid' })
+    }
+    const created = await paypalCreateOrder({ amount: Number(order.amount), reference, fieldTitle: order.field_title })
+    if (!created.ok) return sendJson(res, 502, { error: 'create_failed', reason: created.reason || null })
+    return sendJson(res, 200, { id: created.id })
+  }
+
+  // PayPal SDK — capture + verify on the server after the buyer approves.
+  // The capture must be COMPLETED, the amount must match, and the order's
+  // reference must be carried. Only then is the field delivered.
+  if (url === '/api/checkout/paypal/capture' && method === 'POST') {
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    if (!paypalConfigured()) return sendJson(res, 503, { error: 'paypal_not_configured' })
+    const b = await readBody(req)
+    const reference = (b.reference || '').toString()
+    const orderId = (b.orderId || b.orderID || '').toString()
+    if (!reference || !orderId) return sendJson(res, 400, { error: 'bad_request' })
+    const order = await getOrderByRef(reference)
+    if (!order) return sendJson(res, 404, { error: 'order_not_found' })
+    if (order.method !== 'paypal') return sendJson(res, 400, { error: 'wrong_method' })
+    if (order.status === 'delivered' || order.status === 'paid') {
+      return sendJson(res, 200, { status: 'delivered', txid: order.txid || null })
+    }
+    const cap = await paypalCaptureOrder(orderId, { amount: Number(order.amount), reference })
+    if (!cap.ok) return sendJson(res, 200, { status: 'failed', reason: cap.reason || 'capture_failed' })
+    // dedupe: never let one capture id unlock two different orders
+    const used = cap.txid ? await getOrderByTxid(cap.txid) : null
+    if (used && used.reference !== order.reference) {
+      return sendJson(res, 200, { status: 'failed', reason: 'txid_reused' })
+    }
+    const updated = await markDelivered(order, { txid: cap.txid, meta: cap.raw })
+    return sendJson(res, 200, { status: 'delivered', txid: updated.txid || cap.txid })
   }
 
   // the signed-in customer's real, confirmed orders (paid/delivered), by email.

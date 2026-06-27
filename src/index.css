@@ -5533,9 +5533,65 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-mv-meta-row > span:first-child { color: var(--wf-mute); text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
 .wf-mv-meta-row .mono { font-family: var(--wf-mono); color: var(--wf-gold); font-size: 12.5px; word-break: break-all; text-align: right; }
 
+/* --- PayPal in-page checkout panel --- */
+.wf-co-pp-panel {
+  max-width: 520px;
+  margin: 26px auto 0;
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-rule);
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+.wf-co-pp-sub {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--wf-silver);
+  margin: 18px 0 20px;
+  text-align: center;
+}
+.wf-co-pp-verifying {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 92px;
+  font-size: 14px;
+  color: var(--wf-gold);
+  font-family: var(--wf-sans);
+}
+.wf-pp-buttons { min-height: 92px; position: relative; }
+.wf-pp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 92px;
+  font-size: 13.5px;
+  color: var(--wf-mute);
+  font-family: var(--wf-sans);
+}
+.wf-co-pp-support {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 11px;
+  background: transparent;
+  border: none;
+  color: var(--wf-mute);
+  font-family: var(--wf-sans);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+.wf-co-pp-support:hover { color: var(--wf-gold); }
+
 @media (max-width: 560px) {
   .wf-mv-card { padding: 24px 20px; }
   .wf-mv-title { font-size: 21px; }
+  .wf-co-pp-panel { padding: 22px 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wf-mv-card, .wf-mv-pulse, .wf-mv-orbit, .wf-mv-tile, .wf-mv-sweep, .wf-mv-blink, .wf-mv.glow::before { animation: none !important; }

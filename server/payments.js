@@ -70,6 +70,94 @@ async function paypalToken() {
   return ppToken
 }
 
+// Public, safe-to-expose SDK config for the browser buttons.
+export const paypalClientId = () => PAYPAL_CLIENT_ID
+export const paypalMode = () => PAYPAL_MODE
+
+// Create a PayPal Checkout order (intent=CAPTURE) for the exact order amount.
+// custom_id/invoice_id carry our reference so we can reconcile. Returns { ok, id }.
+export async function paypalCreateOrder({ amount, reference, fieldTitle }) {
+  if (!paypalConfigured()) return { ok: false, reason: 'not_configured' }
+  let token
+  try {
+    token = await paypalToken()
+  } catch (e) {
+    return { ok: false, reason: e.message }
+  }
+  try {
+    const r = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [
+          {
+            reference_id: String(reference).slice(0, 256),
+            custom_id: String(reference).slice(0, 127),
+            invoice_id: String(reference).slice(0, 127),
+            description: (fieldTitle || 'Waslerr field').slice(0, 127),
+            amount: { currency_code: 'USD', value: money(amount) },
+          },
+        ],
+        application_context: { shipping_preference: 'NO_SHIPPING', user_action: 'PAY_NOW' },
+      }),
+    })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok || !d.id) return { ok: false, reason: `create_${r.status}`, detail: JSON.stringify(d).slice(0, 300) }
+    return { ok: true, id: d.id, raw: d }
+  } catch (e) {
+    return { ok: false, reason: e.message }
+  }
+}
+
+// Capture an approved PayPal order and verify it server-side: the capture must
+// be COMPLETED, the amount must match `amount`, and (when given) the invoice/
+// custom id must carry our `reference`. Returns { ok, txid, amount, raw }.
+export async function paypalCaptureOrder(orderId, { amount, reference } = {}) {
+  if (!paypalConfigured()) return { ok: false, reason: 'not_configured' }
+  if (!orderId) return { ok: false, reason: 'no_order_id' }
+  let token
+  try {
+    token = await paypalToken()
+  } catch (e) {
+    return { ok: false, reason: e.message }
+  }
+  try {
+    const r = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    })
+    const d = await r.json().catch(() => ({}))
+    // 422 ORDER_ALREADY_CAPTURED → fall back to a GET so re-submits still verify.
+    let order = d
+    if (!r.ok) {
+      const already = JSON.stringify(d).includes('ORDER_ALREADY_CAPTURED')
+      if (!already) return { ok: false, reason: `capture_${r.status}`, detail: JSON.stringify(d).slice(0, 300) }
+      const g = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      })
+      order = await g.json().catch(() => ({}))
+      if (!g.ok) return { ok: false, reason: `lookup_${g.status}` }
+    }
+    const pu = (order.purchase_units && order.purchase_units[0]) || {}
+    const cap = (pu.payments && pu.payments.captures && pu.payments.captures[0]) || {}
+    const status = cap.status || order.status
+    const value = (cap.amount && cap.amount.value) != null ? cap.amount.value : pu.amount && pu.amount.value
+    if (status !== 'COMPLETED') return { ok: false, reason: `status_${status || 'unknown'}` }
+    if (amount != null && !amountsMatch(value, amount)) {
+      return { ok: false, reason: 'amount_mismatch', detail: `expected ${money(amount)} got ${value}` }
+    }
+    if (reference) {
+      const refUp = String(reference).toUpperCase()
+      const carried = `${pu.custom_id || ''} ${pu.invoice_id || ''} ${pu.reference_id || ''}`.toUpperCase()
+      if (carried && !carried.includes(refUp)) return { ok: false, reason: 'reference_mismatch' }
+    }
+    return { ok: true, txid: cap.id || order.id, amount: value, raw: order }
+  } catch (e) {
+    return { ok: false, reason: e.message }
+  }
+}
+
 // Find a COMPLETED transaction whose note/custom field contains `reference`
 // and whose gross amount matches `amount`. Returns { ok, txid, raw } | { ok:false }.
 export async function paypalFindByReference(reference, amount) {
