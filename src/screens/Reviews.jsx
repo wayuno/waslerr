@@ -15,6 +15,31 @@ const FILTERS = [
   { id: 'akashic', label: 'Akashic' },
 ]
 
+// composed empty state for the wall
+function WallEmpty({ isAll, onShare }) {
+  return (
+    <div className="wf-wall-empty" data-reveal>
+      <div className="wf-wall-empty-card">
+        <div className="wf-wall-empty-icon" aria-hidden="true">
+          <span className="wf-wall-empty-blob" />
+          <span className="wf-wall-empty-tile">
+            <StarIcon size={26} filled={false} />
+          </span>
+        </div>
+        <h2 className="wf-wall-empty-title">No stories here yet.</h2>
+        <p className="wf-wall-empty-sub">
+          {isAll
+            ? 'Be the first to share what shifted — your story opens the wall for everyone after you.'
+            : 'Nothing under this filter yet. Try another, or be the first to post here.'}
+        </p>
+        <button className="wf-btn wf-btn-gold wf-mag wf-wall-empty-cta" onClick={onShare}>
+          Share your story
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Reviews() {
   const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast } = useStore()
   const ref = useRef(null)
@@ -25,6 +50,7 @@ export default function Reviews() {
   const [filter, setFilter] = useState('all')
   const [form, setForm] = useState({ name: '', field: reviewField || products[0]?.id || '', rating: 0, text: '' })
   const [hover, setHover] = useState(0)
+  const [popped, setPopped] = useState(false)
   const [err, setErr] = useState('')
   const [freshId, setFreshId] = useState(null)
   const [photos, setPhotos] = useState([]) // up to 2 uploaded image URLs
@@ -160,9 +186,7 @@ export default function Reviews() {
         </div>
 
         {shown.length === 0 ? (
-          <p className="wf-detail-desc" data-reveal>
-            No stories here yet — be the first.
-          </p>
+          <WallEmpty isAll={filter === 'all'} onShare={scrollToForm} />
         ) : (
           <div className="wf-wall-masonry">
             {shown.map((s) => (
@@ -218,11 +242,16 @@ export default function Reviews() {
                 <button
                   key={n}
                   type="button"
-                  className={`wf-star-btn${n <= (hover || form.rating) ? ' on' : ''}`}
+                  className={`wf-star-btn${n <= (hover || form.rating) ? ' on' : ''}${popped && n <= form.rating ? ' pop' : ''}`}
                   aria-label={`${n} star${n > 1 ? 's' : ''}`}
                   onMouseEnter={() => setHover(n)}
                   onMouseLeave={() => setHover(0)}
-                  onClick={() => setForm({ ...form, rating: n })}
+                  onClick={() => {
+                    setForm({ ...form, rating: n })
+                    setPopped(false)
+                    requestAnimationFrame(() => setPopped(true))
+                    setTimeout(() => setPopped(false), 360)
+                  }}
                 >
                   <StarIcon size={26} filled={n <= (hover || form.rating)} />
                 </button>
