@@ -5240,6 +5240,11 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   flex-direction: column;
   gap: 0;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: wf-mv-up 0.6s var(--wf-ease) both;
+}
+@keyframes wf-mv-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
 }
 .wf-mv-card.verifying { align-items: center; text-align: center; gap: 22px; padding-top: 36px; }
 
@@ -5497,5 +5502,6 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   .wf-mv-title { font-size: 21px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wf-mv-pulse, .wf-mv-orbit, .wf-mv-tile, .wf-mv-sweep, .wf-mv-blink, .wf-mv.glow::before { animation: none !important; }
+  .wf-mv-card, .wf-mv-pulse, .wf-mv-orbit, .wf-mv-tile, .wf-mv-sweep, .wf-mv-blink, .wf-mv.glow::before { animation: none !important; }
+  .wf-mv-card { opacity: 1; transform: none; }
 }
