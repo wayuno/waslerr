@@ -62,7 +62,7 @@ function CopyRow({ label, value, copyKey, mono, copying, onCopy }) {
 }
 
 export default function Checkout() {
-  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user } = useStore()
+  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady } = useStore()
 
   const [stage, setStage] = useState('method')
 
@@ -95,8 +95,9 @@ export default function Checkout() {
   useMagnetic(ref)
 
   useEffect(() => {
-    if (!selectedProduct) navigate('fields')
-  }, [selectedProduct, navigate])
+    if (authReady && !loggedIn) navigate('login') // purchasing requires sign-in
+    else if (!selectedProduct) navigate('fields')
+  }, [selectedProduct, navigate, authReady, loggedIn])
 
   // countdown + reference refresh (new order on expiry)
   useEffect(() => {

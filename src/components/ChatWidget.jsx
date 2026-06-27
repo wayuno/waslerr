@@ -89,7 +89,7 @@ function DeliveryCard({ offer, onDownload }) {
 }
 
 export default function ChatWidget() {
-  const { chatOpen, setChatOpen, conversationId, userEmail, chatRequest, clearChatRequest, pushNotification } = useStore()
+  const { chatOpen, setChatOpen, conversationId, userEmail, chatRequest, clearChatRequest, pushNotification, loggedIn } = useStore()
   const [msgs, setMsgs] = useState([])
   const [offers, setOffers] = useState({})
   const [typing, setTyping] = useState(false)
@@ -354,15 +354,17 @@ export default function ChatWidget() {
         </div>
       )}
 
-      <button
-        className={`wf-fab${chatOpen ? ' open' : ''}`}
-        aria-label={chatOpen ? 'Close support chat' : 'Open support chat'}
-        onClick={() => setChatOpen(!chatOpen)}
-      >
-        {!chatOpen && <span className="wf-fab-ring" aria-hidden="true" />}
-        {!chatOpen && unread && <span className="wf-fab-badge">1</span>}
-        {chatOpen ? <CloseIcon size={20} /> : <ChatIconBubble />}
-      </button>
+      {loggedIn && (
+        <button
+          className={`wf-fab${chatOpen ? ' open' : ''}`}
+          aria-label={chatOpen ? 'Close support chat' : 'Open support chat'}
+          onClick={() => setChatOpen(!chatOpen)}
+        >
+          {!chatOpen && <span className="wf-fab-ring" aria-hidden="true" />}
+          {!chatOpen && unread && <span className="wf-fab-badge">1</span>}
+          {chatOpen ? <CloseIcon size={20} /> : <ChatIconBubble />}
+        </button>
+      )}
     </>
   )
 }

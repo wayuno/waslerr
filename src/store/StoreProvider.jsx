@@ -300,11 +300,16 @@ export function StoreProvider({ children }) {
   )
   const goCheckout = useCallback(
     (id) => {
+      if (!loggedIn) {
+        showToast('Please sign in to purchase a field')
+        navigate('login')
+        return
+      }
       setPayDone(false)
       setAppliedCoupon(null)
       navigate({ page: 'checkout', ...(id != null ? { id } : {}) })
     },
-    [navigate],
+    [navigate, loggedIn, showToast],
   )
   const pay = useCallback(() => {
     setOrderId('WF-' + (1000 + Math.floor(Math.random() * 9000)))
@@ -875,12 +880,27 @@ export function StoreProvider({ children }) {
     [ensureConvId, loadChat],
   )
 
-  const openChat = useCallback(() => setChatOpen(true), [])
-  // route a Custom Code request into the support chat
-  const requestViaChat = useCallback((payload) => {
-    setChatRequest({ ...payload, ts: Date.now() })
+  const openChat = useCallback(() => {
+    if (!loggedIn) {
+      showToast('Please sign in to chat with support')
+      navigate('login')
+      return
+    }
     setChatOpen(true)
-  }, [])
+  }, [loggedIn, showToast, navigate])
+  // route a Custom Code request into the support chat
+  const requestViaChat = useCallback(
+    (payload) => {
+      if (!loggedIn) {
+        showToast('Please sign in to request a Custom Code')
+        navigate('login')
+        return
+      }
+      setChatRequest({ ...payload, ts: Date.now() })
+      setChatOpen(true)
+    },
+    [loggedIn, showToast, navigate],
+  )
   const clearChatRequest = useCallback(() => setChatRequest(null), [])
 
   // ---- offers (chat: field offered → pay → deliver) ----

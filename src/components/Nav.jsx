@@ -200,7 +200,7 @@ export default function Nav() {
                 {t('nav.signout')}
               </button>
             )}
-            <NotificationBell />
+            {authReady && loggedIn && <NotificationBell />}
             <CartButton />
             <button className="wf-nav-cta wf-mag" onClick={() => go({ page: 'fields' })}>
               {t('nav.begin')}
@@ -209,7 +209,7 @@ export default function Nav() {
         </div>
 
         <div className="wf-notif-mobile">
-          <NotificationBell />
+          {authReady && loggedIn && <NotificationBell />}
           <CartButton />
           {authReady && loggedIn && (
             <button
