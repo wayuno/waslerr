@@ -5,6 +5,8 @@ import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { PayPalMark, BinanceMark, CloseIcon, CheckIcon } from '../components/icons'
 import ManualVerify from '../components/ManualVerify'
+import PayPalButtons from '../components/PayPalButtons'
+import { loadConfig } from '../lib/supabase'
 
 const PAYPAL_EMAIL = 'ck806180@gmail.com'
 const BINANCE_ID = '767314103'
@@ -85,6 +87,9 @@ export default function Checkout() {
   const [dotPhase, setDotPhase] = useState(0)
   const [fallbackOpen, setFallbackOpen] = useState(false)
   const [copying, setCopying] = useState(null)
+  const [paypalClientId, setPaypalClientId] = useState(null)
+  const [ppProcessing, setPpProcessing] = useState(false)
+  const [ppError, setPpError] = useState('')
 
   const ref = useRef(null)
   const pollRef = useRef(null)
@@ -96,6 +101,13 @@ export default function Checkout() {
     if (authReady && !loggedIn) navigate('login') // purchasing requires sign-in
     else if (!selectedProduct) navigate('fields')
   }, [selectedProduct, navigate, authReady, loggedIn])
+
+  // public PayPal SDK client id (for the in-page Smart Buttons)
+  useEffect(() => {
+    let alive = true
+    loadConfig().then((c) => alive && setPaypalClientId((c && c.paypalClientId) || ''))
+    return () => { alive = false }
+  }, [])
 
   // countdown + reference refresh (new order on expiry)
   useEffect(() => {
@@ -419,6 +431,56 @@ export default function Checkout() {
             ) : creating && !reference ? (
               <div className="wf-co-create-loading" data-reveal>
                 <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Starting secure checkout…
+              </div>
+            ) : payMethod === 'paypal' ? (
+              <div className="wf-co-pp-panel" data-reveal>
+                <div className="wf-co-send-title">
+                  <span className="wf-co-send-logo paypal"><PayPalMark size={20} /></span>
+                  <span>Pay securely with PayPal</span>
+                </div>
+
+                <div className="wf-co-amount-box">
+                  <span className="wf-co-amount-label">Amount to pay</span>
+                  <span className="wf-co-amount-value">${payable}</span>
+                  <div className="wf-co-amount-shimmer" aria-hidden="true" />
+                </div>
+
+                <p className="wf-co-pp-sub">
+                  Pay with your PayPal balance or any card. The moment PayPal confirms, we verify it on our server
+                  and unlock your field automatically — nothing to copy or paste.
+                </p>
+
+                {ppProcessing ? (
+                  <div className="wf-co-pp-verifying">
+                    <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Verifying your payment…
+                  </div>
+                ) : paypalClientId === null ? (
+                  <div className="wf-pp-loading">
+                    <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Loading secure PayPal checkout…
+                  </div>
+                ) : !paypalClientId ? (
+                  <div className="wf-co-create-error" style={{ marginTop: 4 }}>
+                    <p>PayPal isn’t available right now. Please contact support to complete your order.</p>
+                  </div>
+                ) : (
+                  <PayPalButtons
+                    clientId={paypalClientId}
+                    reference={reference}
+                    onProcessing={setPpProcessing}
+                    onError={(m) => { setPpProcessing(false); setPpError(m) }}
+                    onVerified={(txid) => grantManualAccess(txid)}
+                  />
+                )}
+
+                {ppError && <p className="wf-auth-error" style={{ marginTop: 12, textAlign: 'center' }}>{ppError}</p>}
+
+                <div className="wf-co-encrypted" style={{ justifyContent: 'center', marginTop: 14 }}>
+                  🔒 Paid securely via PayPal · verified server-side
+                </div>
+
+                <button className="wf-co-pp-support" onClick={contactSupport}>
+                  Still not verified? Contact support
+                </button>
               </div>
             ) : fallbackOpen ? (
               <ManualVerify
