@@ -27,6 +27,7 @@ import {
   paypalVerifyTxid,
   binanceCreateOrder,
   binanceQueryOrder,
+  binanceDiagnose,
 } from './payments.js'
 import { canCheckout, canDeliver } from './offer-state.js'
 
@@ -1394,6 +1395,12 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/admin/conversations' && method === 'GET') {
     if (!(await requireAdmin(req, res))) return
     return sendJson(res, 200, { conversations: await getConversations() })
+  }
+  // Binance Pay self-test (admin) — reveals whether the keys are valid Binance
+  // Pay MERCHANT credentials. Bad keys / a non-merchant account fail here.
+  if (url === '/api/admin/binance-check' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    return sendJson(res, 200, { configured: binanceConfigured(), diagnose: await binanceDiagnose() })
   }
   // admin: delete a whole conversation (clears its messages)
   if (url.startsWith('/api/admin/conversations/') && method === 'DELETE') {

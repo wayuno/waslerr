@@ -221,6 +221,7 @@ export async function binanceCreateOrder({ reference, amount, goodsName }) {
   try {
     const { httpOk, data } = await binanceCall('/binancepay/openapi/v3/order', bodyObj)
     if (httpOk && data.status === 'SUCCESS' && data.data) {
+      console.log('[binance] order created · merchantTradeNo=%s prepayId=%s', reference, data.data.prepayId)
       return {
         ok: true,
         prepayId: data.data.prepayId,
@@ -230,9 +231,26 @@ export async function binanceCreateOrder({ reference, amount, goodsName }) {
         universalUrl: data.data.universalUrl,
       }
     }
+    // surface the real reason — almost always "account is not a Binance Pay
+    // merchant" or "invalid signature / API key" or an IP-whitelist error.
+    console.error('[binance] createOrder FAILED · code=%s msg=%s', data.code || '?', data.errorMessage || JSON.stringify(data).slice(0, 300))
     return { ok: false, reason: data.errorMessage || data.code || 'create_failed', raw: data }
   } catch (e) {
+    console.error('[binance] createOrder ERROR ·', e.message)
     return { ok: false, reason: e.message }
+  }
+}
+
+// Lightweight auth/merchant self-test: query a dummy order. With valid merchant
+// credentials this returns a SUCCESS/known error; with bad keys/signature or a
+// non-merchant account it returns the specific Binance error code.
+export async function binanceDiagnose() {
+  if (!binanceConfigured()) return { configured: false, hint: 'BINANCE_PAY_API_KEY / BINANCE_PAY_SECRET_KEY not set' }
+  try {
+    const { httpOk, data } = await binanceCall('/binancepay/openapi/v3/order/query', { merchantTradeNo: 'WF-DIAG-TEST' })
+    return { configured: true, httpOk, status: data.status || null, code: data.code || null, errorMessage: data.errorMessage || null }
+  } catch (e) {
+    return { configured: true, error: e.message }
   }
 }
 
@@ -243,6 +261,7 @@ export async function binanceQueryOrder(reference) {
   try {
     const { httpOk, data } = await binanceCall('/binancepay/openapi/v3/order/query', { merchantTradeNo: reference })
     if (!httpOk || data.status !== 'SUCCESS' || !data.data) {
+      console.error('[binance] query FAILED · ref=%s code=%s msg=%s', reference, data.code || '?', data.errorMessage || JSON.stringify(data).slice(0, 200))
       return { ok: false, reason: data.errorMessage || data.code || 'query_failed', raw: data }
     }
     const d = data.data
