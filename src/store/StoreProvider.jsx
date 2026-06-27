@@ -191,9 +191,43 @@ export function StoreProvider({ children }) {
       }
       pendingSection.current = section || null
       setPage(p)
+      // push a browser-history entry so the device/browser Back button returns to
+      // the PREVIOUS page (not straight to home).
+      try {
+        window.history.pushState(
+          { wf: { page: p, fieldsCat: cat || fieldsCat, selectedId: id != null ? id : selectedId, section: section || null } },
+          '',
+        )
+      } catch {
+        /* ignore */
+      }
     },
-    [page],
+    [page, fieldsCat, selectedId],
   )
+
+  // seed the initial history entry + handle Back/Forward (popstate)
+  useEffect(() => {
+    try {
+      window.history.replaceState({ wf: { page, fieldsCat, selectedId } }, '')
+    } catch {
+      /* ignore */
+    }
+    const onPop = (e) => {
+      const wf = e.state && e.state.wf
+      setMenuOpen(false)
+      if (wf) {
+        if (wf.selectedId !== undefined) setSelectedId(wf.selectedId)
+        if (wf.fieldsCat !== undefined) setFieldsCat(wf.fieldsCat)
+        pendingSection.current = wf.section || null
+        setPage(wf.page || 'home')
+      } else {
+        setPage('home') // back past the first in-app entry → home
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const id = pendingSection.current
