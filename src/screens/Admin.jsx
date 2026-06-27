@@ -551,7 +551,8 @@ export default function Admin() {
     if (res?.error) return setOfferErr(res.error)
     setOfferForm({ name: '', description: '', amount: '', includes: [], includeInput: '' })
     setShowOfferBuilder(false)
-    setConvOffers((prev) => [...prev, res.offer])
+    // the server supersedes any prior unpaid offer — reflect that locally too
+    setConvOffers((prev) => [...prev.map((o) => (o.status === 'sent' ? { ...o, status: 'cancelled' } : o)), res.offer])
     showToast('Field sent — awaiting payment')
   }
   const submitDelivery = async (offerId) => {
@@ -1321,6 +1322,7 @@ export default function Admin() {
                   {activeOffer?.status === 'sent' ? (
                     <div className="wf-offer-await">
                       <span className="wf-offer-await-dot" /> Awaiting payment · ${activeOffer.amount}
+                      <span className="wf-offer-await-hint">Customer asked for something else? Send a new field below — it replaces this one.</span>
                     </div>
                   ) : activeOffer?.status === 'paid' ? (
                     <div className="wf-offer-deliver">
@@ -1339,11 +1341,13 @@ export default function Admin() {
                     <div className="wf-offer-done">✓ Field delivered — order complete</div>
                   ) : null}
 
-                  {/* create-field builder (when no active unpaid/paid offer) */}
-                  {(!activeOffer || activeOffer.status === 'delivered') && (
+                  {/* create-field builder — available unless an offer is paid & awaiting delivery */}
+                  {(!activeOffer || activeOffer.status === 'sent' || activeOffer.status === 'delivered') && (
                     showOfferBuilder ? (
                       <form className="wf-offer-builder" onSubmit={sendOffer}>
-                        <div className="wf-eyebrow" style={{ marginBottom: 2 }}>✦ Create field</div>
+                        <div className="wf-eyebrow" style={{ marginBottom: 2 }}>
+                          {activeOffer?.status === 'sent' ? '✦ Replace with a new field' : '✦ Create field'}
+                        </div>
                         <input className="wf-input" value={offerForm.name} onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })} placeholder="Field name (e.g. Focus & productivity field)" />
                         <textarea className="wf-textarea" rows="2" value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="Short description…" />
                         <div className="wf-form-row">
@@ -1370,7 +1374,9 @@ export default function Admin() {
                         </div>
                       </form>
                     ) : (
-                      <button className="wf-offer-create-btn" onClick={() => setShowOfferBuilder(true)}>✦ Create field</button>
+                      <button className="wf-offer-create-btn" onClick={() => setShowOfferBuilder(true)}>
+                        {activeOffer?.status === 'sent' ? '✦ Send a different field' : '✦ Create field'}
+                      </button>
                     )
                   )}
 
