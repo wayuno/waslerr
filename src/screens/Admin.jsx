@@ -345,6 +345,12 @@ export default function Admin() {
       : activeOffer.status === 'paid' ? (activeFree ? 'Free' : 'Paid')
       : activeOffer.status === 'delivered' ? 'Delivered'
       : 'New request'
+  // After a completed delivery the order is done — only re-offer "Create field"
+  // if the customer has sent a fresh request since the last delivery.
+  const deliveredAtMs = activeOffer?.deliveredAt ? Date.parse(activeOffer.deliveredAt) : 0
+  const newRequestAfterDelivery =
+    activeOffer?.status === 'delivered' &&
+    thread.some((m) => m.from === 'user' && (Date.parse(m.at || 0) || 0) > deliveredAtMs)
 
   const publishAnnouncement = async (e) => {
     e.preventDefault()
@@ -1394,8 +1400,9 @@ export default function Admin() {
                     <div className="wf-offer-done">✓ Field delivered — order complete</div>
                   ) : null}
 
-                  {/* create-field builder — available unless an offer is paid & awaiting delivery */}
-                  {(!activeOffer || activeOffer.status === 'sent' || activeOffer.status === 'delivered') && (
+                  {/* create-field builder — hidden once an order is delivered & complete,
+                      unless the customer has come back with a fresh request */}
+                  {(!activeOffer || activeOffer.status === 'sent' || newRequestAfterDelivery) && (
                     showOfferBuilder ? (
                       <form className="wf-offer-builder" onSubmit={sendOffer}>
                         <div className="wf-eyebrow" style={{ marginBottom: 2 }}>
