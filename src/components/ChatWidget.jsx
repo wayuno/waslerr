@@ -212,7 +212,7 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!chatRequest) return
     const { name, email, focus, intention } = chatRequest
-    const label = FOCUS_LABELS[focus] || 'Something else'
+    const label = FOCUS_LABELS[focus] || focus || 'Something else'
     const uId = addMsg({ from: 'user', eyebrow: '✦ Custom Code request', text: `${label} — ${intention}`, status: 'Sending request…' })
     if (conversationId) {
       fetch('/api/chat/send', {

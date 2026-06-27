@@ -4,23 +4,32 @@ import { useStore } from '../store/StoreProvider'
 import { CheckIcon } from './icons'
 
 export default function CustomForm() {
-  const { requestViaChat } = useStore()
+  const { requestViaChat, user, loggedIn } = useStore()
   const formRef = useRef(null)
   const [submitted, setSubmitted] = useState(false)
   const [name, setName] = useState('')
+  const [focus, setFocus] = useState('')
+  const [otherFocus, setOtherFocus] = useState('') // free text when "Something else"
+  const [err, setErr] = useState('')
 
   const onSubmit = (e) => {
     e.preventDefault()
+    setErr('')
     const form = formRef.current
     if (!form.reportValidity()) return
+    if (!focus) return setErr('Choose a focus area.')
+    const focusValue = focus === 'other' ? otherFocus.trim() : focus
+    if (focus === 'other' && !focusValue) return setErr('Tell us what your focus is.')
     const fd = new FormData(form)
     const submittedName = (fd.get('name') || '').toString().trim()
     const payload = {
       name: submittedName,
-      email: (fd.get('email') || '').toString(),
-      focus: (fd.get('focus') || '').toString(),
+      email: loggedIn ? user || '' : '', // always the signed-in account's email
+      focus: focusValue,
       intention: (fd.get('intention') || '').toString(),
     }
+    // custom code is members-only — requestViaChat redirects guests to sign-in
+    if (!loggedIn) return requestViaChat(payload)
     try {
       const list = JSON.parse(localStorage.getItem('wf_custom_requests') || '[]')
       list.push({ ...payload, ts: Date.now() })
@@ -36,6 +45,9 @@ export default function CustomForm() {
 
   const reset = () => {
     formRef.current?.reset()
+    setFocus('')
+    setOtherFocus('')
+    setErr('')
     setSubmitted(false)
   }
 
@@ -65,18 +77,28 @@ export default function CustomForm() {
           <div className="wf-form-card">
             <form ref={formRef} className="wf-form" noValidate onSubmit={onSubmit}>
               <div className="wf-form-row">
-                <label className="wf-field">
+                <label className="wf-field" style={loggedIn ? undefined : { gridColumn: '1 / -1' }}>
                   <span className="wf-field-label">Name</span>
                   <input className="wf-input" name="name" type="text" placeholder="Your name" />
                 </label>
-                <label className="wf-field">
-                  <span className="wf-field-label">Email *</span>
-                  <input className="wf-input" name="email" type="email" required placeholder="you@email.com" />
-                </label>
+                {loggedIn && (
+                  <label className="wf-field">
+                    <span className="wf-field-label">Email · your account</span>
+                    <input
+                      className="wf-input"
+                      name="email"
+                      type="email"
+                      value={user || ''}
+                      readOnly
+                      title="Linked to your signed-in account"
+                      style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                    />
+                  </label>
+                )}
               </div>
               <label className="wf-field">
                 <span className="wf-field-label">Focus area</span>
-                <select className="wf-select" name="focus" required defaultValue="">
+                <select className="wf-select" name="focus" required value={focus} onChange={(e) => setFocus(e.target.value)}>
                   <option value="" disabled>
                     Choose a focus…
                   </option>
@@ -87,6 +109,18 @@ export default function CustomForm() {
                   ))}
                 </select>
               </label>
+              {focus === 'other' && (
+                <label className="wf-field">
+                  <span className="wf-field-label">Tell us your focus</span>
+                  <input
+                    className="wf-input"
+                    type="text"
+                    value={otherFocus}
+                    onChange={(e) => setOtherFocus(e.target.value)}
+                    placeholder="Describe the focus of your field"
+                  />
+                </label>
+              )}
               <label className="wf-field">
                 <span className="wf-field-label">Your intention</span>
                 <textarea
@@ -97,6 +131,7 @@ export default function CustomForm() {
                   placeholder="Describe the outcome you want to engineer — be as specific as you like."
                 />
               </label>
+              {err && <p className="wf-auth-error" style={{ margin: 0 }}>{err}</p>}
               <button type="submit" className="wf-form-submit wf-mag">
                 Request your custom field
               </button>
