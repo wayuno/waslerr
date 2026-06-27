@@ -454,12 +454,20 @@ a {
 .wf-burger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 .wf-mobile-menu {
   display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   flex-direction: column;
-  padding: 6px 24px 20px;
-  background: rgba(8, 10, 16, 0.97);
-  backdrop-filter: blur(16px);
+  padding: 6px 24px 22px;
+  background: rgba(8, 10, 16, 0.98);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--wf-rule);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
   animation: wf-menu-in 0.38s var(--wf-ease) both;
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
 }
 .wf-mobile-menu.open { display: flex; }
 .wf-mlink {
