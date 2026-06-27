@@ -390,7 +390,9 @@ a {
   white-space: nowrap;
 }
 .wf-nav-desktop {
-  display: flex;
+  /* the inline links + cluster are retired — every screen uses the hamburger
+     drawer now (see .wf-burger / .wf-mobile-menu) */
+  display: none;
   align-items: center;
   gap: 38px;
 }
@@ -428,7 +430,7 @@ a {
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .wf-burger {
-  display: none;
+  display: flex;
   width: 42px;
   height: 42px;
   border-radius: 9px;
@@ -2393,7 +2395,7 @@ a {
 @keyframes wf-shimmer-sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 60%, 100% { transform: translateX(360%) skewX(-18deg); } }
 
 .wf-notif { position: relative; display: inline-flex; }
-.wf-notif-mobile { display: none; }
+.wf-notif-mobile { display: inline-flex; align-items: center; margin-right: 10px; }
 .wf-notif-btn {
   position: relative;
   width: 40px;
