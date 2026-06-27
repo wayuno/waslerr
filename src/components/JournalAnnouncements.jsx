@@ -17,13 +17,16 @@ const readTime = (body) => {
 
 // Homepage Journal (editorial) + Announcements (changelog rail) — split by tag.
 export default function JournalAnnouncements({ onNavigate }) {
-  const { announcements } = useStore()
+  const { announcements, loggedIn } = useStore()
   const isBlog = (p) => (p.tag || '').toUpperCase() === 'BLOG'
   const blogs = announcements.filter(isBlog)
   const feat = blogs[0]
   const rest = blogs.slice(1, 3)
   const announce = announcements.filter((p) => !isBlog(p)).slice(0, 4)
   const toUpdates = () => onNavigate({ page: 'updates' })
+
+  // What's new / Journal is members-only — hidden from guests on the homepage.
+  if (!loggedIn) return null
 
   return (
     <section className="wf-section wf-section--rule wf-pad" id="journal">
