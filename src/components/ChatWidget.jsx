@@ -36,8 +36,9 @@ function OfferCard({ offer, onPay }) {
   if (!offer) return null
   const paid = offer.status === 'paid'
   const delivered = offer.status === 'delivered'
+  const cancelled = offer.status === 'cancelled'
   return (
-    <div className={`wf-offer-card${paid || delivered ? ' is-paid' : ''}`}>
+    <div className={`wf-offer-card${paid || delivered ? ' is-paid' : ''}${cancelled ? ' is-cancelled' : ''}`}>
       <div className="wf-offer-shine" aria-hidden="true" />
       <div className="wf-offer-eyebrow">✦ A field, made for you</div>
       <div className="wf-offer-name">{offer.name}</div>
@@ -59,6 +60,8 @@ function OfferCard({ offer, onPay }) {
         <button className="wf-offer-pay wf-mag" onClick={() => onPay(offer)}>
           Pay ${offer.amount} →
         </button>
+      ) : cancelled ? (
+        <div className="wf-offer-state wf-offer-state--cancelled">Replaced by a newer offer below</div>
       ) : (
         <div className="wf-offer-state">
           {delivered ? '✓ Field delivered' : '✓ Payment complete · field in production'}

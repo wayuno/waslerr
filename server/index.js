@@ -1074,6 +1074,13 @@ const server = http.createServer(async (req, res) => {
       includes: Array.isArray(b.includes) ? b.includes.slice(0, 12).map((s) => String(s).slice(0, 120)) : [],
       status: 'sent',
     }
+    // Supersede any still-unpaid offer in this thread so the conversation never
+    // gets stuck on one "awaiting payment" — a new field request gets a fresh
+    // offer, and only the newest one stays payable. Paid/delivered are untouched.
+    const priorOffers = await listOffersForConversation(conversationId)
+    for (const o of priorOffers) {
+      if (o.status === 'sent') await updateOffer(o.id, { status: 'cancelled' })
+    }
     const out = await insertOffer(offerRow)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.status })
     await insertMessage({

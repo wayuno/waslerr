@@ -4538,6 +4538,9 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 }
 .wf-offer-pay:hover { filter: brightness(1.06); }
 .wf-offer-state { text-align: center; font-size: 13px; color: #4bc882; font-weight: 500; padding: 4px 0 2px; }
+.wf-offer-state--cancelled { color: rgba(232,224,210,0.5); }
+.wf-offer-card.is-cancelled { opacity: 0.55; border-color: rgba(232,224,210,0.16); }
+.wf-offer-card.is-cancelled .wf-offer-shine { display: none; }
 
 /* delivery reveal card */
 .wf-delivery-card {
@@ -4630,11 +4633,13 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 .wf-mo-amt { font-size: 14px; color: var(--wf-gold); font-weight: 600; }
 .wf-mo-status { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 20px; border: 1px solid var(--wf-rule); color: var(--wf-mute); }
 .wf-mo-status--paid, .wf-mo-status--delivered { color: #4bc882; border-color: rgba(75,200,130,0.4); }
+.wf-mo-status--cancelled { opacity: 0.6; text-decoration: line-through; }
 .wf-msg-sys { align-self: center; font-family: var(--wf-mono); font-size: 11px; color: #4bc882; background: rgba(75,200,130,0.1); border: 1px solid rgba(75,200,130,0.28); border-radius: 20px; padding: 4px 12px; }
 .wf-msg-deliv { align-self: flex-start; font-size: 12.5px; color: var(--wf-gold); }
 
-.wf-offer-await { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 11px; background: rgba(227,179,65,0.08); border: 1px solid rgba(227,179,65,0.3); color: #e3b341; font-size: 13px; }
+.wf-offer-await { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 11px 14px; border-radius: 11px; background: rgba(227,179,65,0.08); border: 1px solid rgba(227,179,65,0.3); color: #e3b341; font-size: 13px; }
 .wf-offer-await-dot { width: 8px; height: 8px; border-radius: 50%; background: #e3b341; animation: wf-pillpulse 1.6s ease-in-out infinite; }
+.wf-offer-await-hint { flex-basis: 100%; margin-top: 2px; font-size: 11.5px; line-height: 1.4; font-weight: 400; color: rgba(227,179,65,0.72); }
 .wf-offer-cleared { color: #4bc882; font-size: 13.5px; font-weight: 500; }
 .wf-offer-deliver { padding: 12px 14px; border-radius: 12px; background: rgba(75,200,130,0.06); border: 1px solid rgba(75,200,130,0.28); }
 .wf-offer-done { padding: 11px 14px; border-radius: 11px; background: rgba(75,200,130,0.12); border: 1px solid rgba(75,200,130,0.4); color: #4bc882; font-size: 13.5px; text-align: center; }
