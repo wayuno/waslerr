@@ -26,6 +26,34 @@ const CAT = {
   wealth: { label: 'Wealth', cls: 'gold' },
 }
 
+// Ambient gold particles for the PayPal panel background — fixed (not random)
+// so they don't reshuffle on every render. x/y position, size, duration, delay.
+const PP_PARTICLES = [
+  { x: '6%', y: '72%', s: 3, d: '11s', delay: '0s' },
+  { x: '14%', y: '30%', s: 2, d: '9s', delay: '1.4s' },
+  { x: '22%', y: '88%', s: 4, d: '13s', delay: '0.6s' },
+  { x: '31%', y: '52%', s: 2, d: '8s', delay: '2.2s' },
+  { x: '40%', y: '18%', s: 3, d: '12s', delay: '3.1s' },
+  { x: '48%', y: '80%', s: 2, d: '10s', delay: '0.9s' },
+  { x: '57%', y: '40%', s: 3, d: '14s', delay: '2.6s' },
+  { x: '64%', y: '66%', s: 2, d: '9s', delay: '1.1s' },
+  { x: '72%', y: '24%', s: 4, d: '12s', delay: '4s' },
+  { x: '79%', y: '58%', s: 2, d: '8s', delay: '0.3s' },
+  { x: '86%', y: '84%', s: 3, d: '13s', delay: '2.9s' },
+  { x: '91%', y: '36%', s: 2, d: '10s', delay: '1.7s' },
+  { x: '36%', y: '94%', s: 3, d: '11s', delay: '3.6s' },
+  { x: '67%', y: '12%', s: 2, d: '9s', delay: '0.5s' },
+]
+
+function LockGlyph({ size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="11" width="16" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  )
+}
+
 function fmtTime(secs) {
   const m = Math.floor(secs / 60)
   const s = secs % 60
@@ -419,7 +447,7 @@ export default function Checkout() {
               <span className="wf-co-auto-pill">✓ Automatic verification</span>
             </div>
 
-            <div data-reveal><ProductCard f={f} cat={cat} compact /></div>
+            {payMethod !== 'paypal' && <div data-reveal><ProductCard f={f} cat={cat} compact /></div>}
 
             {createError ? (
               <div className="wf-co-create-error" data-reveal>
@@ -433,54 +461,118 @@ export default function Checkout() {
                 <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Starting secure checkout…
               </div>
             ) : payMethod === 'paypal' ? (
-              <div className="wf-co-pp-panel">
-                <div className="wf-co-send-title">
-                  <span className="wf-co-send-logo paypal"><PayPalMark size={20} /></span>
-                  <span>Pay securely with PayPal</span>
+              <div className="wf-pp-verify">
+                <div className="wf-pp-ambient" aria-hidden="true">
+                  <span className="wf-pp-glow wf-pp-glow-c" />
+                  <span className="wf-pp-glow wf-pp-glow-tr" />
+                  <span className="wf-pp-glow wf-pp-glow-bl" />
+                  <span className="wf-pp-bgring wf-pp-bgring-1" />
+                  <span className="wf-pp-bgring wf-pp-bgring-2" />
+                  {PP_PARTICLES.map((p, i) => (
+                    <span
+                      key={i}
+                      className="wf-pp-particle"
+                      style={{ left: p.x, top: p.y, width: p.s, height: p.s, animationDuration: p.d, animationDelay: p.delay }}
+                    />
+                  ))}
                 </div>
 
-                <div className="wf-co-amount-box">
-                  <span className="wf-co-amount-label">Amount to pay</span>
-                  <span className="wf-co-amount-value">${payable}</span>
-                  <div className="wf-co-amount-shimmer" aria-hidden="true" />
+                <div className="wf-pp-grid">
+                  {/* LEFT — order, live listening, how it works */}
+                  <div className="wf-pp-left">
+                    <div className="wf-pp-anim"><ProductCard f={f} cat={cat} /></div>
+
+                    <div className="wf-pp-listen wf-pp-anim">
+                      <div className="wf-pp-radar" aria-hidden="true">
+                        <span className="wf-pp-radar-ring" />
+                        <span className="wf-pp-radar-ring r2" />
+                        <span className="wf-pp-radar-dash" />
+                      </div>
+                      <span className="wf-pp-eyebrow gold">Live</span>
+                      <h3 className="wf-pp-listen-title">Listening for your payment</h3>
+                      <p className="wf-pp-listen-sub">
+                        The moment PayPal confirms, your field unlocks automatically. Keep this tab open.
+                      </p>
+                      <div className="wf-pp-listen-dots"><span /><span /><span /></div>
+                    </div>
+
+                    <div className="wf-pp-how wf-pp-anim">
+                      <span className="wf-pp-eyebrow">How it works</span>
+                      <ol className="wf-pp-steps">
+                        <li>
+                          <span className="wf-pp-step-n">1</span>
+                          <div>
+                            <div className="wf-pp-step-t">Complete the PayPal payment</div>
+                            <div className="wf-pp-step-d">Pay with your balance, bank, or any card.</div>
+                          </div>
+                        </li>
+                        <li>
+                          <span className="wf-pp-step-n">2</span>
+                          <div>
+                            <div className="wf-pp-step-t">We verify automatically</div>
+                            <div className="wf-pp-step-d">PayPal confirms and we check it server-side.</div>
+                          </div>
+                        </li>
+                        <li>
+                          <span className="wf-pp-step-n">3</span>
+                          <div>
+                            <div className="wf-pp-step-t">Your field unlocks</div>
+                            <div className="wf-pp-step-d">Access is granted instantly — no manual step.</div>
+                          </div>
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  {/* RIGHT — the PayPal payment card */}
+                  <div className="wf-pp-card wf-pp-anim wf-pp-anim-delay">
+                    <div className="wf-co-send-title">
+                      <span className="wf-co-send-logo paypal"><PayPalMark size={20} /></span>
+                      <span>Pay securely with PayPal</span>
+                    </div>
+
+                    <div className="wf-co-amount-box">
+                      <span className="wf-co-amount-label">Amount to pay</span>
+                      <span className="wf-co-amount-value">${payable}</span>
+                      <div className="wf-co-amount-shimmer" aria-hidden="true" />
+                    </div>
+
+                    <p className="wf-co-pp-sub">
+                      Pay with your PayPal balance or any card. The moment PayPal confirms, we verify it on our
+                      server and unlock your field automatically — nothing to copy or paste.
+                    </p>
+
+                    {ppProcessing ? (
+                      <div className="wf-co-pp-verifying">
+                        <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Verifying your payment…
+                      </div>
+                    ) : paypalClientId === null ? (
+                      <div className="wf-pp-loading">
+                        <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Loading secure PayPal checkout…
+                      </div>
+                    ) : !paypalClientId ? (
+                      <div className="wf-co-create-error" style={{ marginTop: 4 }}>
+                        <p>PayPal isn’t available right now. Please contact support to complete your order.</p>
+                      </div>
+                    ) : (
+                      <PayPalButtons
+                        clientId={paypalClientId}
+                        reference={reference}
+                        onProcessing={setPpProcessing}
+                        onError={(m) => { setPpProcessing(false); setPpError(m) }}
+                        onVerified={(txid) => grantManualAccess(txid)}
+                      />
+                    )}
+
+                    {ppError && <p className="wf-auth-error" style={{ marginTop: 12, textAlign: 'center' }}>{ppError}</p>}
+
+                    <div className="wf-pp-powered">Powered by PayPal</div>
+                    <div className="wf-pp-secure"><LockGlyph /> Paid securely via PayPal · verified server-side</div>
+                    <button className="wf-co-pp-support" onClick={contactSupport}>
+                      Still not verified? Contact support
+                    </button>
+                  </div>
                 </div>
-
-                <p className="wf-co-pp-sub">
-                  Pay with your PayPal balance or any card. The moment PayPal confirms, we verify it on our server
-                  and unlock your field automatically — nothing to copy or paste.
-                </p>
-
-                {ppProcessing ? (
-                  <div className="wf-co-pp-verifying">
-                    <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Verifying your payment…
-                  </div>
-                ) : paypalClientId === null ? (
-                  <div className="wf-pp-loading">
-                    <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Loading secure PayPal checkout…
-                  </div>
-                ) : !paypalClientId ? (
-                  <div className="wf-co-create-error" style={{ marginTop: 4 }}>
-                    <p>PayPal isn’t available right now. Please contact support to complete your order.</p>
-                  </div>
-                ) : (
-                  <PayPalButtons
-                    clientId={paypalClientId}
-                    reference={reference}
-                    onProcessing={setPpProcessing}
-                    onError={(m) => { setPpProcessing(false); setPpError(m) }}
-                    onVerified={(txid) => grantManualAccess(txid)}
-                  />
-                )}
-
-                {ppError && <p className="wf-auth-error" style={{ marginTop: 12, textAlign: 'center' }}>{ppError}</p>}
-
-                <div className="wf-co-encrypted" style={{ justifyContent: 'center', marginTop: 14 }}>
-                  🔒 Paid securely via PayPal · verified server-side
-                </div>
-
-                <button className="wf-co-pp-support" onClick={contactSupport}>
-                  Still not verified? Contact support
-                </button>
               </div>
             ) : fallbackOpen ? (
               <ManualVerify
