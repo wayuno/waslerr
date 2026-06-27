@@ -170,6 +170,7 @@ export default function Admin() {
   const [deliverErr, setDeliverErr] = useState('')
   const [deliverPct, setDeliverPct] = useState(0)
   const [deliverElapsed, setDeliverElapsed] = useState(0)
+  const [deliveredFlashId, setDeliveredFlashId] = useState(null) // shows "order complete" for ~10s after delivery
   const paidSeen = useRef(new Set())
   const threadRef = useRef(null)
 
@@ -585,6 +586,9 @@ export default function Admin() {
     setDeliverPct(0)
     setConvOffers((prev) => prev.map((o) => (o.id === offerId ? res.offer : o)))
     showToast('Field delivered ✓')
+    // flash "order complete" for ~10s, then let it fade out (admin-only cue)
+    setDeliveredFlashId(offerId)
+    setTimeout(() => setDeliveredFlashId((cur) => (cur === offerId ? null : cur)), 10000)
   }
   const fmtElapsed = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
@@ -1396,8 +1400,8 @@ export default function Admin() {
                         {deliverBusy ? `Delivering… ${deliverPct >= 100 ? '' : deliverPct + '%'}`.trim() : 'Deliver field →'}
                       </button>
                     </div>
-                  ) : activeOffer?.status === 'delivered' ? (
-                    <div className="wf-offer-done">✓ Field delivered — order complete</div>
+                  ) : activeOffer?.status === 'delivered' && activeOffer.id === deliveredFlashId ? (
+                    <div className="wf-offer-done wf-offer-done--flash">✓ Field delivered — order complete</div>
                   ) : null}
 
                   {/* create-field builder — hidden once an order is delivered & complete,
