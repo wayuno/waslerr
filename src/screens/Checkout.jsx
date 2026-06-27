@@ -433,7 +433,7 @@ export default function Checkout() {
                 <span className="wf-co-spin-glyph" aria-hidden="true">◌</span> Starting secure checkout…
               </div>
             ) : payMethod === 'paypal' ? (
-              <div className="wf-co-pp-panel" data-reveal>
+              <div className="wf-co-pp-panel">
                 <div className="wf-co-send-title">
                   <span className="wf-co-send-logo paypal"><PayPalMark size={20} /></span>
                   <span>Pay securely with PayPal</span>
