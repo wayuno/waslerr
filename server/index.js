@@ -1151,6 +1151,35 @@ const server = http.createServer(async (req, res) => {
     })
   }
 
+  // The signed-in customer's delivered custom fields (chat offers), by email.
+  // Lets them re-access & download their custom fields from the account page,
+  // permanently — not only inside the chat thread.
+  if (url === '/api/my/offers' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { offers: [] })
+    const u = await getAuthedUser(req)
+    if (!u || !u.email) return sendJson(res, 200, { offers: [] })
+    const r = await sbRest(
+      `offers?customer_email=eq.${encodeURIComponent(u.email.toLowerCase())}&status=eq.delivered&order=delivered_at.desc&limit=200`,
+    )
+    const rows = r.ok ? await r.json() : []
+    return sendJson(res, 200, {
+      offers: rows.map((o) => {
+        const files = Array.isArray(o.delivery_files) && o.delivery_files.length
+          ? o.delivery_files
+          : (o.delivery_file_url ? [{ name: o.delivery_file_name, size: 0 }] : [])
+        return {
+          id: o.id,
+          conversationId: o.conversation_id, // owner secret — used to fetch the gated download
+          name: o.name,
+          amount: Number(o.amount) || 0,
+          method: o.payment_method || null,
+          ts: Date.parse(o.delivered_at || o.created_at) || 0,
+          files: files.map((f, i) => ({ name: f.name || `Field file ${i + 1}`, i })),
+        }
+      }),
+    })
+  }
+
   // ---- offers (field offered in chat → pay → deliver) ----
   // 1) admin creates an offer + appends an `offer` card to the thread
   if (/^\/api\/admin\/conversations\/[^/]+\/offers$/.test(url) && method === 'POST') {
@@ -1368,11 +1397,18 @@ const server = http.createServer(async (req, res) => {
     const idx = Math.max(0, parseInt(parsedUrl.searchParams.get('i') || '0', 10) || 0)
     const pick = files[idx] || files[0]
     if (offer.status !== 'delivered' || !pick?.path) return sendJson(res, 409, { error: 'not_delivered' })
-    // auth: the owning conversation (chat guests hold the secret id) OR an admin token
+    // auth: the owning conversation (chat guests hold the secret id), an admin
+    // token, OR the signed-in customer whose email owns this offer (account page)
     const isOwner = conv && conv === offer.conversation_id
-    const admin = isOwner ? null : await getAuthedUser(req)
-    const isAdminUser = admin && (admin.email === ADMIN_EMAIL || admin.role === 'admin')
-    if (!isOwner && !isAdminUser) return sendJson(res, 403, { error: 'forbidden' })
+    let allowed = isOwner
+    if (!allowed) {
+      const u = await getAuthedUser(req)
+      const isAdminUser = u && (u.email === ADMIN_EMAIL || u.role === 'admin')
+      const isEmailOwner =
+        u && u.email && offer.customer_email && u.email.toLowerCase() === String(offer.customer_email).toLowerCase()
+      allowed = isAdminUser || isEmailOwner
+    }
+    if (!allowed) return sendJson(res, 403, { error: 'forbidden' })
     const signed = await signedDownloadUrl(pick.path, 'deliveries', 120)
     if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
     res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })

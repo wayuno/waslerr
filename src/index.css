@@ -4998,6 +4998,28 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   padding: 3px 10px;
 }
 
+/* custom field (delivered chat offer) — download actions */
+.wf-pf-libcard-custom { cursor: default; }
+.wf-pf-libcard-custom:hover { transform: none; border-color: var(--wf-rule); }
+.wf-pf-libactions { flex: none; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.wf-pf-dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #0d0b07;
+  background: var(--wf-grad);
+  border: none;
+  border-radius: 9px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: var(--wf-sans);
+  transition: filter 0.2s var(--wf-ease);
+}
+.wf-pf-dl:hover { filter: brightness(1.05); }
+.wf-pf-order-custom { width: 100%; text-align: left; cursor: pointer; font: inherit; }
+
 /* orders */
 .wf-pf-orders { display: flex; flex-direction: column; gap: 12px; }
 .wf-pf-order {
