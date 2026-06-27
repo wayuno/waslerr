@@ -26,6 +26,12 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
   const [step, setStep] = useState(0)
   const submitted = useRef('')
 
+  // Keep the latest callback in a ref so the stepper timer below never depends
+  // on the parent's callback identity — the checkout re-renders every second
+  // (countdown), which would otherwise reset the timer and freeze the stepper.
+  const onVerifiedRef = useRef(onVerified)
+  useEffect(() => { onVerifiedRef.current = onVerified }, [onVerified])
+
   const value = txid.trim()
   const canSubmit = value.length > 0
 
@@ -37,16 +43,17 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
     setState('verifying')
   }
 
-  // advance the stepper on a timer, then grant access after the last stage
+  // Advance the stepper on a timer, then grant access after the last stage.
+  // Deps are intentionally limited to state/step/stageDuration.
   useEffect(() => {
     if (state !== 'verifying') return
     if (step >= STEPS.length - 1) {
-      const t = setTimeout(() => onVerified?.(submitted.current), stageDuration)
+      const t = setTimeout(() => onVerifiedRef.current?.(submitted.current), stageDuration)
       return () => clearTimeout(t)
     }
     const t = setTimeout(() => setStep((s) => s + 1), stageDuration)
     return () => clearTimeout(t)
-  }, [state, step, stageDuration, onVerified])
+  }, [state, step, stageDuration])
 
   const last = STEPS.length - 1
   const stepStatus = (i) => {
@@ -58,7 +65,7 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
   return (
     <div className={`wf-mv${glow ? ' glow' : ''}`}>
       {state === 'submit' ? (
-        <div className="wf-mv-card" data-reveal>
+        <div className="wf-mv-card">
           <div className="wf-mv-head">
             <span className="wf-mv-eyebrow">Manual verification</span>
             {reference && <span className="wf-mv-ref">{reference}</span>}
@@ -95,7 +102,7 @@ export default function ManualVerify({ reference, stageDuration = 1400, glow = t
           )}
         </div>
       ) : (
-        <div className="wf-mv-card verifying" data-reveal>
+        <div className="wf-mv-card verifying">
           <div className="wf-mv-scanner" aria-hidden="true">
             <span className="wf-mv-pulse wf-mv-pulse-1" />
             <span className="wf-mv-pulse wf-mv-pulse-2" />
