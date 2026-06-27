@@ -4,7 +4,6 @@ import { useT } from '../lib/i18n'
 import { CloseIcon } from './icons'
 import NotificationBell from './NotificationBell'
 import CartButton from './CartButton'
-import LanguageSwitcher from './LanguageSwitcher'
 
 // primary nav links for the DESKTOP bar (unchanged). Labels are i18n keys.
 const NAV_LINKS = [
@@ -299,10 +298,6 @@ export default function Nav() {
             <button className="wf-mlink wf-mlink--cta" onClick={() => go({ page: 'fields' })}>
               {t('nav.begin')}
             </button>
-          </div>
-
-          <div className="wf-mm-foot">
-            <LanguageSwitcher />
           </div>
         </aside>
       </div>

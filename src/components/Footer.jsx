@@ -1,7 +1,6 @@
 import { XIcon, InstagramIcon, YouTubeIcon, TikTokIcon } from './icons'
 import { useStore } from '../store/StoreProvider'
 import { resolveCommunityLink } from '../lib/communityLinks'
-import LanguageSwitcher from './LanguageSwitcher'
 
 const COMMUNITY_FOOTER = [
   { key: 'youtube', label: 'YouTube' },
@@ -96,10 +95,6 @@ export default function Footer({ onNavigate }) {
             <button className="wf-flink" onClick={goHome}>Guarantee</button>
           </div>
         </div>
-      </div>
-
-      <div className="wf-foot-lang">
-        <LanguageSwitcher />
       </div>
 
       <div className="wf-footer-base">
