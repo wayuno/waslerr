@@ -920,26 +920,58 @@ export function StoreProvider({ children }) {
     },
     [authedFetch],
   )
-  // admin: deliver the file (base64 through the backend, stored privately)
+  // admin: deliver one or more files (base64 through the backend, stored
+  // privately). Uses XHR so the admin sees real upload progress on large files.
+  // onProgress(percent) is called as the browser→server upload streams.
   const deliverOffer = useCallback(
-    async (offerId, { file, note }) => {
+    async (offerId, { files, file, note, onProgress } = {}) => {
+      const list = (files && files.length ? files : file ? [file] : []).filter(Boolean)
+      if (!list.length) return { error: 'Choose at least one file to deliver.' }
       try {
-        const dataBase64 = await fileToBase64(file)
-        const r = await authedFetch(`/api/admin/offers/${offerId}/deliver`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName: file.name, contentType: file.type, dataBase64, note: note || '' }),
-        })
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}))
-          return { error: j.detail || j.error || 'Delivery failed.' }
+        const payloadFiles = []
+        for (const f of list) {
+          payloadFiles.push({ fileName: f.name, contentType: f.type, dataBase64: await fileToBase64(f) })
         }
-        return { ok: true, offer: (await r.json()).offer }
+        const body = JSON.stringify({ files: payloadFiles, note: note || '' })
+        const send = (token) =>
+          new Promise((resolve) => {
+            const xhr = new XMLHttpRequest()
+            xhr.open('POST', `/api/admin/offers/${offerId}/deliver`)
+            xhr.setRequestHeader('Content-Type', 'application/json')
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
+            }
+            xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText })
+            xhr.onerror = () => resolve({ status: 0, text: '' })
+            xhr.send(body)
+          })
+        let r = await send(await getToken())
+        if ((r.status === 401 || r.status === 403) && supabaseRef.current) {
+          // stale token → refresh once and retry
+          try {
+            const { data } = await supabaseRef.current.auth.refreshSession()
+            if (data.session?.access_token) r = await send(data.session.access_token)
+          } catch {
+            /* ignore */
+          }
+        }
+        if (r.status < 200 || r.status >= 300) {
+          let detail = ''
+          try {
+            const j = JSON.parse(r.text)
+            detail = j.detail || j.error || ''
+          } catch {
+            /* ignore */
+          }
+          return { error: detail || 'Delivery failed.' }
+        }
+        return { ok: true, offer: JSON.parse(r.text).offer }
       } catch {
-        return { error: 'Delivery failed — network error. Try a smaller file.' }
+        return { error: 'Delivery failed — network error. Try smaller files.' }
       }
     },
-    [authedFetch],
+    [getToken],
   )
 
   // ---- reviews wall navigation ----

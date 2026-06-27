@@ -505,8 +505,10 @@ const publicOffer = (o) => ({
   status: o.status,
   paymentMethod: o.payment_method || null,
   deliveryFileName: o.delivery_file_name || null,
+  // names only — downloads go through the gated endpoint by index
+  deliveryFiles: Array.isArray(o.delivery_files) ? o.delivery_files.map((f) => ({ name: f.name })) : [],
   deliveryNote: o.delivery_note || null,
-  hasFile: !!o.delivery_file_url,
+  hasFile: !!o.delivery_file_url || (Array.isArray(o.delivery_files) && o.delivery_files.length > 0),
   createdAt: o.created_at,
   paidAt: o.paid_at || null,
   deliveredAt: o.delivered_at || null,
@@ -1207,37 +1209,48 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { status: 'sent', reason: 'not_confirmed_yet', offer: publicOffer(offer) })
   }
 
-  // 4) admin delivers the field (JSON: fileName, contentType, dataBase64, note)
+  // 4) admin delivers the field. JSON: { files: [{fileName, contentType, dataBase64}], note }
+  //    (legacy single-file body { fileName, contentType, dataBase64, note } still works)
   if (/^\/api\/admin\/offers\/[^/]+\/deliver$/.test(url) && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
     const offerId = url.split('/')[4]
-    const b = await readBody(req, 120e6) // up to ~90MB delivery file
+    const b = await readBody(req, 220e6) // shared budget for ~1–several delivery files
     const offer = await getOffer(offerId)
     if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
     if (!canDeliver(offer)) return sendJson(res, 409, { error: 'not_paid', detail: 'cannot deliver before payment' })
     if (offer.status === 'delivered') return sendJson(res, 200, { offer: publicOffer(offer) }) // idempotent
-    if (!b.dataBase64) return sendJson(res, 400, { error: 'no_file' })
-    let path = null
+    // normalise to a list of files (new array form, or the legacy single file)
+    const incoming = Array.isArray(b.files) && b.files.length
+      ? b.files
+      : (b.dataBase64 ? [{ fileName: b.fileName, contentType: b.contentType, dataBase64: b.dataBase64 }] : [])
+    if (!incoming.length) return sendJson(res, 400, { error: 'no_file' })
+    const stored = []
     try {
-      const buffer = Buffer.from(b.dataBase64, 'base64')
-      const up = await uploadPrivate(b.fileName || 'field', b.contentType, buffer, 'deliveries')
-      if (!up.ok) return sendJson(res, 502, { error: 'upload_failed', detail: up.detail })
-      path = up.path
+      for (const f of incoming) {
+        if (!f || !f.dataBase64) continue
+        const buffer = Buffer.from(f.dataBase64, 'base64')
+        const up = await uploadPrivate(f.fileName || 'field', f.contentType, buffer, 'deliveries')
+        if (!up.ok) return sendJson(res, 502, { error: 'upload_failed', detail: up.detail })
+        stored.push({ path: up.path, name: (f.fileName || 'field').toString().slice(0, 200) })
+      }
     } catch (e) {
       return sendJson(res, 500, { error: 'upload_error', detail: e?.message })
     }
+    if (!stored.length) return sendJson(res, 400, { error: 'no_file' })
     const out = await updateOffer(offerId, {
       status: 'delivered',
       delivered_at: new Date().toISOString(),
-      delivery_file_url: path,
-      delivery_file_name: (b.fileName || 'field').toString().slice(0, 200),
+      delivery_files: stored,
+      delivery_file_url: stored[0].path, // legacy compat = first file
+      delivery_file_name: stored[0].name,
       delivery_note: (b.note || '').toString().slice(0, 1000),
     })
+    const label = stored.length === 1 ? stored[0].name : `${stored.length} files`
     await insertMessage({
       conversation_id: offer.conversation_id,
       sender: 'admin',
       kind: 'delivery',
-      body: `Delivery sent · ${b.fileName || 'field'}`,
+      body: `Delivery sent · ${label}`,
       meta: { offerId },
     })
     return sendJson(res, 200, { offer: publicOffer(out.data || { ...offer, status: 'delivered' }) })
@@ -1250,13 +1263,19 @@ const server = http.createServer(async (req, res) => {
     const conv = parsedUrl.searchParams.get('conversationId') || ''
     const offer = await getOffer(offerId)
     if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
-    if (offer.status !== 'delivered' || !offer.delivery_file_url) return sendJson(res, 409, { error: 'not_delivered' })
+    // resolve which file to serve: ?i=index into delivery_files, else the legacy single file
+    const files = Array.isArray(offer.delivery_files) && offer.delivery_files.length
+      ? offer.delivery_files
+      : (offer.delivery_file_url ? [{ path: offer.delivery_file_url, name: offer.delivery_file_name }] : [])
+    const idx = Math.max(0, parseInt(parsedUrl.searchParams.get('i') || '0', 10) || 0)
+    const pick = files[idx] || files[0]
+    if (offer.status !== 'delivered' || !pick?.path) return sendJson(res, 409, { error: 'not_delivered' })
     // auth: the owning conversation (chat guests hold the secret id) OR an admin token
     const isOwner = conv && conv === offer.conversation_id
     const admin = isOwner ? null : await getAuthedUser(req)
     const isAdminUser = admin && (admin.email === ADMIN_EMAIL || admin.role === 'admin')
     if (!isOwner && !isAdminUser) return sendJson(res, 403, { error: 'forbidden' })
-    const signed = await signedDownloadUrl(offer.delivery_file_url, 'deliveries', 120)
+    const signed = await signedDownloadUrl(pick.path, 'deliveries', 120)
     if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
     res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })
     return res.end()

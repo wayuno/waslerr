@@ -164,10 +164,12 @@ export default function Admin() {
   const [offerBusy, setOfferBusy] = useState(false)
   const [offerErr, setOfferErr] = useState('')
   const [showOfferBuilder, setShowOfferBuilder] = useState(false)
-  const [deliverFile, setDeliverFile] = useState(null)
+  const [deliverFiles, setDeliverFiles] = useState([])
   const [deliverNote, setDeliverNote] = useState('')
   const [deliverBusy, setDeliverBusy] = useState(false)
   const [deliverErr, setDeliverErr] = useState('')
+  const [deliverPct, setDeliverPct] = useState(0)
+  const [deliverElapsed, setDeliverElapsed] = useState(0)
   const paidSeen = useRef(new Set())
   const threadRef = useRef(null)
 
@@ -558,16 +560,27 @@ export default function Admin() {
   }
   const submitDelivery = async (offerId) => {
     setDeliverErr('')
-    if (!deliverFile) return setDeliverErr('Choose a file to deliver.')
+    if (!deliverFiles.length) return setDeliverErr('Choose at least one file to deliver.')
     setDeliverBusy(true)
-    const res = await deliverOffer(offerId, { file: deliverFile, note: deliverNote })
+    setDeliverPct(0)
+    setDeliverElapsed(0)
+    const startedAt = Date.now()
+    const tick = setInterval(() => setDeliverElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000)
+    const res = await deliverOffer(offerId, {
+      files: deliverFiles,
+      note: deliverNote,
+      onProgress: (p) => setDeliverPct(p),
+    })
+    clearInterval(tick)
     setDeliverBusy(false)
     if (res?.error) return setDeliverErr(res.error)
-    setDeliverFile(null)
+    setDeliverFiles([])
     setDeliverNote('')
+    setDeliverPct(0)
     setConvOffers((prev) => prev.map((o) => (o.id === offerId ? res.offer : o)))
     showToast('Field delivered ✓')
   }
+  const fmtElapsed = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
   // ---- admin add-review ----
   const fileToBase64 = (file) =>
@@ -1329,13 +1342,52 @@ export default function Admin() {
                     <div className="wf-offer-deliver">
                       <div className="wf-offer-cleared">{activeFree ? '✓ Free field — ready to deliver' : '✓ Payment cleared — ready to deliver'}</div>
                       <label className="wf-field" style={{ marginTop: 10 }}>
-                        <span className="wf-field-label">Field file {deliverFile ? `· ${deliverFile.name}` : ''}</span>
-                        <input className="wf-input wf-file" type="file" onChange={(e) => setDeliverFile(e.target.files?.[0] || null)} />
+                        <span className="wf-field-label">Field files {deliverFiles.length ? `· ${deliverFiles.length} selected` : '· you can pick more than one'}</span>
+                        <input
+                          className="wf-input wf-file"
+                          type="file"
+                          multiple
+                          disabled={deliverBusy}
+                          onChange={(e) => setDeliverFiles((prev) => {
+                            const picked = Array.from(e.target.files || [])
+                            const seen = new Set(prev.map((f) => f.name + f.size))
+                            return [...prev, ...picked.filter((f) => !seen.has(f.name + f.size))]
+                          })}
+                        />
                       </label>
-                      <textarea className="wf-textarea" rows="2" value={deliverNote} onChange={(e) => setDeliverNote(e.target.value)} placeholder="Note to the customer (optional)…" />
+                      {deliverFiles.length > 0 && (
+                        <div className="wf-deliver-files">
+                          {deliverFiles.map((f, i) => (
+                            <span className="wf-deliver-file" key={f.name + f.size}>
+                              📄 {f.name}
+                              {!deliverBusy && (
+                                <button type="button" aria-label="Remove file" onClick={() => setDeliverFiles((prev) => prev.filter((_, j) => j !== i))}>✕</button>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <textarea className="wf-textarea" rows="2" value={deliverNote} onChange={(e) => setDeliverNote(e.target.value)} placeholder="Note to the customer (optional)…" disabled={deliverBusy} />
                       {deliverErr && <p className="wf-auth-error" style={{ margin: '4px 0 0' }}>{deliverErr}</p>}
+                      {deliverBusy && (
+                        <div className="wf-deliver-progress" role="status" aria-live="polite">
+                          <div className="wf-deliver-bar">
+                            <span style={{ width: `${deliverPct}%` }} className={deliverPct >= 100 ? 'done' : ''} />
+                          </div>
+                          <div className="wf-deliver-prog-row">
+                            <span className="wf-deliver-spin" aria-hidden="true" />
+                            <span>
+                              {deliverPct >= 100
+                                ? 'Finalizing on server…'
+                                : `Uploading ${deliverFiles.length > 1 ? deliverFiles.length + ' files' : 'file'} · ${deliverPct}%`}
+                              {' · '}{fmtElapsed(deliverElapsed)}
+                            </span>
+                          </div>
+                          <span className="wf-deliver-hint">Large files can take several minutes — keep this tab open.</span>
+                        </div>
+                      )}
                       <button className="wf-form-submit wf-mag" style={{ marginTop: 8 }} disabled={deliverBusy} onClick={() => submitDelivery(activeOffer.id)}>
-                        {deliverBusy ? 'Delivering…' : 'Deliver field →'}
+                        {deliverBusy ? `Delivering… ${deliverPct >= 100 ? '' : deliverPct + '%'}`.trim() : 'Deliver field →'}
                       </button>
                     </div>
                   ) : activeOffer?.status === 'delivered' ? (
