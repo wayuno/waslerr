@@ -41,7 +41,7 @@ function WallEmpty({ isAll, onShare }) {
 }
 
 export default function Reviews() {
-  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady } = useStore()
+  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady, purchasedIds, hasPurchased } = useStore()
   const ref = useRef(null)
   const formRef = useRef(null)
   useReveal(ref)
@@ -68,6 +68,9 @@ export default function Reviews() {
   const catOf = (id) => prodMap[id]?.line || 'desire'
   const clsOf = (id) => CAT_CLS[catOf(id)] || ''
 
+  // Only fields the visitor actually bought can be reviewed.
+  const purchasedProducts = products.filter((p) => purchasedIds.includes(String(p.id)))
+
   const avg = averageOf(wall)
   const sorted = [...wall].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts)
   const shown = sorted.filter((r) => {
@@ -80,6 +83,13 @@ export default function Reviews() {
   useEffect(() => {
     if (reviewField) setForm((prev) => ({ ...prev, field: reviewField }))
   }, [reviewField])
+  // keep the selected field to one the user actually purchased
+  useEffect(() => {
+    if (purchasedProducts.length && !purchasedIds.includes(String(form.field))) {
+      setForm((prev) => ({ ...prev, field: purchasedProducts[0].id }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchasedIds])
   useEffect(() => {
     if (reviewShare) {
       const t = setTimeout(() => {
@@ -136,6 +146,8 @@ export default function Reviews() {
   const submit = async (e) => {
     e.preventDefault()
     setErr('')
+    if (!hasPurchased) return setErr('Purchase a field to post your story.')
+    if (!purchasedIds.includes(String(form.field))) return setErr('You can only review a field you’ve purchased.')
     if (!form.name.trim()) return setErr('Add your name.')
     if (!form.rating) return setErr('Pick a star rating.')
     if (form.text.trim().length < 8) return setErr('Tell us a little more about what changed.')
@@ -210,8 +222,28 @@ export default function Reviews() {
         )}
       </section>
 
-      {/* ===== SHARE FORM ===== */}
+      {/* ===== SHARE FORM (buyers only) ===== */}
       <section className="wf-section" style={{ maxWidth: 640, margin: '0 auto', padding: '10px 28px 80px' }} ref={formRef}>
+        {!hasPurchased ? (
+          <div className="wf-share-locked" data-reveal>
+            <div className="wf-share-lock-icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="11" width="16" height="9" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+            </div>
+            <h2 className="wf-detail-title" style={{ fontSize: 'clamp(24px,3vw,30px)', marginBottom: 8 }}>
+              Purchase a field to post your story.
+            </h2>
+            <p className="wf-page-lead" style={{ margin: '0 auto 22px', maxWidth: 460 }}>
+              The wall is open to read for everyone — but only listeners who own a field can share a story.
+              Get yours, then come back and tell the wall what changed.
+            </p>
+            <button className="wf-btn wf-btn-gold wf-mag" onClick={() => navigate('fields')}>
+              Browse fields
+            </button>
+          </div>
+        ) : (
         <form className="wf-form-card wf-share-form" data-reveal onSubmit={submit}>
           <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
             Share your story
@@ -233,7 +265,7 @@ export default function Reviews() {
             <label className="wf-field">
               <span className="wf-field-label">Which field</span>
               <select className="wf-select" value={form.field} onChange={(e) => setForm({ ...form, field: e.target.value })}>
-                {products.map((p) => (
+                {purchasedProducts.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
                   </option>
@@ -313,8 +345,9 @@ export default function Reviews() {
           <button type="submit" className="wf-form-submit wf-mag" disabled={busy || uploading}>
             {busy ? 'Posting…' : uploading ? 'Uploading photo…' : 'Post to the wall'}
           </button>
-          <p className="wf-form-note">Open to everyone. Be honest — real stories help others choose.</p>
+          <p className="wf-form-note">Be honest — real stories help others choose.</p>
         </form>
+        )}
       </section>
 
       <footer className="wf-subfoot">
