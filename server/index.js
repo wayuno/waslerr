@@ -1059,7 +1059,10 @@ const server = http.createServer(async (req, res) => {
     const b = await readBody(req)
     const name = (b.name || '').toString().trim()
     const amount = Math.max(0, Number(b.amount) || 0)
-    if (!conversationId || !name || amount <= 0) return sendJson(res, 400, { error: 'bad_request', detail: 'name and amount > 0 required' })
+    if (!conversationId || !name) return sendJson(res, 400, { error: 'bad_request', detail: 'name required' })
+    // amount 0 = a free gift field: there's nothing to pay, so it skips straight
+    // to `paid` and the admin can deliver it right away (same delivery flow).
+    const isFree = amount === 0
     // find the customer email from the thread (best effort)
     const convMsgs = await getMessages(conversationId)
     const customerEmail = (convMsgs.find((m) => m.email)?.email) || null
@@ -1072,7 +1075,8 @@ const server = http.createServer(async (req, res) => {
       currency: (b.currency || 'USD').toString().toUpperCase().slice(0, 8),
       delivery_estimate: (b.deliveryEstimate || '6–7 days').toString().slice(0, 40),
       includes: Array.isArray(b.includes) ? b.includes.slice(0, 12).map((s) => String(s).slice(0, 120)) : [],
-      status: 'sent',
+      status: isFree ? 'paid' : 'sent',
+      paid_at: isFree ? new Date().toISOString() : null,
     }
     // Supersede any still-unpaid offer in this thread so the conversation never
     // gets stuck on one "awaiting payment" — a new field request gets a fresh
@@ -1087,7 +1091,7 @@ const server = http.createServer(async (req, res) => {
       conversation_id: conversationId,
       sender: 'admin',
       kind: 'offer',
-      body: `Field offered: ${offerRow.name} · $${amount}`,
+      body: `Field offered: ${offerRow.name} · ${isFree ? 'Free' : '$' + amount}`,
       meta: { offerId: out.data.id },
     })
     return sendJson(res, 200, { offer: publicOffer(out.data) })

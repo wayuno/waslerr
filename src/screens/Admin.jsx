@@ -160,7 +160,7 @@ export default function Admin() {
   const [reply, setReply] = useState('')
 
   // offer builder + delivery composer
-  const [offerForm, setOfferForm] = useState({ name: '', description: '', amount: '', includes: [], includeInput: '' })
+  const [offerForm, setOfferForm] = useState({ name: '', description: '', amount: '', deliveryEstimate: '6–7 days', includes: [], includeInput: '' })
   const [offerBusy, setOfferBusy] = useState(false)
   const [offerErr, setOfferErr] = useState('')
   const [showOfferBuilder, setShowOfferBuilder] = useState(false)
@@ -336,10 +336,11 @@ export default function Admin() {
   // active offer in the open support thread + a lookup for rendering cards
   const offerById = Object.fromEntries(convOffers.map((o) => [o.id, o]))
   const activeOffer = [...convOffers].reverse().find((o) => o.status !== 'cancelled') || null
+  const activeFree = activeOffer && Number(activeOffer.amount) === 0
   const convStatus =
     !activeOffer ? 'New request'
       : activeOffer.status === 'sent' ? 'Awaiting payment'
-      : activeOffer.status === 'paid' ? 'Paid'
+      : activeOffer.status === 'paid' ? (activeFree ? 'Free' : 'Paid')
       : activeOffer.status === 'delivered' ? 'Delivered'
       : 'New request'
 
@@ -537,23 +538,23 @@ export default function Admin() {
     setOfferErr('')
     const amount = parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) || 0
     if (!offerForm.name.trim()) return setOfferErr('Add a field name.')
-    if (amount <= 0) return setOfferErr('Set a price.')
+    if (amount < 0) return setOfferErr('Amount can’t be negative.') // 0 = free
     setOfferBusy(true)
     const res = await createOffer(activeConv, {
       name: offerForm.name.trim(),
       description: offerForm.description.trim(),
       amount,
       currency: 'USD',
-      deliveryEstimate: '6–7 days',
+      deliveryEstimate: offerForm.deliveryEstimate.trim() || '6–7 days',
       includes: offerForm.includes,
     })
     setOfferBusy(false)
     if (res?.error) return setOfferErr(res.error)
-    setOfferForm({ name: '', description: '', amount: '', includes: [], includeInput: '' })
+    setOfferForm({ name: '', description: '', amount: '', deliveryEstimate: '6–7 days', includes: [], includeInput: '' })
     setShowOfferBuilder(false)
     // the server supersedes any prior unpaid offer — reflect that locally too
     setConvOffers((prev) => [...prev.map((o) => (o.status === 'sent' ? { ...o, status: 'cancelled' } : o)), res.offer])
-    showToast('Field sent — awaiting payment')
+    showToast(amount === 0 ? 'Free field sent — ready to deliver' : 'Field sent — awaiting payment')
   }
   const submitDelivery = async (offerId) => {
     setDeliverErr('')
@@ -1326,7 +1327,7 @@ export default function Admin() {
                     </div>
                   ) : activeOffer?.status === 'paid' ? (
                     <div className="wf-offer-deliver">
-                      <div className="wf-offer-cleared">✓ Payment cleared — ready to deliver</div>
+                      <div className="wf-offer-cleared">{activeFree ? '✓ Free field — ready to deliver' : '✓ Payment cleared — ready to deliver'}</div>
                       <label className="wf-field" style={{ marginTop: 10 }}>
                         <span className="wf-field-label">Field file {deliverFile ? `· ${deliverFile.name}` : ''}</span>
                         <input className="wf-input wf-file" type="file" onChange={(e) => setDeliverFile(e.target.files?.[0] || null)} />
@@ -1351,9 +1352,12 @@ export default function Admin() {
                         <input className="wf-input" value={offerForm.name} onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })} placeholder="Field name (e.g. Focus & productivity field)" />
                         <textarea className="wf-textarea" rows="2" value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="Short description…" />
                         <div className="wf-form-row">
-                          <input className="wf-input" value={offerForm.amount} onChange={(e) => setOfferForm({ ...offerForm, amount: e.target.value })} placeholder="$ amount" />
-                          <span className="wf-offer-chip">Delivery · 6–7 days</span>
+                          <input className="wf-input" value={offerForm.amount} onChange={(e) => setOfferForm({ ...offerForm, amount: e.target.value })} placeholder="$ amount (0 = free)" />
+                          <input className="wf-input" value={offerForm.deliveryEstimate} onChange={(e) => setOfferForm({ ...offerForm, deliveryEstimate: e.target.value })} placeholder="Delivery time (e.g. 6–7 days)" />
                         </div>
+                        {parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' && (
+                          <p className="wf-offer-free-note">Free field — the customer pays nothing and you can deliver it right away.</p>
+                        )}
                         <div className="wf-offer-inc-row">
                           <input className="wf-input" value={offerForm.includeInput} onChange={(e) => setOfferForm({ ...offerForm, includeInput: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInclude() } }} placeholder="Add an 'includes' point + Enter" />
                           <button type="button" className="wf-coupon-apply" onClick={addInclude}>Add</button>
@@ -1370,7 +1374,9 @@ export default function Admin() {
                         {offerErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{offerErr}</p>}
                         <div className="wf-form-row" style={{ marginTop: 6 }}>
                           <button type="button" className="wf-back" onClick={() => setShowOfferBuilder(false)}>Cancel</button>
-                          <button type="submit" className="wf-form-submit wf-mag" disabled={offerBusy}>{offerBusy ? 'Sending…' : 'Send field →'}</button>
+                          <button type="submit" className="wf-form-submit wf-mag" disabled={offerBusy}>
+                            {offerBusy ? 'Sending…' : parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' ? 'Send free field →' : 'Send field →'}
+                          </button>
                         </div>
                       </form>
                     ) : (
