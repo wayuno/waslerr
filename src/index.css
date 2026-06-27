@@ -4545,26 +4545,55 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 /* delivery reveal card */
 .wf-delivery-card {
   position: relative; overflow: hidden;
-  border-radius: 16px; padding: 20px 18px; margin: 2px 0; text-align: center;
-  background: linear-gradient(180deg, rgba(18, 30, 22, 0.8), rgba(16, 18, 14, 0.9));
-  border: 1px solid rgba(75, 200, 130, 0.34);
+  border-radius: 18px; padding: 22px 20px; margin: 2px 0; text-align: center;
+  background: linear-gradient(180deg, rgba(30, 23, 9, 0.72), rgba(13, 11, 8, 0.94));
+  border: 1px solid rgba(212, 175, 55, 0.34);
+  box-shadow: 0 22px 60px -32px rgba(212, 175, 55, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   animation: wf-card-rise 0.45s cubic-bezier(.22,1,.36,1) both;
 }
 .wf-delivery-shine {
   position: absolute; top: 0; left: 0; width: 40%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(246, 221, 146, 0.16), transparent);
+  background: linear-gradient(90deg, transparent, rgba(246, 221, 146, 0.2), transparent);
   animation: wf-offer-shine 2.4s cubic-bezier(.22,1,.36,1) 0.2s; pointer-events: none;
 }
 .wf-delivery-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(180deg, #f6dd92, #d8b15c); color: #14210f;
-  margin-bottom: 10px; animation: wf-deliv-pop 0.5s cubic-bezier(.22,1,.36,1) 0.15s both;
+  width: 50px; height: 50px; border-radius: 15px;
+  background: linear-gradient(180deg, #f6dd92, #d8b15c); color: #1a1407;
+  box-shadow: 0 12px 28px -10px rgba(212, 175, 55, 0.6);
+  margin-bottom: 12px; animation: wf-deliv-pop 0.5s cubic-bezier(.22,1,.36,1) 0.15s both;
 }
-.wf-delivery-eyebrow { font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: #4bc882; }
-.wf-delivery-name { font-family: var(--wf-serif); font-size: 19px; color: #eaf4ea; margin: 5px 0 8px; }
-.wf-delivery-note { font-size: 13px; line-height: 1.55; color: var(--wf-silver); margin: 0 0 10px; }
-.wf-delivery-file { display: inline-block; font-size: 12px; color: var(--wf-mute); font-family: var(--wf-mono); }
+.wf-delivery-eyebrow { font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--wf-gold); }
+.wf-delivery-name { font-family: var(--wf-serif); font-size: 22px; color: #f3efe6; margin: 6px 0 14px; }
+.wf-delivery-files-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; text-align: left; }
+.wf-delivery-filecard {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 13px; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(212, 175, 55, 0.18);
+  font-family: var(--wf-sans);
+}
+button.wf-delivery-filecard { cursor: pointer; color: inherit; transition: border-color 0.2s, background 0.2s; }
+button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); background: rgba(0, 0, 0, 0.42); }
+.wf-delivery-fileic {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 10px;
+  background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.26); color: var(--wf-gold);
+}
+.wf-delivery-fileinfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.wf-delivery-filename { font-size: 13.5px; color: #ece7da; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wf-delivery-filemeta { font-size: 11px; color: var(--wf-mute); font-family: var(--wf-mono); letter-spacing: 0.03em; }
+.wf-delivery-filecard > svg { color: var(--wf-gold); flex-shrink: 0; }
+.wf-delivery-note { font-size: 12.5px; line-height: 1.55; color: var(--wf-silver); margin: 0 0 14px; text-align: center; }
+.wf-delivery-download {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+  padding: 13px; border-radius: 12px; border: none; cursor: pointer;
+  font-family: var(--wf-sans); font-size: 14px; font-weight: 600; color: #1a1407;
+  background: linear-gradient(180deg, #f6dd92, #d8b15c);
+  box-shadow: 0 14px 32px -14px rgba(212, 175, 55, 0.7);
+  transition: filter 0.2s, transform 0.2s;
+}
+.wf-delivery-download:hover { filter: brightness(1.05); }
+.wf-delivery-foot { margin: 12px 0 0; font-size: 10.5px; letter-spacing: 0.04em; color: var(--wf-mute); font-family: var(--wf-mono); }
 
 /* in-widget secure checkout (slide-up over the chat panel) */
 .wf-cocheckout {
@@ -4659,10 +4688,6 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 .wf-deliver-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(75,200,130,0.3); border-top-color: #4bc882; animation: wf-spin 0.8s linear infinite; flex-shrink: 0; }
 .wf-deliver-hint { font-size: 11px; color: var(--wf-mute); }
 /* customer — multiple delivered files */
-.wf-delivery-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-.wf-delivery-dl { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 14px; border-radius: 11px; background: var(--wf-glass-2); border: 1px solid rgba(212,175,55,0.32); color: var(--wf-gold); font-family: var(--wf-sans); font-size: 13px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
-.wf-delivery-dl:hover { border-color: var(--wf-gold); background: var(--wf-glass); }
-.wf-delivery-dl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .wf-offer-create-btn { width: 100%; margin-top: 4px; background: var(--wf-glass); border: 1px dashed rgba(212,175,55,0.4); color: var(--wf-gold); border-radius: 11px; padding: 11px; font-size: 13.5px; cursor: pointer; font-family: var(--wf-sans); transition: border-color 0.2s, background 0.2s; }
 .wf-offer-create-btn:hover { border-color: var(--wf-gold); background: var(--wf-glass-2); }
 .wf-offer-builder { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid rgba(212,175,55,0.3); border-radius: 12px; margin-top: 4px; background: var(--wf-glass); }

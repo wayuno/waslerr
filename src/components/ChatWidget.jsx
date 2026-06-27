@@ -30,6 +30,29 @@ const greeting = () => {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
 }
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+// delivered-file helpers — pretty size + extension chip ("48.2 MB · .zip")
+const fmtBytes = (n) => {
+  if (!n || n <= 0) return ''
+  const mb = n / (1024 * 1024)
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`
+}
+const fileExt = (name = '') => {
+  const m = /\.([a-z0-9]+)$/i.exec(name)
+  return m ? '.' + m[1].toLowerCase() : 'file'
+}
+const fileMeta = (f) => [fmtBytes(f.size), fileExt(f.name)].filter(Boolean).join(' · ')
+const ShieldCheck = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+)
+const FileGlyph = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 3v5h5" />
+    <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+  </svg>
+)
 
 // ---- gold offer card (the field offered by the admin) ----
 function OfferCard({ offer, onPay }) {
@@ -80,32 +103,52 @@ function DeliveryCard({ offer, onDownload }) {
     : offer.deliveryFileName
       ? [{ name: offer.deliveryFileName }]
       : []
+  const single = files.length === 1
   return (
     <div className="wf-delivery-card">
       <div className="wf-delivery-shine" aria-hidden="true" />
       <span className="wf-delivery-badge" aria-hidden="true">
-        <CheckIcon size={22} stroke={2.6} />
+        <ShieldCheck size={24} />
       </span>
-      <div className="wf-delivery-eyebrow">Your field has arrived</div>
+      <div className="wf-delivery-eyebrow">✦ Your field is ready</div>
       <div className="wf-delivery-name">{offer.name}</div>
-      {offer.deliveryNote && <p className="wf-delivery-note">{offer.deliveryNote}</p>}
-      {files.length <= 1 ? (
-        <>
-          {files[0]?.name && <span className="wf-delivery-file">📄 {files[0].name}</span>}
-          <button className="wf-offer-pay wf-mag" onClick={() => onDownload(offer, 0)} style={{ marginTop: 14 }}>
-            <DownloadIcon size={15} /> Download field
-          </button>
-        </>
-      ) : (
-        <div className="wf-delivery-list">
-          {files.map((f, i) => (
-            <button className="wf-delivery-dl" key={i} onClick={() => onDownload(offer, i)}>
-              <span className="wf-delivery-dl-name">📄 {f.name}</span>
-              <DownloadIcon size={15} />
+
+      <div className="wf-delivery-files-wrap">
+        {files.map((f, i) =>
+          single ? (
+            <div className="wf-delivery-filecard" key={i}>
+              <span className="wf-delivery-fileic">
+                <FileGlyph />
+              </span>
+              <span className="wf-delivery-fileinfo">
+                <span className="wf-delivery-filename">{f.name}</span>
+                {fileMeta(f) && <span className="wf-delivery-filemeta">{fileMeta(f)}</span>}
+              </span>
+            </div>
+          ) : (
+            <button type="button" className="wf-delivery-filecard" key={i} onClick={() => onDownload(offer, i)}>
+              <span className="wf-delivery-fileic">
+                <FileGlyph />
+              </span>
+              <span className="wf-delivery-fileinfo">
+                <span className="wf-delivery-filename">{f.name}</span>
+                {fileMeta(f) && <span className="wf-delivery-filemeta">{fileMeta(f)}</span>}
+              </span>
+              <DownloadIcon size={16} />
             </button>
-          ))}
-        </div>
+          ),
+        )}
+      </div>
+
+      {offer.deliveryNote && <p className="wf-delivery-note">{offer.deliveryNote}</p>}
+
+      {single && (
+        <button className="wf-delivery-download wf-mag" onClick={() => onDownload(offer, 0)}>
+          <DownloadIcon size={16} /> Download field
+        </button>
       )}
+
+      <p className="wf-delivery-foot">Lifetime re-downloads · revisions open</p>
     </div>
   )
 }
