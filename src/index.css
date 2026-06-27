@@ -2395,7 +2395,9 @@ a {
 @keyframes wf-shimmer-sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 60%, 100% { transform: translateX(360%) skewX(-18deg); } }
 
 .wf-notif { position: relative; display: inline-flex; }
-.wf-notif-mobile { display: inline-flex; align-items: center; margin-right: 10px; }
+/* bell + cart sit on the right, right next to the hamburger (margin-left:auto
+   groups them + the burger together since the inline desktop nav is hidden) */
+.wf-notif-mobile { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; margin-right: 10px; }
 .wf-notif-btn {
   position: relative;
   width: 40px;
@@ -3406,6 +3408,9 @@ a {
   [data-reveal],
   [data-anim] { opacity: 1 !important; transform: none !important; transition: none !important; }
 }
+
+/* hide the floating chat button whenever the menu drawer is open (all sizes) */
+body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *,
