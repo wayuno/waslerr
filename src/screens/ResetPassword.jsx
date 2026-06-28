@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import Background from '../components/Background'
+import PasswordInput from '../components/PasswordInput'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
@@ -85,25 +86,11 @@ export default function ResetPassword() {
 
           <label className="wf-field" style={{ width: '100%' }}>
             <span className="wf-field-label">New password</span>
-            <input
-              className="wf-input"
-              type="password"
-              value={pass}
-              onChange={(e) => setPass(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
+            <PasswordInput value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="new-password" />
           </label>
           <label className="wf-field" style={{ width: '100%' }}>
             <span className="wf-field-label">Confirm password</span>
-            <input
-              className="wf-input"
-              type="password"
-              value={pass2}
-              onChange={(e) => setPass2(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
+            <PasswordInput value={pass2} onChange={(e) => setPass2(e.target.value)} autoComplete="new-password" />
           </label>
 
           {error && <p className="wf-auth-error">{error}</p>}

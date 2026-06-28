@@ -1224,6 +1224,28 @@ a {
 .wf-textarea:focus { border-color: var(--wf-gold); background-color: rgba(255, 255, 255, 0.05); }
 .wf-input::placeholder,
 .wf-textarea::placeholder { color: #5f6573; }
+
+/* password field with show/hide eye toggle */
+.wf-pass-wrap { position: relative; width: 100%; }
+.wf-pass-wrap .wf-input { padding-right: 44px; }
+.wf-pass-eye {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  color: var(--wf-mute);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.wf-pass-eye:hover { color: var(--wf-gold); }
 .wf-select:invalid { color: #5f6573; }
 .wf-form-submit {
   margin-top: 4px;
