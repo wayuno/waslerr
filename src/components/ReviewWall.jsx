@@ -56,8 +56,7 @@ export default function ReviewWall() {
     }
   }, [open])
 
-  // nothing published yet → don't render an empty section
-  if (!wall.length) return null
+  const hasReviews = wall.length > 0
 
   const onField = (id) => {
     setOpen(false)
@@ -97,7 +96,7 @@ export default function ReviewWall() {
             words.
           </p>
           <div className="wf-rw-stat" data-reveal>
-            {wall.length.toLocaleString('en-US')} voices · every field
+            {hasReviews ? `${wall.length.toLocaleString('en-US')} voices · every field` : 'Be the first to share your story'}
           </div>
         </div>
 
@@ -115,10 +114,15 @@ export default function ReviewWall() {
         )}
 
         <div className="wf-rw-cta" data-reveal>
-          <button className="wf-btn wf-btn-gold wf-mag wf-rw-open" onClick={() => setOpen(true)}>
-            Open the review wall <ArrowRight size={15} />
-          </button>
-          <button className="wf-btn wf-btn-glass wf-mag" onClick={() => openReviews(null, true)}>
+          {hasReviews && (
+            <button className="wf-btn wf-btn-gold wf-mag wf-rw-open" onClick={() => setOpen(true)}>
+              Open the review wall <ArrowRight size={15} />
+            </button>
+          )}
+          <button
+            className={`wf-btn wf-mag ${hasReviews ? 'wf-btn-glass' : 'wf-btn-gold wf-rw-open'}`}
+            onClick={() => openReviews(null, true)}
+          >
             Share your review
           </button>
         </div>
