@@ -45,7 +45,14 @@ export default function Detail() {
   const total = priceOf(f)
   const free = total === 0
   const img = f.image_url || f.img
-  const benefits = benefitsById[f.id]?.length ? benefitsById[f.id] : free ? freeBenefits : genericBenefits
+  // per-field benefits set in admin win; otherwise fall back to the static lists
+  const benefits = f.benefits?.length
+    ? f.benefits
+    : benefitsById[f.id]?.length
+      ? benefitsById[f.id]
+      : free
+        ? freeBenefits
+        : genericBenefits
   const sold = Number(f.sold) || 0
   const soldStr = sold.toLocaleString('en-US')
 

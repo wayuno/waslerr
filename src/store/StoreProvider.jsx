@@ -19,6 +19,7 @@ const normalizeFreeField = (row) => ({
   image_url: row.image_url || null,
   sold: Number(row.sold_count) || 0,
   hasAudio: !!row.audio_url,
+  benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
   freq: 200,
 })
 
@@ -659,7 +660,7 @@ export function StoreProvider({ children }) {
         const res = await fetch('/api/admin/free-fields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, image_url, audio_url }),
+          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, benefits: form.benefits || [], image_url, audio_url }),
         })
         if (!res.ok) return { error: `Publish failed (${res.status})` }
         await loadFreeFields()

@@ -32,6 +32,42 @@ function SoldEditor({ item, isFree, soldEdits, setSoldEdits, saveSold }) {
     </div>
   )
 }
+// Per-field benefits editor: add (Enter / Add button), click a chip to remove.
+// Used in both the create and edit field forms (free + paid).
+function BenefitsEditor({ list, setList }) {
+  const [draft, setDraft] = useState('')
+  const add = () => {
+    const v = draft.trim()
+    if (!v) return
+    setList([...list, v].slice(0, 30))
+    setDraft('')
+  }
+  return (
+    <label className="wf-field">
+      <span className="wf-field-label">Benefits · {list.length} — what this field rewires</span>
+      <div className="wf-offer-inc-row">
+        <input
+          className="wf-input"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder="Add a benefit + Enter"
+        />
+        <button type="button" className="wf-coupon-apply" onClick={add}>Add</button>
+      </div>
+      {list.length > 0 && (
+        <div className="wf-offer-inc-chips">
+          {list.map((b, i) => (
+            <span key={i} className="wf-offer-inc-chip" onClick={() => setList(list.filter((_, j) => j !== i))}>
+              {b} ✕
+            </span>
+          ))}
+        </div>
+      )}
+    </label>
+  )
+}
+
 const ZERO_STATS = {
   revenueWeek: 0, revenueMonth: 0, revenueYear: 0, revenueTotal: 0,
   salesWeek: 0, salesMonth: 0, salesYear: 0, salesTotal: 0,
@@ -95,7 +131,7 @@ export default function Admin() {
   useMagnetic(ref)
 
   // product add form
-  const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '' })
+  const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [] })
   const [file, setFile] = useState(null)
   const [audioFile, setAudioFile] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -105,7 +141,7 @@ export default function Admin() {
 
   // per-field edit panel
   const [editId, setEditId] = useState(null)
-  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', isFree: false })
+  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], isFree: false })
   const [editImg, setEditImg] = useState(null)
   const [editAudio, setEditAudio] = useState(null)
   const [editBusy, setEditBusy] = useState(false)
@@ -385,7 +421,7 @@ export default function Admin() {
     const res =
       priceNum === 0
         ? await addFreeField(
-            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.' },
+            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.', benefits: form.benefits },
             file,
             audioFile,
           )
@@ -395,6 +431,7 @@ export default function Admin() {
               line: form.category.toLowerCase(),
               price: priceNum,
               description: form.desc.trim() || 'A new Waslerr field.',
+              benefits: form.benefits,
             },
             file,
             audioFile,
@@ -404,7 +441,7 @@ export default function Admin() {
       setErr(res.error)
       return
     }
-    setForm({ title: '', category: 'DESIRE', price: '', desc: '' })
+    setForm({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [] })
     setFile(null)
     setAudioFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -422,6 +459,7 @@ export default function Admin() {
       category: (p.line || 'desire').toUpperCase(),
       price: isFree ? '' : String(p.priceNum ?? ''),
       desc: p.desc || '',
+      benefits: Array.isArray(p.benefits) ? p.benefits : [],
       isFree,
     })
   }
@@ -429,7 +467,7 @@ export default function Admin() {
     setEditErr('')
     if (!editForm.title.trim()) return setEditErr('Title is required.')
     setEditBusy(true)
-    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc }
+    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits }
     if (!editForm.isFree) patch.price = parseFloat(String(editForm.price).replace(/[^0-9.]/g, '')) || 0
     const res = await updateProduct(editId, editForm.isFree, patch, editImg, editAudio)
     setEditBusy(false)
@@ -459,6 +497,7 @@ export default function Admin() {
         <span className="wf-field-label">Description</span>
         <textarea className="wf-textarea" rows="2" value={editForm.desc} onChange={(e) => setEditForm({ ...editForm, desc: e.target.value })} />
       </label>
+      <BenefitsEditor list={editForm.benefits} setList={(b) => setEditForm((f) => ({ ...f, benefits: b }))} />
       <label className="wf-field">
         <span className="wf-field-label">Replace image {editImg ? `· ${editImg.name}` : '(keep current)'}</span>
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
@@ -859,6 +898,7 @@ export default function Admin() {
                 <span className="wf-field-label">Description</span>
                 <textarea className="wf-textarea" rows="3" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="What does this field encode?" />
               </label>
+              <BenefitsEditor list={form.benefits} setList={(b) => setForm((f) => ({ ...f, benefits: b }))} />
               <label className="wf-field">
                 <span className="wf-field-label">Artwork image {file ? `· ${file.name}` : '(optional)'}</span>
                 <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
