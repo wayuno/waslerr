@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react'
-import { useStore } from '../store/StoreProvider'
+import { useEffect, useMemo, useState } from 'react'
 
 const normVersions = (raw) =>
   Array.isArray(raw)
@@ -13,51 +12,27 @@ const normVersions = (raw) =>
         }))
     : []
 
-// Per-product version picker: visitors switch "cuts" (price + tagline update
-// with animation); admins add/remove/edit versions inline (auto-saved to the
-// field's `versions` column). There is no fixed limit on the number of versions.
-export default function VersionPicker({ field, isFree }) {
-  const { isAdmin, updateProduct } = useStore()
-  const [versions, setVersions] = useState(() => normVersions(field.versions))
-  const [sel, setSel] = useState(() => normVersions(field.versions)[0]?.id ?? null)
-  const [admin, setAdmin] = useState(false)
-  const saveTimer = useRef()
-
-  // visitors with no versions configured see nothing
-  if (!isAdmin && versions.length === 0) return null
+// Visitor version picker (paid fields): switch "cuts" — price + tagline update
+// with animation. The chosen version flows up via onSelect so the buy button
+// charges that price and the buyer receives that version's audio. Admins manage
+// versions from the Field control panel, not here.
+export default function VersionPicker({ field, isFree, onSelect }) {
+  const versions = useMemo(() => normVersions(field.versions), [field.versions])
+  const [sel, setSel] = useState(() => versions[0]?.id ?? null)
 
   const selected = versions.find((v) => v.id === sel) || versions[0] || null
 
-  const persist = (next) => {
-    setVersions(next)
-    if (!isAdmin) return
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => updateProduct(field.id, isFree, { versions: next }), 700)
-  }
+  useEffect(() => {
+    onSelect?.(selected || null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel, versions])
 
-  const addVersion = () => {
-    const id = versions.reduce((m, v) => Math.max(m, v.id), 0) + 1
-    const price = (versions[versions.length - 1]?.price ?? 0) + 33
-    persist([...versions, { id, name: 'New version', price, tagline: '' }])
-    setSel(id)
-  }
-  const removeVersion = (id) => {
-    if (versions.length <= 1) return
-    const next = versions.filter((v) => v.id !== id)
-    persist(next)
-    if (sel === id) setSel(next[0].id)
-  }
-  const editSel = (patch) => selected && persist(versions.map((v) => (v.id === selected.id ? { ...v, ...patch } : v)))
+  if (isFree || versions.length === 0) return null
 
   return (
-    <div className={`wf-vp${admin ? ' admin' : ''}`} data-reveal>
+    <div className="wf-vp" data-reveal>
       <div className="wf-vp-head">
         <span className="wf-vp-label">Version · choose your cut</span>
-        {isAdmin && (
-          <button className={`wf-vp-admin${admin ? ' on' : ''}`} onClick={() => setAdmin((a) => !a)}>
-            {admin ? 'Done' : 'Admin'}
-          </button>
-        )}
       </div>
 
       <div className="wf-vp-chips">
@@ -66,43 +41,14 @@ export default function VersionPicker({ field, isFree }) {
             <button className="wf-vp-chip-btn" onClick={() => setSel(v.id)}>
               {v.name || 'Untitled'}
             </button>
-            {admin && versions.length > 1 && (
-              <button className="wf-vp-chip-x" onClick={() => removeVersion(v.id)} aria-label={`Remove ${v.name}`}>
-                ✕
-              </button>
-            )}
           </span>
         ))}
-        {admin && (
-          <button className="wf-vp-add" onClick={addVersion} aria-label="Add version">
-            +
-          </button>
-        )}
       </div>
 
       {selected && (
         <div className="wf-vp-detail" key={selected.id}>
           <span className="wf-vp-price">${selected.price}</span>
           {selected.tagline && <span className="wf-vp-tagline">{selected.tagline}</span>}
-        </div>
-      )}
-
-      {admin && selected && (
-        <div className="wf-vp-edit">
-          <label className="wf-field">
-            <span className="wf-field-label">Version name</span>
-            <input className="wf-input" value={selected.name} onChange={(e) => editSel({ name: e.target.value })} />
-          </label>
-          <div className="wf-form-row">
-            <label className="wf-field">
-              <span className="wf-field-label">Price ($)</span>
-              <input className="wf-input" type="number" min="0" value={selected.price} onChange={(e) => editSel({ price: Math.max(0, Number(e.target.value) || 0) })} />
-            </label>
-            <label className="wf-field">
-              <span className="wf-field-label">Tagline</span>
-              <input className="wf-input" value={selected.tagline} onChange={(e) => editSel({ tagline: e.target.value })} />
-            </label>
-          </div>
         </div>
       )}
     </div>

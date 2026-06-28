@@ -28,6 +28,7 @@ export default function Detail() {
   const [saved, setSaved] = useState(false)
   const [benefitsOpen, setBenefitsOpen] = useState(false)
   const [methodOpen, setMethodOpen] = useState(false)
+  const [selVersion, setSelVersion] = useState(null)
   const ref = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
@@ -39,6 +40,7 @@ export default function Detail() {
     setSaved(false)
     setBenefitsOpen(false)
     setMethodOpen(false)
+    setSelVersion(null)
   }, [selectedProduct])
 
   if (!selectedProduct) return null
@@ -150,7 +152,7 @@ export default function Detail() {
               </div>
             )}
 
-            <VersionPicker field={f} isFree={free} />
+            <VersionPicker field={f} isFree={free} onSelect={setSelVersion} />
 
             <p className="wf-detail-desc" data-reveal>
               {f.desc}
@@ -171,8 +173,8 @@ export default function Detail() {
                 </button>
               ) : (
                 <>
-                  <button className="wf-btn wf-btn-gold wf-mag" onClick={() => goCheckout(f.id)}>
-                    Buy now — {f.price || `$${total}`}
+                  <button className="wf-btn wf-btn-gold wf-mag" onClick={() => goCheckout(f.id, selVersion?.id ?? null)}>
+                    Buy now — {selVersion ? `$${selVersion.price}` : f.price || `$${total}`}
                   </button>
                   <button className="wf-btn wf-btn-glass wf-mag" onClick={() => addToCart(f)}>
                     <CartIcon size={16} /> Add to cart
