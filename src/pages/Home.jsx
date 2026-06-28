@@ -164,12 +164,6 @@ export default function Home({ onNavigate }) {
           </button>
         </div>
 
-        <div className="wf-trust" data-anim>
-          <span className="stars">★★★★★</span>
-          <span className="sep" />
-          <span>50,000+ listeners across 60 countries</span>
-        </div>
-
         <div className="wf-scrollcue">
           <label>Scroll</label>
           <span className="line">

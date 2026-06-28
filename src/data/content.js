@@ -179,7 +179,6 @@ export const tickerItems = [
   'Headphone-optimized',
   '50,000+ listeners',
   'New fields monthly',
-  '30-day guarantee',
 ]
 
 // --- Community links ---
