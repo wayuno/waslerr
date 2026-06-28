@@ -155,11 +155,6 @@ export default function Home({ onNavigate }) {
           <DecryptText text="Reshape your reality." order={1} className="accent" />
         </h1>
 
-        <p className="wf-hero-sub" data-anim>
-          Cinematic frequency fields that encode confidence, wealth and magnetism directly into the subconscious — while
-          the conscious mind simply listens.
-        </p>
-
         <div className="wf-hero-cta" data-anim>
           <button className="wf-btn wf-btn-gold wf-mag" onClick={() => onNavigate({ page: 'fields' })}>
             Start your transformation
