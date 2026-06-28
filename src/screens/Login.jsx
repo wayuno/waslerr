@@ -5,8 +5,8 @@ import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 
 export default function Login() {
-  const { signIn, signUp } = useStore()
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup'
+  const { signIn, signUp, requestPasswordReset } = useStore()
+  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'forgot'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
@@ -18,11 +18,24 @@ export default function Login() {
   useMagnetic(ref)
 
   const signup = mode === 'signup'
+  const forgot = mode === 'forgot'
 
   const submit = async (e) => {
     e.preventDefault()
     setError('')
     setInfo('')
+    if (forgot) {
+      if (!email.trim()) {
+        setError('Enter your account email.')
+        return
+      }
+      setBusy(true)
+      const res = await requestPasswordReset(email)
+      setBusy(false)
+      if (res?.error) setError(res.error)
+      else setInfo('If an account exists for that email, a reset link is on its way. Check your inbox.')
+      return
+    }
     if (!email.trim() || !pass) {
       setError('Enter your email and password.')
       return
@@ -47,11 +60,15 @@ export default function Login() {
           <span className="wf-monogram" style={{ width: 46, height: 46, fontSize: 26, marginBottom: 22 }}>
             W
           </span>
-          <h1 className="wf-auth-title">{signup ? 'Create your account' : 'Welcome back'}</h1>
+          <h1 className="wf-auth-title">
+            {forgot ? 'Reset your password' : signup ? 'Create your account' : 'Welcome back'}
+          </h1>
           <p className="wf-auth-sub">
-            {signup
-              ? 'Join Waslerr Fields and unlock your first field.'
-              : 'Sign in to access your fields and the Inner Circle.'}
+            {forgot
+              ? 'Enter your email and we’ll send you a link to set a new password.'
+              : signup
+                ? 'Join Waslerr Fields and unlock your first field.'
+                : 'Sign in to access your fields and the Inner Circle.'}
           </p>
 
           {signup && (
@@ -78,37 +95,54 @@ export default function Login() {
               autoComplete="email"
             />
           </label>
-          <label className="wf-field" style={{ width: '100%' }}>
-            <span className="wf-field-label">Password</span>
-            <input
-              className="wf-input"
-              type="password"
-              value={pass}
-              onChange={(e) => setPass(e.target.value)}
-              placeholder="••••••••"
-              autoComplete={signup ? 'new-password' : 'current-password'}
-            />
-          </label>
+          {!forgot && (
+            <label className="wf-field" style={{ width: '100%' }}>
+              <span className="wf-field-label">Password</span>
+              <input
+                className="wf-input"
+                type="password"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                placeholder="••••••••"
+                autoComplete={signup ? 'new-password' : 'current-password'}
+              />
+            </label>
+          )}
+
+          {mode === 'signin' && (
+            <button
+              type="button"
+              className="wf-auth-toggle"
+              style={{ alignSelf: 'flex-end', marginTop: 4, fontSize: 13 }}
+              onClick={() => {
+                setMode('forgot')
+                setError('')
+                setInfo('')
+              }}
+            >
+              Forgot password?
+            </button>
+          )}
 
           {error && <p className="wf-auth-error">{error}</p>}
           {info && <p className="wf-auth-info">{info}</p>}
 
           <button type="submit" className="wf-form-submit wf-mag" style={{ width: '100%', marginTop: 6 }} disabled={busy}>
-            {busy ? 'Please wait…' : signup ? 'Create account' : 'Enter the field'}
+            {busy ? 'Please wait…' : forgot ? 'Send reset link' : signup ? 'Create account' : 'Enter the field'}
           </button>
 
           <p className="wf-form-note" style={{ marginTop: 16 }}>
-            {signup ? 'Already have an account? ' : 'New here? '}
+            {forgot ? 'Remembered it? ' : signup ? 'Already have an account? ' : 'New here? '}
             <button
               type="button"
               className="wf-auth-toggle"
               onClick={() => {
-                setMode(signup ? 'signin' : 'signup')
+                setMode(signup || forgot ? 'signin' : 'signup')
                 setError('')
                 setInfo('')
               }}
             >
-              {signup ? 'Sign in' : 'Create an account'}
+              {signup || forgot ? 'Sign in' : 'Create an account'}
             </button>
           </p>
         </form>
