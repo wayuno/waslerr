@@ -6378,3 +6378,172 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   .wf-mv-card, .wf-mv-pulse, .wf-mv-orbit, .wf-mv-tile, .wf-mv-sweep, .wf-mv-blink, .wf-mv.glow::before { animation: none !important; }
   .wf-mv-card { opacity: 1; transform: none; }
 }
+
+/* ============================================================
+   Homepage Review Wall — teaser marquee + full-screen overlay
+   ============================================================ */
+.wf-rw-stat {
+  margin-top: 20px;
+  font-family: var(--wf-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+}
+
+/* teaser marquee */
+.wf-rw-teaser {
+  margin: 40px 0 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.wf-rw-row { overflow: hidden; }
+.wf-rw-track { display: flex; gap: 16px; width: max-content; animation: wf-rw-marquee 46s linear infinite; }
+.wf-rw-track--rev { animation-direction: reverse; animation-duration: 54s; }
+.wf-rw-teaser:hover .wf-rw-track { animation-play-state: paused; }
+@keyframes wf-rw-marquee { to { transform: translateX(-50%); } }
+
+.wf-rw-mini {
+  flex: none;
+  width: 300px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--wf-rule);
+  background: linear-gradient(180deg, rgba(20, 17, 11, 0.92), rgba(12, 10, 7, 0.94));
+  cursor: pointer;
+  transition: border-color 0.3s var(--wf-ease), transform 0.3s var(--wf-ease);
+}
+.wf-rw-mini:hover { border-color: rgba(212, 175, 55, 0.35); transform: translateY(-3px); }
+.wf-rw-mini-head { display: flex; align-items: center; gap: 11px; margin-bottom: 11px; }
+.wf-rw-av {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--wf-serif);
+  font-size: 16px;
+  color: var(--wf-gold-2);
+  background: radial-gradient(circle at 50% 35%, rgba(212, 175, 55, 0.28), rgba(212, 175, 55, 0.06));
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+.wf-rw-mini-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wf-rw-mini-name { font-size: 13.5px; color: #eef0f4; }
+.wf-rw-mini-cat {
+  font-family: var(--wf-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wf-rw-mini-cat::first-line { color: var(--wf-gold); }
+.wf-rw-mini-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--wf-silver);
+  font-weight: 300;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wf-rw-cta { display: flex; gap: 14px; flex-wrap: wrap; }
+.wf-rw-open { animation: wf-rw-glow 3s var(--wf-ease) infinite; }
+@keyframes wf-rw-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.4), 0 8px 24px rgba(212, 175, 55, 0.16); }
+  50% { box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.6), 0 10px 34px rgba(212, 175, 55, 0.42); }
+}
+
+/* full-screen overlay */
+.wf-rw-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(5, 4, 3, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: wf-rw-fade 0.4s var(--wf-ease);
+  overflow-y: auto;
+}
+@keyframes wf-rw-fade { from { opacity: 0; } to { opacity: 1; } }
+.wf-rw-panel {
+  position: relative;
+  width: 100%;
+  max-width: 1140px;
+  height: max-content;
+  min-height: 100%;
+  border-radius: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: linear-gradient(180deg, rgba(14, 12, 9, 0.96), rgba(8, 7, 5, 0.98));
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
+  padding: 26px 30px 60px;
+  animation: wf-rw-rise 0.5s var(--wf-ease);
+}
+@keyframes wf-rw-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+.wf-rw-topbar {
+  position: sticky;
+  top: -26px;
+  z-index: 2;
+  margin: -26px -30px 18px;
+  padding: 22px 30px 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--wf-rule);
+  background: linear-gradient(180deg, rgba(14, 12, 9, 0.98), rgba(14, 12, 9, 0.92));
+  backdrop-filter: blur(8px);
+  border-radius: 22px 22px 0 0;
+}
+.wf-rw-title { font-family: var(--wf-serif); font-weight: 500; font-size: clamp(24px, 3vw, 34px); color: #f3ecdb; margin: 8px 0 8px; }
+.wf-rw-topbar-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+.wf-rw-close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--wf-rule);
+  background: var(--wf-glass);
+  color: var(--wf-silver);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.3s, color 0.3s, transform 0.2s var(--wf-ease);
+}
+.wf-rw-close:hover { border-color: rgba(212, 175, 55, 0.5); color: var(--wf-gold); transform: rotate(90deg); }
+.wf-rw-chips { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 24px; }
+.wf-rw-empty { color: var(--wf-mute); font-size: 14px; padding: 30px 0; text-align: center; }
+
+.wf-rw-masonry { columns: 3 300px; column-gap: 20px; }
+.wf-rw-cell {
+  break-inside: avoid;
+  margin: 0 0 20px;
+  animation: wf-rw-up 0.5s var(--wf-ease) both;
+  animation-delay: calc(var(--d) * 0.04s);
+}
+.wf-rw-cell .wf-story-card { width: 100%; }
+@keyframes wf-rw-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 760px) {
+  .wf-rw-overlay { padding: 0; }
+  .wf-rw-panel { border-radius: 0; padding: 20px 18px 50px; }
+  .wf-rw-topbar { margin: -20px -18px 16px; padding: 18px 18px 14px; border-radius: 0; top: -20px; flex-wrap: wrap; }
+  .wf-rw-masonry { columns: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wf-rw-track, .wf-rw-open, .wf-rw-cell { animation: none !important; }
+}

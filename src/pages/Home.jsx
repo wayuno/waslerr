@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
 import ProductCard from '../components/ProductCard'
+import ReviewWall from '../components/ReviewWall'
 import CustomForm from '../components/CustomForm'
 import JournalAnnouncements from '../components/JournalAnnouncements'
 import Footer from '../components/Footer'
@@ -252,6 +253,9 @@ export default function Home({ onNavigate }) {
           </div>
         </div>
       </section>
+
+      {/* ===== REVIEW WALL ===== */}
+      <ReviewWall />
 
       {/* ===== THREE WAYS + CUSTOM ===== */}
       <section
