@@ -95,9 +95,11 @@ export default function ReviewWall() {
             Every Waslerr field leaves a trace. Read what the listening left behind — across every line, in their own
             words.
           </p>
-          <div className="wf-rw-stat" data-reveal>
-            {hasReviews ? `${wall.length.toLocaleString('en-US')} voices · every field` : 'Be the first to share your story'}
-          </div>
+          {hasReviews && (
+            <div className="wf-rw-stat" data-reveal>
+              {wall.length.toLocaleString('en-US')} voices · every field
+            </div>
+          )}
         </div>
 
         {teaser.length > 0 && (
