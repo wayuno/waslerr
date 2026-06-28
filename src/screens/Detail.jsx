@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
 import PreviewPlayer from '../components/PreviewPlayer'
+import PosterPlayer from '../components/PosterPlayer'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
@@ -73,6 +74,14 @@ export default function Detail() {
     <div className="wf-app" ref={ref}>
       <Background resonanceTop="48%" />
 
+      {img && (
+        <div className="wf-detail-cinema" aria-hidden="true">
+          <img src={img} alt="" />
+          <div className="wf-detail-cinema-scrim" />
+        </div>
+      )}
+
+      <div className="wf-detail-body">
       <section className="wf-section" style={{ maxWidth: 1180, margin: '0 auto', padding: '104px 28px 0' }}>
         <nav className="wf-breadcrumb" data-reveal>
           <button onClick={() => navigate('fields')}>All fields</button>
@@ -85,7 +94,9 @@ export default function Detail() {
         {/* ===== HERO ===== */}
         <div className="wf-detail-grid">
           <div data-reveal>
-            {img ? (
+            {free && (img || f.hasAudio) ? (
+              <PosterPlayer field={f} saved={saved} onDownload={() => { setSaved(true); downloadAudio() }} />
+            ) : img ? (
               <figure className="wf-poster-frame">
                 <img src={img} alt={f.title} />
               </figure>
@@ -249,6 +260,7 @@ export default function Detail() {
           </span>
         </div>
       </footer>
+      </div>
     </div>
   )
 }
