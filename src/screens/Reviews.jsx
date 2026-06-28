@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
-import StoryCard, { Stars } from '../components/StoryCard'
+import StoryCard from '../components/StoryCard'
+import { ChatIconBubble } from '../components/icons'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { averageOf } from '../lib/wall'
-import { StarIcon } from '../components/icons'
 
 const CAT_CLS = { desire: '', akashic: 'akashic', wealth: 'wealth' }
 const FILTERS = [
@@ -23,7 +22,7 @@ function WallEmpty({ isAll, onShare }) {
         <div className="wf-wall-empty-icon" aria-hidden="true">
           <span className="wf-wall-empty-blob" />
           <span className="wf-wall-empty-tile">
-            <StarIcon size={26} filled={false} />
+            <ChatIconBubble size={26} />
           </span>
         </div>
         <h2 className="wf-wall-empty-title">No stories here yet.</h2>
@@ -53,9 +52,7 @@ export default function Reviews() {
   }, [authReady, loggedIn, navigate])
 
   const [filter, setFilter] = useState('all')
-  const [form, setForm] = useState({ name: '', field: reviewField || products[0]?.id || '', rating: 0, text: '' })
-  const [hover, setHover] = useState(0)
-  const [popped, setPopped] = useState(false)
+  const [form, setForm] = useState({ name: '', field: reviewField || products[0]?.id || '', text: '' })
   const [err, setErr] = useState('')
   const [freshId, setFreshId] = useState(null)
   const [photos, setPhotos] = useState([]) // up to 2 uploaded image URLs
@@ -75,7 +72,6 @@ export default function Reviews() {
   const canReviewField = (id) =>
     purchasedIds.includes(String(id)) || Number(prodMap[id]?.priceNum) === 0
 
-  const avg = averageOf(wall)
   const sorted = [...wall].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts)
   const shown = sorted.filter((r) => {
     if (filter === 'all') return true
@@ -153,21 +149,18 @@ export default function Reviews() {
     if (!reviewableProducts.length) return setErr('Get a field first to post your story.')
     if (!canReviewField(form.field)) return setErr('You can only review a field you own or a free field.')
     if (!form.name.trim()) return setErr('Add your name.')
-    if (!form.rating) return setErr('Pick a star rating.')
     if (form.text.trim().length < 8) return setErr('Tell us a little more about what changed.')
     setBusy(true)
     const item = await addReview({
       field: form.field,
       name: form.name.trim(),
-      rating: form.rating,
       text: form.text.trim(),
       images: photos,
     })
     setBusy(false)
     if (item?.id) setFreshId(item.id)
-    setForm({ name: '', field: form.field, rating: 0, text: '' })
+    setForm({ name: '', field: form.field, text: '' })
     setPhotos([])
-    setHover(0)
     setFilter('all')
     showToast('Thanks — your story is on the wall')
   }
@@ -190,8 +183,6 @@ export default function Reviews() {
           stories.
         </p>
         <div className="wf-wall-stat" data-reveal>
-          <span className="wf-wall-avg">{avg || '—'}</span>
-          <Stars rating={avg} size={16} />
           <span className="wf-wall-count">{wall.length} stories</span>
           <button className="wf-btn wf-btn-gold wf-mag" onClick={scrollToForm}>
             Share your story
@@ -276,30 +267,6 @@ export default function Reviews() {
                 ))}
               </select>
             </label>
-          </div>
-
-          <div className="wf-field">
-            <span className="wf-field-label">Your rating</span>
-            <div className="wf-star-input" role="radiogroup" aria-label="Rating">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`wf-star-btn${n <= (hover || form.rating) ? ' on' : ''}${popped && n <= form.rating ? ' pop' : ''}`}
-                  aria-label={`${n} star${n > 1 ? 's' : ''}`}
-                  onMouseEnter={() => setHover(n)}
-                  onMouseLeave={() => setHover(0)}
-                  onClick={() => {
-                    setForm({ ...form, rating: n })
-                    setPopped(false)
-                    requestAnimationFrame(() => setPopped(true))
-                    setTimeout(() => setPopped(false), 360)
-                  }}
-                >
-                  <StarIcon size={26} filled={n <= (hover || form.rating)} />
-                </button>
-              ))}
-            </div>
           </div>
 
           <label className="wf-field">

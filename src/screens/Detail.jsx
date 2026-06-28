@@ -5,10 +5,9 @@ import PosterPlayer from '../components/PosterPlayer'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import StoryCard, { Stars } from '../components/StoryCard'
+import StoryCard from '../components/StoryCard'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
-import { averageOf } from '../lib/wall'
-import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, StarIcon, ChevronRight } from '../components/icons'
+import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, ChevronRight } from '../components/icons'
 
 const CATS = {
   desire: { label: 'Desire', cls: '', ph: 'wf-card-ph-desire' },
@@ -78,8 +77,6 @@ export default function Detail() {
 
   const fieldStories = wall.filter((r) => r.field === f.id)
   const featured = [...fieldStories].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts).slice(0, 3)
-  const avg = fieldStories.length ? averageOf(fieldStories) : 4.9
-  const rating = avg
   const prodMap = Object.fromEntries(products.map((p) => [p.id, p]))
   const nameOf = (id) => prodMap[id]?.title || 'a Waslerr field'
   const clsOf = (id) => CATS[prodMap[id]?.line]?.cls || ''
@@ -128,9 +125,6 @@ export default function Detail() {
             </h1>
             <div className="wf-detail-by" data-reveal>
               <span>by Waslerr</span>
-              <span className="wf-detail-rate">
-                <StarIcon size={13} /> {rating}
-              </span>
               {free
                 ? sold > 0 && <span>{soldStr} downloads</span>
                 : (
@@ -230,8 +224,6 @@ export default function Detail() {
           <div className="wf-rsum-head" data-reveal>
             <div className="wf-rsum-score">
               <div className="wf-eyebrow">From the wall</div>
-              <div className="wf-rsum-avg">{rating}</div>
-              <Stars rating={rating} size={16} />
               <div className="wf-rsum-count">
                 {fieldStories.length ? `${fieldStories.length} ${fieldStories.length === 1 ? 'story' : 'stories'} for this field` : 'Be the first to share your story'}
               </div>
