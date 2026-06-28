@@ -4,6 +4,7 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import MethodEditor from '../components/MethodEditor'
+import VersionsEditor from '../components/VersionsEditor'
 import { normalizeMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
@@ -142,7 +143,7 @@ export default function Admin() {
 
   // per-field edit panel
   const [editId, setEditId] = useState(null)
-  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], method: null, isFree: false })
+  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], method: null, versions: [], isFree: false })
   const [editImg, setEditImg] = useState(null)
   const [editAudio, setEditAudio] = useState(null)
   const [editBusy, setEditBusy] = useState(false)
@@ -461,6 +462,7 @@ export default function Admin() {
       desc: p.desc || '',
       benefits: Array.isArray(p.benefits) ? p.benefits : [],
       method: normalizeMethod(p.method, p.title),
+      versions: Array.isArray(p.versions) ? p.versions : [],
       isFree,
     })
   }
@@ -468,7 +470,7 @@ export default function Admin() {
     setEditErr('')
     if (!editForm.title.trim()) return setEditErr('Title is required.')
     setEditBusy(true)
-    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method }
+    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method, versions: editForm.versions }
     if (!editForm.isFree) patch.price = parseFloat(String(editForm.price).replace(/[^0-9.]/g, '')) || 0
     const res = await updateProduct(editId, editForm.isFree, patch, editImg, editAudio)
     setEditBusy(false)
@@ -502,6 +504,7 @@ export default function Admin() {
       {editForm.method && (
         <MethodEditor value={editForm.method} onChange={(m) => setEditForm((f) => ({ ...f, method: m }))} />
       )}
+      <VersionsEditor value={editForm.versions} onChange={(v) => setEditForm((f) => ({ ...f, versions: v }))} />
       <label className="wf-field">
         <span className="wf-field-label">Replace image {editImg ? `· ${editImg.name}` : '(keep current)'}</span>
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />

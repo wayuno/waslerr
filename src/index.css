@@ -6853,3 +6853,28 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 @media (prefers-reduced-motion: reduce) {
   .wf-vp-chip.active, .wf-vp-add, .wf-vp-detail { animation: none !important; }
 }
+
+/* admin versions editor (field edit form) */
+.wf-ve { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.wf-ve-row { display: flex; gap: 8px; align-items: center; }
+.wf-ve-name { flex: 1 1 110px; min-width: 0; }
+.wf-ve-price { flex: 0 0 84px; }
+.wf-ve-tag { flex: 2 1 140px; min-width: 0; }
+.wf-ve-del {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #e7a78f;
+  background: rgba(142, 42, 12, 0.25);
+  border: 1px solid rgba(142, 42, 12, 0.4);
+}
+.wf-ve-del:hover { background: rgba(142, 42, 12, 0.4); }
+@media (max-width: 640px) {
+  .wf-ve-row { flex-wrap: wrap; }
+  .wf-ve-name, .wf-ve-tag { flex: 1 1 100%; }
+}
