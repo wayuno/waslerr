@@ -43,7 +43,7 @@ export default function Detail() {
   const total = priceOf(f)
   const free = total === 0
   const img = f.image_url || f.img
-  const benefits = benefitsById[f.id] || (free ? freeBenefits : genericBenefits)
+  const benefits = benefitsById[f.id]?.length ? benefitsById[f.id] : free ? freeBenefits : genericBenefits
   const sold = Number(f.sold) || 0
   const soldStr = sold.toLocaleString('en-US')
 
@@ -197,7 +197,7 @@ export default function Detail() {
               {free ? 'What you wake up to.' : 'The benefits, in full.'}
             </h2>
           </div>
-          <div className={`wf-benefits-x${benefitsOpen ? ' open' : ''}`} data-reveal>
+          <div className={`wf-benefits-x${benefitsOpen ? ' open' : ''}`}>
             <button
               className="wf-benefits-trigger"
               aria-expanded={benefitsOpen}
