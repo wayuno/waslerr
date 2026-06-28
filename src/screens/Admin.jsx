@@ -3,6 +3,8 @@ import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
+import MethodEditor from '../components/MethodEditor'
+import { normalizeMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
 const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
@@ -140,7 +142,7 @@ export default function Admin() {
 
   // per-field edit panel
   const [editId, setEditId] = useState(null)
-  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], isFree: false })
+  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], method: null, isFree: false })
   const [editImg, setEditImg] = useState(null)
   const [editAudio, setEditAudio] = useState(null)
   const [editBusy, setEditBusy] = useState(false)
@@ -458,6 +460,7 @@ export default function Admin() {
       price: isFree ? '' : String(p.priceNum ?? ''),
       desc: p.desc || '',
       benefits: Array.isArray(p.benefits) ? p.benefits : [],
+      method: normalizeMethod(p.method, p.title),
       isFree,
     })
   }
@@ -465,7 +468,7 @@ export default function Admin() {
     setEditErr('')
     if (!editForm.title.trim()) return setEditErr('Title is required.')
     setEditBusy(true)
-    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits }
+    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method }
     if (!editForm.isFree) patch.price = parseFloat(String(editForm.price).replace(/[^0-9.]/g, '')) || 0
     const res = await updateProduct(editId, editForm.isFree, patch, editImg, editAudio)
     setEditBusy(false)
@@ -496,6 +499,9 @@ export default function Admin() {
         <textarea className="wf-textarea" rows="2" value={editForm.desc} onChange={(e) => setEditForm({ ...editForm, desc: e.target.value })} />
       </label>
       <BenefitsEditor list={editForm.benefits} setList={(b) => setEditForm((f) => ({ ...f, benefits: b }))} />
+      {editForm.method && (
+        <MethodEditor value={editForm.method} onChange={(m) => setEditForm((f) => ({ ...f, method: m }))} />
+      )}
       <label className="wf-field">
         <span className="wf-field-label">Replace image {editImg ? `· ${editImg.name}` : '(keep current)'}</span>
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
