@@ -148,34 +148,43 @@ const sbHeaders = () => ({
   'Content-Type': 'application/json',
 })
 
-const insertProduct = async (body) => {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
-    method: 'POST',
-    headers: { ...sbHeaders(), Prefer: 'return=representation' },
-    body: JSON.stringify(body),
-  })
-  const data = await r.json().catch(() => null)
+// PostgREST error that mentions the benefits column (e.g. the migration that
+// adds `benefits text[]` hasn't been run yet)
+const benefitsColErr = (data) => {
+  try {
+    return JSON.stringify(data || '').toLowerCase().includes('benefits')
+  } catch {
+    return false
+  }
+}
+
+// POST/PATCH to a PostgREST table. If the write fails only because the table
+// has no `benefits` column yet, transparently retry without it so publishing
+// keeps working (benefits start persisting once the column is added).
+const sbWrite = async (urlStr, method, body) => {
+  const send = (payload) =>
+    fetch(urlStr, {
+      method,
+      headers: { ...sbHeaders(), Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    })
+  let r = await send(body)
+  let data = await r.json().catch(() => null)
+  if (!r.ok && body && body.benefits !== undefined && benefitsColErr(data)) {
+    const { benefits, ...rest } = body // eslint-disable-line no-unused-vars
+    r = await send(rest)
+    data = await r.json().catch(() => null)
+  }
   return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
 }
 
-const updateProductRow = async (id, patch) => {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { ...sbHeaders(), Prefer: 'return=representation' },
-    body: JSON.stringify(patch),
-  })
-  const data = await r.json().catch(() => null)
-  return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
-}
-const updateFreeFieldRow = async (id, patch) => {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/free_fields?id=eq.${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { ...sbHeaders(), Prefer: 'return=representation' },
-    body: JSON.stringify(patch),
-  })
-  const data = await r.json().catch(() => null)
-  return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
-}
+const insertProduct = (body) => sbWrite(`${SUPABASE_URL}/rest/v1/products`, 'POST', body)
+
+const updateProductRow = (id, patch) =>
+  sbWrite(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`, 'PATCH', patch)
+
+const updateFreeFieldRow = (id, patch) =>
+  sbWrite(`${SUPABASE_URL}/rest/v1/free_fields?id=eq.${encodeURIComponent(id)}`, 'PATCH', patch)
 
 const deleteProduct = async (id) => {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
@@ -385,11 +394,8 @@ const getFreeFieldById = async (id) => {
   const d = await r.json().catch(() => [])
   return Array.isArray(d) && d[0] ? d[0] : null
 }
-const insertFreeField = async (row) => {
-  const r = await sbRest('free_fields', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
-  const d = await r.json().catch(() => null)
-  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
-}
+// retry without benefits if that column isn't in the table yet
+const insertFreeField = (row) => sbWrite(`${SUPABASE_URL}/rest/v1/free_fields`, 'POST', row)
 const removeFreeField = async (id) => (await sbRest(`free_fields?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
 
 // normalize an incoming benefits list to a clean string[] (trimmed, no blanks,
