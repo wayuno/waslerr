@@ -6878,3 +6878,27 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   .wf-ve-row { flex-wrap: wrap; }
   .wf-ve-name, .wf-ve-tag { flex: 1 1 100%; }
 }
+
+/* collapsible Listening Method editor header (admin form) */
+.wf-me-wrap { display: flex; flex-direction: column; }
+.wf-me-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--wf-rule);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  font-family: var(--wf-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+  transition: border-color 0.3s var(--wf-ease);
+}
+.wf-me-toggle:hover { border-color: rgba(212, 175, 55, 0.4); }
+.wf-me-toggle svg { color: var(--wf-mute); transform: rotate(90deg); transition: transform 0.35s var(--wf-ease), color 0.3s; }
+.wf-me-wrap.open .wf-me-toggle svg { transform: rotate(-90deg); color: var(--wf-gold); }
+.wf-me-wrap.open .wf-me { margin-top: 12px; }

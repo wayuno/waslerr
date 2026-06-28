@@ -1,9 +1,12 @@
-import { CloseIcon } from './icons'
+import { useState } from 'react'
+import { CloseIcon, ChevronRight } from './icons'
 import { ICON_KEYS, Glyph, uid } from './methodShared'
 
-// Inline Listening Method editor for the admin field form. Controlled:
-// `value` is a MethodData object, `onChange(next)` fires on every edit.
+// Inline Listening Method editor for the admin field form. Collapsed by default
+// (the form is long) — click the header to expand. Controlled: `value` is a
+// MethodData object, `onChange(next)` fires on every edit.
 export default function MethodEditor({ value, onChange }) {
+  const [open, setOpen] = useState(false)
   const data = value
   const setStep = (id, patch) =>
     onChange({ ...data, steps: data.steps.map((s) => (s.id === id ? { ...s, ...patch } : s)) })
@@ -20,6 +23,12 @@ export default function MethodEditor({ value, onChange }) {
   const delPill = (i) => onChange({ ...data, pills: data.pills.filter((_, j) => j !== i) })
 
   return (
+    <div className={`wf-me-wrap${open ? ' open' : ''}`}>
+      <button type="button" className="wf-me-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span>Listening method · {data.steps.length} {data.steps.length === 1 ? 'block' : 'blocks'}</span>
+        <ChevronRight size={16} />
+      </button>
+      {!open ? null : (
     <div className="wf-me">
       <label className="wf-field">
         <span className="wf-field-label">Listening method · headline</span>
@@ -60,6 +69,8 @@ export default function MethodEditor({ value, onChange }) {
         ))}
         <button type="button" className="wf-me-pill wf-me-pill-add" onClick={addPill}>+ Add tag</button>
       </div>
+    </div>
+      )}
     </div>
   )
 }
