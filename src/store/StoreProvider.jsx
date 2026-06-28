@@ -103,6 +103,7 @@ export function StoreProvider({ children }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const [selectedId, setSelectedId] = useState(null)
+  const [checkoutVersionId, setCheckoutVersionId] = useState(null) // version chosen for the current checkout
   const [paidProducts, setPaidProducts] = useState([])
   const [freeFieldsList, setFreeFieldsList] = useState([])
   const [announcements, setAnnouncements] = useState([])
@@ -303,7 +304,7 @@ export function StoreProvider({ children }) {
     [navigate],
   )
   const goCheckout = useCallback(
-    (id) => {
+    (id, versionId = null) => {
       if (!loggedIn) {
         showToast('Please sign in to purchase a field')
         navigate('login')
@@ -311,6 +312,7 @@ export function StoreProvider({ children }) {
       }
       setPayDone(false)
       setAppliedCoupon(null)
+      setCheckoutVersionId(versionId != null ? versionId : null)
       navigate({ page: 'checkout', ...(id != null ? { id } : {}) })
     },
     [navigate, loggedIn, showToast],
@@ -623,6 +625,19 @@ export function StoreProvider({ children }) {
       }
     },
     [getToken, reloadProducts, loadFreeFields],
+  )
+
+  // upload an audio file (paid bucket) and return its storage path — used by the
+  // admin version editor to attach a per-version gated audio
+  const uploadAudio = useCallback(
+    async (file) => {
+      const token = await getToken()
+      if (!token) return { error: 'Not authorized.' }
+      const au = await uploadAudioViaApi(file, token)
+      if (au.error) return { error: au.error }
+      return { path: au.path }
+    },
+    [getToken],
   )
 
   const deleteProduct = useCallback(
@@ -1122,6 +1137,8 @@ export function StoreProvider({ children }) {
     setUserRole,
     selectedId,
     selectedProduct,
+    checkoutVersionId,
+    uploadAudio,
     findProduct,
     openDetail,
     goCheckout,

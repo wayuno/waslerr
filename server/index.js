@@ -314,8 +314,18 @@ const genReference = (fieldTitle) => {
 }
 
 const insertOrder = async (row) => {
-  const r = await sbRest('orders', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
-  const d = await r.json().catch(() => null)
+  const send = (payload) => sbRest('orders', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) })
+  let r = await send(row)
+  let d = await r.json().catch(() => null)
+  // retry without version_id if that column hasn't been added yet
+  if (!r.ok && row.version_id !== undefined) {
+    const s = (() => { try { return JSON.stringify(d || '').toLowerCase() } catch { return '' } })()
+    if (s.includes('version_id')) {
+      const { version_id, ...rest } = row // eslint-disable-line no-unused-vars
+      r = await send(rest)
+      d = await r.json().catch(() => null)
+    }
+  }
   return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d }
 }
 const getOrderByRef = async (reference) => {
@@ -435,6 +445,7 @@ const cleanVersions = (v) =>
         name: String(x && x.name ? x.name : 'Version').slice(0, 60),
         price: Math.max(0, Number(x && x.price) || 0),
         tagline: String(x && x.tagline ? x.tagline : '').slice(0, 160),
+        audio: String(x && x.audio ? x.audio : ''), // storage path of this version's gated audio
       }))
     : []
 
@@ -1013,6 +1024,17 @@ const server = http.createServer(async (req, res) => {
     if (!product) return sendJson(res, 404, { error: 'field_not_found' })
 
     let amount = Number(product.price) || 0
+    // a specific version, if chosen, sets the price + which audio gets delivered
+    let versionId = null
+    let versionName = ''
+    if (b.versionId != null && Array.isArray(product.versions)) {
+      const v = product.versions.find((x) => String(x.id) === String(b.versionId))
+      if (v) {
+        versionId = Number(v.id)
+        versionName = String(v.name || '')
+        amount = Number(v.price) || amount
+      }
+    }
     if (amount <= 0) return sendJson(res, 400, { error: 'free_field', detail: 'free fields need no checkout' })
 
     // server-side coupon application — validate scope (field) + limits + expiry
@@ -1033,13 +1055,14 @@ const server = http.createServer(async (req, res) => {
     const orderRow = {
       reference,
       field_id: fieldId,
-      field_title: product.title,
+      field_title: versionName ? `${product.title} · ${versionName}` : product.title,
       method: methodSel,
       amount,
       currency: 'USD',
       status: 'pending',
       coupon: couponCode,
       buyer_email: (b.email || '').toString().toLowerCase() || null,
+      ...(versionId != null ? { version_id: versionId } : {}),
     }
 
     let binance = null
@@ -1486,12 +1509,20 @@ const server = http.createServer(async (req, res) => {
     if (!field.audio_url) return sendJson(res, 404, { error: 'no_audio' })
 
     const isFree = !!freeF || Number(field.price) === 0
+    let audioPath = field.audio_url
     if (!isFree) {
       // must prove purchase (paid order ref for this field) — or be admin
       let allowed = false
       if (ref) {
         const order = await getOrderByRef(ref)
-        if (order && order.field_id === id && (order.status === 'paid' || order.status === 'delivered')) allowed = true
+        if (order && order.field_id === id && (order.status === 'paid' || order.status === 'delivered')) {
+          allowed = true
+          // deliver the exact version they bought, if it has its own audio
+          if (order.version_id != null && Array.isArray(paid && paid.versions)) {
+            const v = paid.versions.find((x) => Number(x.id) === Number(order.version_id))
+            if (v && v.audio) audioPath = v.audio
+          }
+        }
       }
       if (!allowed) {
         const u = await getAuthedUser(req)
@@ -1499,9 +1530,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (!allowed) return sendJson(res, 403, { error: 'not_purchased' })
     }
+    if (!audioPath) return sendJson(res, 404, { error: 'no_audio' })
     // paid audio lives in field-audio, free audio in its own free-audio bucket
     const bucket = freeF ? 'free-audio' : 'field-audio'
-    const signed = await signedDownloadUrl(field.audio_url, bucket, 120)
+    const signed = await signedDownloadUrl(audioPath, bucket, 120)
     if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
     res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })
     return res.end()

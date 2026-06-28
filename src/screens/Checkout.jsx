@@ -93,7 +93,7 @@ function CopyRow({ label, value, copyKey, mono, copying, onCopy }) {
 }
 
 export default function Checkout() {
-  const { selectedProduct, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady, openChat } = useStore()
+  const { selectedProduct, checkoutVersionId, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady, openChat } = useStore()
 
   const [stage, setStage] = useState('method')
 
@@ -191,7 +191,10 @@ export default function Checkout() {
   if (!selectedProduct) return null
 
   const f = selectedProduct
-  const total = priceOf(f)
+  // a chosen version sets the price + which audio is delivered
+  const chosenVersion =
+    checkoutVersionId != null && Array.isArray(f.versions) ? f.versions.find((v) => v.id === checkoutVersionId) : null
+  const total = chosenVersion ? Number(chosenVersion.price) || 0 : priceOf(f)
   const free = total === 0
   const discount = appliedCoupon
     ? appliedCoupon.type === 'percent'
@@ -239,7 +242,7 @@ export default function Checkout() {
       const r = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fieldId: f.id, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }),
+        body: JSON.stringify({ fieldId: f.id, versionId: checkoutVersionId ?? null, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.reference) {
