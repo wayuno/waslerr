@@ -12,6 +12,7 @@ import Detail from './screens/Detail'
 import Checkout from './screens/Checkout'
 import Delivered from './screens/Delivered'
 import Login from './screens/Login'
+import ResetPassword from './screens/ResetPassword'
 import Admin from './screens/Admin'
 import Profile from './screens/Profile'
 import Updates from './screens/Updates'
@@ -54,6 +55,7 @@ function Shell() {
       {page === 'checkout' && <Checkout />}
       {page === 'delivered' && <Delivered />}
       {page === 'login' && <Login />}
+      {page === 'reset' && <ResetPassword />}
       {page === 'admin' && <Admin />}
       {page === 'profile' && <Profile />}
       {page === 'updates' && <Updates />}

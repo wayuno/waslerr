@@ -349,6 +349,9 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     let sub
     let cancelled = false
+    // capture this BEFORE the Supabase client consumes & clears the URL hash —
+    // a "forgot password" email link lands here with #type=recovery
+    const isRecovery = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash)
     ;(async () => {
       const cfg = await loadConfig()
       if (cancelled) return
@@ -375,8 +378,14 @@ export function StoreProvider({ children }) {
       } = await supabase.auth.getSession()
       if (cancelled) return
       applySession(session)
-      const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => applySession(s))
+      const { data: listener } = supabase.auth.onAuthStateChange((evt, s) => {
+        applySession(s)
+        // recovery link signed the user in just to let them pick a new password
+        if (evt === 'PASSWORD_RECOVERY') setPage('reset')
+      })
       sub = listener?.subscription
+      // belt-and-suspenders: if the listener missed the event, the captured flag routes us
+      if (isRecovery) setPage('reset')
       setAuthReady(true)
       reloadProducts(supabase)
       loadFreeFields(supabase)
@@ -496,6 +505,19 @@ export function StoreProvider({ children }) {
     },
     [navigate],
   )
+
+  // forgot-password: email a recovery link that returns to the app and fires
+  // the PASSWORD_RECOVERY flow (-> the reset screen)
+  const requestPasswordReset = useCallback(async (email) => {
+    const supabase = supabaseRef.current
+    if (!supabase) return { error: 'Password reset isn’t available right now.' }
+    if (!email || !email.trim()) return { error: 'Enter your account email first.' }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    })
+    if (error) return { error: error.message }
+    return { ok: true }
+  }, [])
 
   const logout = useCallback(async () => {
     const supabase = supabaseRef.current
@@ -1116,6 +1138,7 @@ export function StoreProvider({ children }) {
     signIn,
     signUp,
     logout,
+    requestPasswordReset,
     updateProfile,
     requireAdmin,
     adminTab,

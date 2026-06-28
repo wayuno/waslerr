@@ -23,7 +23,12 @@ export function getSupabase() {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: false,
+          // parse the recovery/confirmation token from the URL so the
+          // "forgot password" email link can establish a session. Implicit
+          // flow keeps the token in the URL hash, so it works even when the
+          // email is opened on a different device/browser.
+          detectSessionInUrl: true,
+          flowType: 'implicit',
           storageKey: 'wf-auth',
         },
       })
