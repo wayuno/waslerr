@@ -36,7 +36,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--wf-bg);
+  /* deep warm-black base with a faint gold top glow — the global starfield
+     (fixed canvas) drifts on top of this, behind all page content */
+  background: radial-gradient(120% 90% at 50% -10%, #1a1408 0%, #0d0b06 42%, #050403 100%) fixed, var(--wf-bg);
   color: var(--wf-silver);
   font-family: var(--wf-sans);
   font-weight: 400;
@@ -87,13 +89,15 @@ a {
    ============================================================ */
 .wf-app {
   position: relative;
+  z-index: 1;
   width: 100%;
   overflow: hidden;
+  /* transparent so the global gold starfield (behind everything) shows
+     through; the soft ambient glows ride on top, without an opaque base */
   background:
-    radial-gradient(1200px 700px at 78% -8%, rgba(40, 58, 110, 0.28), transparent 60%),
-    radial-gradient(1100px 800px at 8% 18%, rgba(20, 30, 64, 0.3), transparent 55%),
-    radial-gradient(900px 900px at 50% 120%, rgba(60, 48, 18, 0.18), transparent 60%),
-    var(--wf-bg);
+    radial-gradient(1200px 700px at 78% -8%, rgba(40, 58, 110, 0.22), transparent 60%),
+    radial-gradient(1100px 800px at 8% 18%, rgba(20, 30, 64, 0.24), transparent 55%),
+    radial-gradient(900px 900px at 50% 120%, rgba(60, 48, 18, 0.14), transparent 60%);
 }
 
 .wf-particles {
