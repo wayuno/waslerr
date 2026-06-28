@@ -861,6 +861,10 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
   gap: 22px;
 }
+.wf-grid--few {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 360px));
+  justify-content: center;
+}
 .wf-card {
   position: relative;
   display: flex;

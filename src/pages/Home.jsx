@@ -222,7 +222,7 @@ export default function Home({ onNavigate }) {
             </button>
           </div>
 
-          <div className="wf-grid">
+          <div className={`wf-grid${topPicks.length < 3 ? ' wf-grid--few' : ''}`}>
             {topPicks.map((f) => (
               <ProductCard key={f.id} field={f} />
             ))}
@@ -256,7 +256,7 @@ export default function Home({ onNavigate }) {
               shift.
             </p>
           </div>
-          <div className="wf-grid">
+          <div className={`wf-grid${freeFields.length < 3 ? ' wf-grid--few' : ''}`}>
             {freeFields.map((f) => (
               <ProductCard key={f.id} field={f} variant="free" />
             ))}
