@@ -1891,8 +1891,8 @@ a {
 /* ---------- Product detail ---------- */
 .wf-detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 48px;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 44px;
   align-items: start;
 }
 .wf-detail-media {
@@ -3168,7 +3168,7 @@ a {
   object-fit: cover;
   object-position: center 18%;
   filter: blur(40px) saturate(1.25);
-  opacity: 0.55;
+  opacity: 0.5;
   transform: scale(1.25);
   animation: wf-detail-kenburns 22s var(--wf-ease) infinite alternate;
 }
@@ -3492,22 +3492,8 @@ a {
   animation: none;
 }
 
-/* benefit checklist in the info column */
-.wf-detail-checks { list-style: none; margin: 4px 0 26px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
-.wf-detail-checks li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.5; color: #cdd1da; font-weight: 300; }
-.wf-detail-check {
-  flex: none;
-  margin-top: 1px;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: var(--wf-gold);
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-}
+/* benefits expander sits full-width inside the info column */
+.wf-detail-info .wf-benefits-x { max-width: none; margin: 26px 0 0; }
 
 /* detail meta + stars + spec chips */
 .wf-detail-metaline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--wf-silver); margin: 0 0 22px; }
