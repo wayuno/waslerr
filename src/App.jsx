@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AudioProvider } from './audio/AudioProvider'
 import { StoreProvider, useStore } from './store/StoreProvider'
 import Nav from './components/Nav'
+import Starfield from './components/Starfield'
 import ChatWidget from './components/ChatWidget'
 import Toast from './components/Toast'
 import Home from './pages/Home'
@@ -35,6 +36,8 @@ function Shell() {
 
   return (
     <>
+      <Starfield />
+
       {!introDone && (
         <div className={`wf-intro${introLift ? ' lift' : ''}`}>
           <span className="wf-intro-logo">W</span>
