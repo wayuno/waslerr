@@ -61,6 +61,9 @@ export default function Detail() {
   }
   // owns this field? (local flag OR server-confirmed orders) — gates posting a story
   const ownsThis = isPurchased || (purchasedIds || []).includes(String(f.id))
+  // free fields are free to everyone, so anyone can share a story for them;
+  // paid fields still require a purchase
+  const canShare = ownsThis || free
   const downloadAudio = () => {
     const base = `/api/fields/${f.id}/audio`
     window.open(free ? base : `${base}?ref=${encodeURIComponent(purchaseRef)}`, '_blank')
@@ -227,7 +230,7 @@ export default function Detail() {
               </div>
             </div>
             <div className="wf-rsum-actions">
-              {ownsThis ? (
+              {canShare ? (
                 <button className="wf-btn wf-btn-gold wf-mag" onClick={() => openReviews(f.id, true)}>
                   Share your story
                 </button>

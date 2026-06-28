@@ -41,7 +41,7 @@ function WallEmpty({ isAll, onShare }) {
 }
 
 export default function Reviews() {
-  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady, purchasedIds, hasPurchased } = useStore()
+  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady, purchasedIds } = useStore()
   const ref = useRef(null)
   const formRef = useRef(null)
   useReveal(ref)
@@ -68,8 +68,12 @@ export default function Reviews() {
   const catOf = (id) => prodMap[id]?.line || 'desire'
   const clsOf = (id) => CAT_CLS[catOf(id)] || ''
 
-  // Only fields the visitor actually bought can be reviewed.
-  const purchasedProducts = products.filter((p) => purchasedIds.includes(String(p.id)))
+  // Fields the visitor can review: ones they bought, plus free fields (free to all).
+  const reviewableProducts = products.filter(
+    (p) => purchasedIds.includes(String(p.id)) || Number(p.priceNum) === 0,
+  )
+  const canReviewField = (id) =>
+    purchasedIds.includes(String(id)) || Number(prodMap[id]?.priceNum) === 0
 
   const avg = averageOf(wall)
   const sorted = [...wall].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts)
@@ -83,13 +87,13 @@ export default function Reviews() {
   useEffect(() => {
     if (reviewField) setForm((prev) => ({ ...prev, field: reviewField }))
   }, [reviewField])
-  // keep the selected field to one the user actually purchased
+  // keep the selected field to one the user can actually review
   useEffect(() => {
-    if (purchasedProducts.length && !purchasedIds.includes(String(form.field))) {
-      setForm((prev) => ({ ...prev, field: purchasedProducts[0].id }))
+    if (reviewableProducts.length && !canReviewField(form.field)) {
+      setForm((prev) => ({ ...prev, field: reviewableProducts[0].id }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchasedIds])
+  }, [purchasedIds, products])
   useEffect(() => {
     if (reviewShare) {
       const t = setTimeout(() => {
@@ -146,8 +150,8 @@ export default function Reviews() {
   const submit = async (e) => {
     e.preventDefault()
     setErr('')
-    if (!hasPurchased) return setErr('Purchase a field to post your story.')
-    if (!purchasedIds.includes(String(form.field))) return setErr('You can only review a field you’ve purchased.')
+    if (!reviewableProducts.length) return setErr('Get a field first to post your story.')
+    if (!canReviewField(form.field)) return setErr('You can only review a field you own or a free field.')
     if (!form.name.trim()) return setErr('Add your name.')
     if (!form.rating) return setErr('Pick a star rating.')
     if (form.text.trim().length < 8) return setErr('Tell us a little more about what changed.')
@@ -224,7 +228,7 @@ export default function Reviews() {
 
       {/* ===== SHARE FORM (buyers only) ===== */}
       <section className="wf-section" style={{ maxWidth: 640, margin: '0 auto', padding: '10px 28px 80px' }} ref={formRef}>
-        {!hasPurchased ? (
+        {!reviewableProducts.length ? (
           <div className="wf-share-locked" data-reveal>
             <div className="wf-share-lock-icon" aria-hidden="true">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -265,7 +269,7 @@ export default function Reviews() {
             <label className="wf-field">
               <span className="wf-field-label">Which field</span>
               <select className="wf-select" value={form.field} onChange={(e) => setForm({ ...form, field: e.target.value })}>
-                {purchasedProducts.map((p) => (
+                {reviewableProducts.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
                   </option>
