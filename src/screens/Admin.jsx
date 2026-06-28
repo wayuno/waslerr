@@ -520,32 +520,43 @@ export default function Admin() {
     setVerErr('')
     if (!verEdit.name.trim()) return setVerErr('Version name is required.')
     setVerBusy(true)
-    let audioPath = verEdit.audio
-    if (verAudio) {
-      const up = await uploadAudio(verAudio)
-      if (up?.error) { setVerBusy(false); return setVerErr(up.error) }
-      audioPath = up.path
+    try {
+      let audioPath = verEdit.audio
+      if (verAudio) {
+        const up = await uploadAudio(verAudio)
+        if (up?.error) return setVerErr(up.error)
+        audioPath = up.path
+      }
+      let versions = [...fieldVersions(verEdit.fieldId)]
+      const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audio: audioPath }
+      if (verEdit.id == null) {
+        const id = versions.reduce((m, v) => Math.max(m, Number(v.id) || 0), 0) + 1
+        versions.push({ id, ...row })
+      } else {
+        versions = versions.map((v) => (v.id === verEdit.id ? { ...v, ...row } : v))
+      }
+      const res = await updateProduct(verEdit.fieldId, verEdit.isFree, { versions })
+      if (res?.error) return setVerErr(res.error)
+      setVerEdit(null)
+    } catch (e) {
+      setVerErr(`Couldn’t save${e?.message ? ': ' + e.message : '. Please try again.'}`)
+    } finally {
+      setVerBusy(false)
     }
-    let versions = [...fieldVersions(verEdit.fieldId)]
-    const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audio: audioPath }
-    if (verEdit.id == null) {
-      const id = versions.reduce((m, v) => Math.max(m, Number(v.id) || 0), 0) + 1
-      versions.push({ id, ...row })
-    } else {
-      versions = versions.map((v) => (v.id === verEdit.id ? { ...v, ...row } : v))
-    }
-    const res = await updateProduct(verEdit.fieldId, verEdit.isFree, { versions })
-    setVerBusy(false)
-    if (res?.error) return setVerErr(res.error)
-    setVerEdit(null)
   }
   const deleteVersion = async () => {
+    setVerErr('')
     setVerBusy(true)
-    const versions = fieldVersions(verEdit.fieldId).filter((v) => v.id !== verEdit.id)
-    const res = await updateProduct(verEdit.fieldId, verEdit.isFree, { versions })
-    setVerBusy(false)
-    if (res?.error) return setVerErr(res.error)
-    setVerEdit(null)
+    try {
+      const versions = fieldVersions(verEdit.fieldId).filter((v) => v.id !== verEdit.id)
+      const res = await updateProduct(verEdit.fieldId, verEdit.isFree, { versions })
+      if (res?.error) return setVerErr(res.error)
+      setVerEdit(null)
+    } catch (e) {
+      setVerErr(`Couldn’t delete${e?.message ? ': ' + e.message : '. Please try again.'}`)
+    } finally {
+      setVerBusy(false)
+    }
   }
   const renderVersionChooser = (p, isFree) => (
     <div className="wf-ver-chooser" key={p.id + '-vpick'}>
@@ -591,7 +602,7 @@ export default function Admin() {
               <TrashIcon />
             </button>
           )}
-          <button type="button" className="wf-form-submit wf-mag" onClick={saveVersion} disabled={verBusy}>{verBusy ? 'Saving…' : 'Save version'}</button>
+          <button type="button" className="wf-form-submit wf-mag" onClick={saveVersion} disabled={verBusy}>{verBusy ? (verAudio ? 'Uploading audio…' : 'Saving…') : 'Save version'}</button>
         </span>
       </div>
     </div>
