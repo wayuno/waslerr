@@ -392,6 +392,11 @@ const insertFreeField = async (row) => {
 }
 const removeFreeField = async (id) => (await sbRest(`free_fields?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
 
+// normalize an incoming benefits list to a clean string[] (trimmed, no blanks,
+// capped) for the products / free_fields `benefits` column
+const cleanBenefits = (v) =>
+  Array.isArray(v) ? v.map((s) => String(s).trim()).filter(Boolean).slice(0, 30) : []
+
 // --- conversation delete (clears all messages in a thread) ---------
 const removeConversation = async (conversationId) =>
   (await sbRest(`support_messages?conversation_id=eq.${encodeURIComponent(conversationId)}`, { method: 'DELETE' })).ok
@@ -859,6 +864,7 @@ const server = http.createServer(async (req, res) => {
       image_url: b.image_url || null,
       audio_url: b.audio_url || null,
       sold_count: Math.max(0, parseInt(b.sold_count, 10) || 0),
+      benefits: cleanBenefits(b.benefits),
     }
     const out = await insertProduct(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
@@ -878,6 +884,7 @@ const server = http.createServer(async (req, res) => {
     if (b.description != null) patch.description = b.description.trim()
     if (b.image_url !== undefined) patch.image_url = b.image_url || null
     if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
+    if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateProductRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
@@ -1465,6 +1472,7 @@ const server = http.createServer(async (req, res) => {
       description: (b.description || '').trim(),
       image_url: b.image_url || null,
       audio_url: b.audio_url || null,
+      benefits: cleanBenefits(b.benefits),
     }
     const out = await insertFreeField(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
@@ -1481,6 +1489,7 @@ const server = http.createServer(async (req, res) => {
     if (b.description != null) patch.description = b.description.trim()
     if (b.image_url !== undefined) patch.image_url = b.image_url || null
     if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
+    if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateFreeFieldRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })

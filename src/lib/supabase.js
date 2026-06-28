@@ -64,6 +64,7 @@ export function normalizeProduct(row) {
     image_url: row.image_url || null,
     sold: Number(row.sold_count) || 0,
     hasAudio: !!row.audio_url,
+    benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
     freq: 200,
   }
 }
