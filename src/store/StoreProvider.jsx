@@ -75,22 +75,31 @@ const uploadImageViaApi = async (file, token) => {
 // Upload an audio file through the backend → returns { path } or { error }.
 // isFree routes it to the free-audio bucket; otherwise the paid field-audio bucket.
 const uploadAudioViaApi = async (file, token, isFree = false) => {
-  if (file && file.size > 120 * 1024 * 1024) return { error: 'Audio is too large (max ~120MB). Please compress it.' }
+  // storage bucket caps audio at 100MB; WAV is uncompressed (huge) so guide to MP3
+  if (file && file.size > 95 * 1024 * 1024) {
+    return { error: 'Audio is too large (max ~95MB). WAV files are huge — export as MP3 (much smaller) and re-upload.' }
+  }
   if (file && !String(file.type).startsWith('audio/')) return { error: 'Please choose an audio file.' }
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 180000) // never hang forever — fail after 3 min
   try {
     const dataBase64 = await fileToBase64(file)
     const up = await fetch('/api/admin/upload-audio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64, free: !!isFree }),
+      signal: ctrl.signal,
     })
     if (!up.ok) {
       const j = await up.json().catch(() => ({}))
       return { error: `Audio upload failed${j.detail ? ': ' + j.detail : j.status ? ' (' + j.status + ')' : ''}` }
     }
     return { path: (await up.json()).path }
-  } catch {
-    return { error: 'Audio upload failed — network error. Try a smaller file.' }
+  } catch (e) {
+    if (e?.name === 'AbortError') return { error: 'Audio upload timed out — the file is likely too big. Export as MP3 and try again.' }
+    return { error: 'Audio upload failed — network error. Try a smaller MP3.' }
+  } finally {
+    clearTimeout(timer)
   }
 }
 
