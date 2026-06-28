@@ -81,6 +81,13 @@ const IcUser = () => (
     <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
   </Svg>
 )
+const IcLogin = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+    <polyline points="10 17 15 12 10 7" />
+    <line x1="15" y1="12" x2="3" y2="12" />
+  </svg>
+)
 const IcSignout = () => (
   <Svg>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -213,6 +220,15 @@ export default function Nav() {
         </div>
 
         <div className="wf-notif-mobile">
+          {authReady && !loggedIn && (
+            <button className="wf-signin" onClick={() => go({ page: 'login' })}>
+              <span className="wf-signin-label">
+                <IcLogin />
+                <span className="wf-signin-txt">{t('nav.signin')}</span>
+              </span>
+              <span className="wf-signin-sheen" aria-hidden="true" />
+            </button>
+          )}
           {authReady && loggedIn && <NotificationBell />}
           <CartButton />
           {authReady && loggedIn && (
