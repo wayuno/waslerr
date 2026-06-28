@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import Background from '../components/Background'
+import PasswordInput from '../components/PasswordInput'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
@@ -98,12 +99,9 @@ export default function Login() {
           {!forgot && (
             <label className="wf-field" style={{ width: '100%' }}>
               <span className="wf-field-label">Password</span>
-              <input
-                className="wf-input"
-                type="password"
+              <PasswordInput
                 value={pass}
                 onChange={(e) => setPass(e.target.value)}
-                placeholder="••••••••"
                 autoComplete={signup ? 'new-password' : 'current-password'}
               />
             </label>
