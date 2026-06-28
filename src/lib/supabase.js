@@ -66,6 +66,7 @@ export function normalizeProduct(row) {
     hasAudio: !!row.audio_url,
     benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
     method: row.method && typeof row.method === 'object' ? row.method : null,
+    versions: Array.isArray(row.versions) ? row.versions : [],
     freq: 200,
   }
 }

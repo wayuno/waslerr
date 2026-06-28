@@ -6741,3 +6741,115 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-me-pill input { width: 110px; background: none; border: none; outline: none; color: #eef0f4; font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
 .wf-me-pill button { border: none; background: none; color: #e7a78f; cursor: pointer; font-size: 11px; }
 .wf-me-pill-add { color: var(--wf-gold); border-style: dashed; cursor: pointer; background: none; font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 12px; }
+
+/* ============================================================
+   Version picker (product detail) + inline admin editor
+   ============================================================ */
+.wf-vp { margin: 0 0 22px; }
+.wf-vp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.wf-vp-label {
+  font-family: var(--wf-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--wf-mute);
+}
+.wf-vp-admin {
+  font-family: var(--wf-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+  background: none;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background 0.3s var(--wf-ease), color 0.3s;
+}
+.wf-vp-admin.on { background: var(--wf-grad); color: #1a1208; border-color: transparent; }
+
+.wf-vp-chips { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.wf-vp-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 13px;
+  border: 1px solid rgba(212, 175, 106, 0.18);
+  background: rgba(255, 255, 255, 0.028);
+  overflow: hidden;
+  transition: border-color 0.3s var(--wf-ease);
+}
+.wf-vp-chip-btn {
+  font-family: var(--wf-serif);
+  font-size: 17px;
+  font-weight: 500;
+  color: #cfc6b8;
+  background: none;
+  border: none;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.wf-vp-chip.active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f0d99b, #d4af6a 55%, #b8893f);
+  animation: wf-vp-pop 0.36s var(--wf-ease);
+}
+.wf-vp-chip.active .wf-vp-chip-btn { color: #1a1208; }
+@keyframes wf-vp-pop { 0% { transform: scale(0.9); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.wf-vp-chip-x {
+  border: none;
+  background: none;
+  color: #1a1208;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 12px 0 2px;
+  opacity: 0.7;
+}
+.wf-vp-chip:not(.active) .wf-vp-chip-x { color: #e7a78f; }
+.wf-vp-chip-x:hover { opacity: 1; }
+.wf-vp-add {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  border: 1px dashed rgba(212, 175, 106, 0.4);
+  background: none;
+  color: var(--wf-gold);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  animation: wf-vp-in 0.36s var(--wf-ease);
+  transition: background 0.3s, border-color 0.3s;
+}
+.wf-vp-add:hover { background: rgba(212, 175, 55, 0.06); border-color: rgba(212, 175, 55, 0.7); }
+@keyframes wf-vp-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.wf-vp-detail { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-top: 16px; animation: wf-vp-up 0.4s var(--wf-ease); }
+@keyframes wf-vp-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.wf-vp-price {
+  font-family: var(--wf-serif);
+  font-weight: 500;
+  font-size: 34px;
+  background: var(--wf-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: var(--wf-gold-2);
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .wf-vp-price { color: transparent; }
+}
+.wf-vp-tagline { font-size: 14px; color: var(--wf-silver); font-weight: 300; }
+
+.wf-vp-edit {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--wf-rule);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-vp-chip.active, .wf-vp-add, .wf-vp-detail { animation: none !important; }
+}

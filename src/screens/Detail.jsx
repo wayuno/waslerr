@@ -7,6 +7,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import StoryCard from '../components/StoryCard'
 import ListeningMethod from '../components/ListeningMethod'
+import VersionPicker from '../components/VersionPicker'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, ChevronRight } from '../components/icons'
 
@@ -148,6 +149,8 @@ export default function Detail() {
                 {f.price || `$${total}`}
               </div>
             )}
+
+            <VersionPicker field={f} isFree={free} />
 
             <p className="wf-detail-desc" data-reveal>
               {f.desc}
