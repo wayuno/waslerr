@@ -151,7 +151,7 @@ const sbHeaders = () => ({
 // Newer columns added by later migrations. If a write fails only because one of
 // these isn't in the table yet, we transparently retry without them so
 // publishing/editing keeps working (they persist once the column is added).
-const OPTIONAL_COLS = ['benefits', 'method']
+const OPTIONAL_COLS = ['benefits', 'method', 'versions']
 const missingOptionalCol = (data) => {
   try {
     const s = JSON.stringify(data || '').toLowerCase()
@@ -426,6 +426,17 @@ const cleanMethod = (m) => {
     pills: Array.isArray(m.pills) ? m.pills.map((p) => str(p, 48).trim()).filter(Boolean).slice(0, 10) : [],
   }
 }
+
+// sanitize an incoming versions list for the `versions` jsonb column
+const cleanVersions = (v) =>
+  Array.isArray(v)
+    ? v.slice(0, 20).map((x, i) => ({
+        id: Number(x && x.id) || i + 1,
+        name: String(x && x.name ? x.name : 'Version').slice(0, 60),
+        price: Math.max(0, Number(x && x.price) || 0),
+        tagline: String(x && x.tagline ? x.tagline : '').slice(0, 160),
+      }))
+    : []
 
 // --- conversation delete (clears all messages in a thread) ---------
 const removeConversation = async (conversationId) =>
@@ -897,6 +908,7 @@ const server = http.createServer(async (req, res) => {
       benefits: cleanBenefits(b.benefits),
     }
     if (b.method !== undefined) row.method = cleanMethod(b.method)
+    if (b.versions !== undefined) row.versions = cleanVersions(b.versions)
     const out = await insertProduct(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { product: out.data })
@@ -917,6 +929,7 @@ const server = http.createServer(async (req, res) => {
     if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
     if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
     if (b.method !== undefined) patch.method = cleanMethod(b.method)
+    if (b.versions !== undefined) patch.versions = cleanVersions(b.versions)
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateProductRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
@@ -1507,6 +1520,7 @@ const server = http.createServer(async (req, res) => {
       benefits: cleanBenefits(b.benefits),
     }
     if (b.method !== undefined) row.method = cleanMethod(b.method)
+    if (b.versions !== undefined) row.versions = cleanVersions(b.versions)
     const out = await insertFreeField(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { freeField: out.data })
@@ -1524,6 +1538,7 @@ const server = http.createServer(async (req, res) => {
     if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
     if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
     if (b.method !== undefined) patch.method = cleanMethod(b.method)
+    if (b.versions !== undefined) patch.versions = cleanVersions(b.versions)
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateFreeFieldRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
