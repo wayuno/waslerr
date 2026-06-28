@@ -3,8 +3,7 @@ import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { Stars } from '../components/StoryCard'
-import { TrashIcon, SendIcon, PlusIcon, StarIcon } from '../components/icons'
+import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
 const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
 
@@ -177,8 +176,7 @@ export default function Admin() {
   const [adminLoginBusy, setAdminLoginBusy] = useState(false)
 
   // admin add-review form
-  const [rvForm, setRvForm] = useState({ field: '', name: '', rating: 5, text: '', featured: false })
-  const [rvHover, setRvHover] = useState(0)
+  const [rvForm, setRvForm] = useState({ field: '', name: '', text: '', featured: false })
   const [rvPhotos, setRvPhotos] = useState([])
   const [rvErr, setRvErr] = useState('')
   const [rvBusy, setRvBusy] = useState(false)
@@ -677,16 +675,14 @@ export default function Admin() {
     const res = await adminAddReview({
       field,
       name: rvForm.name.trim(),
-      rating: rvForm.rating,
       text: rvForm.text.trim(),
       featured: rvForm.featured,
       images: rvPhotos,
     })
     setRvBusy(false)
     if (res?.error) return setRvErr(res.error)
-    setRvForm({ field, name: '', rating: 5, text: '', featured: false })
+    setRvForm({ field, name: '', text: '', featured: false })
     setRvPhotos([])
-    setRvHover(0)
   }
 
   const saveSold = async (id, isFree) => {
@@ -1010,7 +1006,6 @@ export default function Admin() {
                           </span>
                           <span className="wf-rv-field">on {prod?.title || 'a field'}</span>
                         </div>
-                        <Stars rating={rv.rating} size={13} />
                       </div>
                       <p className="wf-rv-text">{rv.text}</p>
                       {Array.isArray(rv.images) && rv.images.length > 0 && (
@@ -1058,24 +1053,6 @@ export default function Admin() {
                 <span className="wf-field-label">Name</span>
                 <input className="wf-input" value={rvForm.name} onChange={(e) => setRvForm({ ...rvForm, name: e.target.value })} placeholder="e.g. Priya M." />
               </label>
-              <div className="wf-field">
-                <span className="wf-field-label">Rating</span>
-                <div className="wf-star-input" role="radiogroup" aria-label="Rating">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={`wf-star-btn${n <= (rvHover || rvForm.rating) ? ' on' : ''}`}
-                      aria-label={`${n} star${n > 1 ? 's' : ''}`}
-                      onMouseEnter={() => setRvHover(n)}
-                      onMouseLeave={() => setRvHover(0)}
-                      onClick={() => setRvForm({ ...rvForm, rating: n })}
-                    >
-                      <StarIcon size={22} filled={n <= (rvHover || rvForm.rating)} />
-                    </button>
-                  ))}
-                </div>
-              </div>
               <label className="wf-field">
                 <span className="wf-field-label">Story</span>
                 <textarea className="wf-textarea" rows="3" value={rvForm.text} onChange={(e) => setRvForm({ ...rvForm, text: e.target.value })} placeholder="What changed…" />

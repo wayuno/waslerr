@@ -783,7 +783,7 @@ export function StoreProvider({ children }) {
     if (supabase) {
       const { data, error } = await supabase
         .from('reviews')
-        .insert({ field: entry.field, name: entry.name, rating: entry.rating, text: entry.text, images })
+        .insert({ field: entry.field, name: entry.name, rating: entry.rating ?? 5, text: entry.text, images })
         .select()
         .single()
       if (!error && data) {
