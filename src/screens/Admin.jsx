@@ -4,7 +4,6 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import MethodEditor from '../components/MethodEditor'
-import VersionsEditor from '../components/VersionsEditor'
 import { normalizeMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
@@ -107,6 +106,7 @@ export default function Admin() {
     addProduct,
     deleteProduct,
     updateProduct,
+    uploadAudio,
     addFreeField,
     deleteFreeField,
     announcements,
@@ -143,7 +143,14 @@ export default function Admin() {
 
   // per-field edit panel
   const [editId, setEditId] = useState(null)
-  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], method: null, versions: [], isFree: false })
+  const [editForm, setEditForm] = useState({ title: '', category: '', price: '', desc: '', benefits: [], method: null, isFree: false })
+  // version chooser + editor (paid fields): pencil shows Main/version choices once
+  // a field has versions; the editor persists each version to the field
+  const [verPickId, setVerPickId] = useState(null)
+  const [verEdit, setVerEdit] = useState(null) // { fieldId, isFree, id|null, name, price, tagline, audio }
+  const [verAudio, setVerAudio] = useState(null)
+  const [verBusy, setVerBusy] = useState(false)
+  const [verErr, setVerErr] = useState('')
   const [editImg, setEditImg] = useState(null)
   const [editAudio, setEditAudio] = useState(null)
   const [editBusy, setEditBusy] = useState(false)
@@ -462,7 +469,6 @@ export default function Admin() {
       desc: p.desc || '',
       benefits: Array.isArray(p.benefits) ? p.benefits : [],
       method: normalizeMethod(p.method, p.title),
-      versions: Array.isArray(p.versions) ? p.versions : [],
       isFree,
     })
   }
@@ -470,13 +476,126 @@ export default function Admin() {
     setEditErr('')
     if (!editForm.title.trim()) return setEditErr('Title is required.')
     setEditBusy(true)
-    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method, versions: editForm.versions }
+    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method }
     if (!editForm.isFree) patch.price = parseFloat(String(editForm.price).replace(/[^0-9.]/g, '')) || 0
     const res = await updateProduct(editId, editForm.isFree, patch, editImg, editAudio)
     setEditBusy(false)
     if (res?.error) return setEditErr(res.error)
     setEditId(null)
   }
+
+  // ---- per-field versions (paid): chooser + editor ----
+  const onEditClick = (p, isFree) => {
+    setVerEdit(null)
+    const vers = Array.isArray(p.versions) ? p.versions : []
+    if (!isFree && vers.length > 0) {
+      setEditId(null)
+      setVerPickId((cur) => (cur === p.id ? null : p.id))
+    } else {
+      setVerPickId(null)
+      openEdit(p, isFree)
+    }
+  }
+  const startVersionEdit = (p, isFree, version) => {
+    setVerPickId(null)
+    setEditId(null)
+    setVerAudio(null)
+    setVerErr('')
+    const vers = Array.isArray(p.versions) ? p.versions : []
+    setVerEdit({
+      fieldId: p.id,
+      isFree,
+      id: version?.id ?? null,
+      name: version?.name ?? 'New version',
+      price: version?.price ?? (vers[vers.length - 1]?.price ?? p.priceNum ?? 0) + 33,
+      tagline: version?.tagline ?? '',
+      audio: version?.audio ?? '',
+    })
+  }
+  const fieldVersions = (id) => {
+    const f = [...paidProducts, ...freeFieldsList].find((x) => x.id === id)
+    return Array.isArray(f?.versions) ? f.versions : []
+  }
+  const saveVersion = async () => {
+    setVerErr('')
+    if (!verEdit.name.trim()) return setVerErr('Version name is required.')
+    setVerBusy(true)
+    let audioPath = verEdit.audio
+    if (verAudio) {
+      const up = await uploadAudio(verAudio)
+      if (up?.error) { setVerBusy(false); return setVerErr(up.error) }
+      audioPath = up.path
+    }
+    let versions = [...fieldVersions(verEdit.fieldId)]
+    const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audio: audioPath }
+    if (verEdit.id == null) {
+      const id = versions.reduce((m, v) => Math.max(m, Number(v.id) || 0), 0) + 1
+      versions.push({ id, ...row })
+    } else {
+      versions = versions.map((v) => (v.id === verEdit.id ? { ...v, ...row } : v))
+    }
+    const res = await updateProduct(verEdit.fieldId, verEdit.isFree, { versions })
+    setVerBusy(false)
+    if (res?.error) return setVerErr(res.error)
+    setVerEdit(null)
+  }
+  const deleteVersion = async () => {
+    setVerBusy(true)
+    const versions = fieldVersions(verEdit.fieldId).filter((v) => v.id !== verEdit.id)
+    const res = await updateProduct(verEdit.fieldId, verEdit.isFree, { versions })
+    setVerBusy(false)
+    if (res?.error) return setVerErr(res.error)
+    setVerEdit(null)
+  }
+  const renderVersionChooser = (p, isFree) => (
+    <div className="wf-ver-chooser" key={p.id + '-vpick'}>
+      <div className="wf-field-label" style={{ marginBottom: 10 }}>What do you want to edit?</div>
+      <div className="wf-ver-choices">
+        <button type="button" className="wf-ver-choice" onClick={() => { setVerPickId(null); openEdit(p, isFree) }}>Main field</button>
+        {(p.versions || []).map((v) => (
+          <button type="button" className="wf-ver-choice" key={v.id} onClick={() => startVersionEdit(p, isFree, v)}>
+            {v.name || 'Untitled'}
+          </button>
+        ))}
+        <button type="button" className="wf-ver-choice add" onClick={() => startVersionEdit(p, isFree, null)}>+ Add version</button>
+      </div>
+    </div>
+  )
+  const renderVersionEditor = () => (
+    <div className="wf-field-edit" key={verEdit.fieldId + '-veredit'}>
+      <div className="wf-eyebrow" style={{ marginBottom: 2 }}>{verEdit.id == null ? 'New version' : 'Edit version'}</div>
+      <label className="wf-field">
+        <span className="wf-field-label">Version name</span>
+        <input className="wf-input" value={verEdit.name} onChange={(e) => setVerEdit({ ...verEdit, name: e.target.value })} />
+      </label>
+      <div className="wf-form-row">
+        <label className="wf-field">
+          <span className="wf-field-label">Price ($)</span>
+          <input className="wf-input" type="number" min="0" value={verEdit.price} onChange={(e) => setVerEdit({ ...verEdit, price: Math.max(0, Number(e.target.value) || 0) })} />
+        </label>
+        <label className="wf-field">
+          <span className="wf-field-label">Tagline</span>
+          <input className="wf-input" value={verEdit.tagline} onChange={(e) => setVerEdit({ ...verEdit, tagline: e.target.value })} />
+        </label>
+      </div>
+      <label className="wf-field">
+        <span className="wf-field-label">Version audio {verAudio ? `· ${verAudio.name}` : verEdit.audio ? '(audio set — choose to replace)' : '(buyers of this version get it)'}</span>
+        <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setVerAudio(e.target.files?.[0] || null)} />
+      </label>
+      {verErr && <p className="wf-auth-error" style={{ margin: 0 }}>{verErr}</p>}
+      <div className="wf-form-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
+        <button type="button" className="wf-back" onClick={() => setVerEdit(null)}>Cancel</button>
+        <span style={{ display: 'flex', gap: 12 }}>
+          {verEdit.id != null && (
+            <button type="button" className="wf-del" onClick={deleteVersion} disabled={verBusy} aria-label="Delete version">
+              <TrashIcon />
+            </button>
+          )}
+          <button type="button" className="wf-form-submit wf-mag" onClick={saveVersion} disabled={verBusy}>{verBusy ? 'Saving…' : 'Save version'}</button>
+        </span>
+      </div>
+    </div>
+  )
   const renderEditPanel = (p) => (
     <div className="wf-field-edit" key={p.id + '-edit'}>
       <div className="wf-eyebrow" style={{ marginBottom: 2 }}>Edit field</div>
@@ -504,7 +623,6 @@ export default function Admin() {
       {editForm.method && (
         <MethodEditor value={editForm.method} onChange={(m) => setEditForm((f) => ({ ...f, method: m }))} />
       )}
-      <VersionsEditor value={editForm.versions} onChange={(v) => setEditForm((f) => ({ ...f, versions: v }))} />
       <label className="wf-field">
         <span className="wf-field-label">Replace image {editImg ? `· ${editImg.name}` : '(keep current)'}</span>
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
@@ -833,11 +951,14 @@ export default function Admin() {
                         </span>
                       </div>
                       <SoldEditor item={p} isFree={false} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
-                      <button className="wf-edit-btn" aria-label={`Edit ${p.title}`} onClick={() => openEdit(p, false)}>✎</button>
+                      <button className="wf-ver-add" aria-label={`Add version to ${p.title}`} onClick={() => startVersionEdit(p, false, null)}>+ Version</button>
+                      <button className="wf-edit-btn" aria-label={`Edit ${p.title}`} onClick={() => onEditClick(p, false)}>✎</button>
                       <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteProduct(p.id)}>
                         <TrashIcon />
                       </button>
                     </div>
+                    {verPickId === p.id && renderVersionChooser(p, false)}
+                    {verEdit?.fieldId === p.id && renderVersionEditor()}
                     {editId === p.id && renderEditPanel(p)}
                   </div>
                 ))}

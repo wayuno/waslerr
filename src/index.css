@@ -6905,3 +6905,35 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 
 /* admin versions editor — per-version card with audio */
 .wf-ve-card { border: 1px solid var(--wf-rule); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: rgba(255, 255, 255, 0.02); }
+
+/* admin per-field version chooser + add button */
+.wf-ver-add {
+  flex: none;
+  font-family: var(--wf-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+  background: none;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 999px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: background 0.3s, border-color 0.3s;
+}
+.wf-ver-add:hover { background: rgba(212, 175, 55, 0.08); border-color: rgba(212, 175, 55, 0.7); }
+.wf-ver-chooser { margin: 10px 0 0; padding: 16px; border: 1px solid var(--wf-rule); border-radius: 14px; background: rgba(255, 255, 255, 0.02); }
+.wf-ver-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.wf-ver-choice {
+  font-family: var(--wf-sans);
+  font-size: 13px;
+  color: #eef0f4;
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-rule);
+  border-radius: 10px;
+  padding: 9px 15px;
+  cursor: pointer;
+  transition: border-color 0.3s, background 0.3s;
+}
+.wf-ver-choice:hover { border-color: rgba(212, 175, 55, 0.5); }
+.wf-ver-choice.add { color: var(--wf-gold); border-style: dashed; border-color: rgba(212, 175, 55, 0.45); }
