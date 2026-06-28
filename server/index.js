@@ -148,19 +148,20 @@ const sbHeaders = () => ({
   'Content-Type': 'application/json',
 })
 
-// PostgREST error that mentions the benefits column (e.g. the migration that
-// adds `benefits text[]` hasn't been run yet)
-const benefitsColErr = (data) => {
+// Newer columns added by later migrations. If a write fails only because one of
+// these isn't in the table yet, we transparently retry without them so
+// publishing/editing keeps working (they persist once the column is added).
+const OPTIONAL_COLS = ['benefits', 'method']
+const missingOptionalCol = (data) => {
   try {
-    return JSON.stringify(data || '').toLowerCase().includes('benefits')
+    const s = JSON.stringify(data || '').toLowerCase()
+    return OPTIONAL_COLS.some((c) => s.includes(c))
   } catch {
     return false
   }
 }
 
-// POST/PATCH to a PostgREST table. If the write fails only because the table
-// has no `benefits` column yet, transparently retry without it so publishing
-// keeps working (benefits start persisting once the column is added).
+// POST/PATCH to a PostgREST table, with the optional-column fallback above.
 const sbWrite = async (urlStr, method, body) => {
   const send = (payload) =>
     fetch(urlStr, {
@@ -170,10 +171,14 @@ const sbWrite = async (urlStr, method, body) => {
     })
   let r = await send(body)
   let data = await r.json().catch(() => null)
-  if (!r.ok && body && body.benefits !== undefined && benefitsColErr(data)) {
-    const { benefits, ...rest } = body // eslint-disable-line no-unused-vars
-    r = await send(rest)
-    data = await r.json().catch(() => null)
+  if (!r.ok && body && missingOptionalCol(data)) {
+    const rest = { ...body }
+    let stripped = false
+    for (const c of OPTIONAL_COLS) if (c in rest) { delete rest[c]; stripped = true }
+    if (stripped) {
+      r = await send(rest)
+      data = await r.json().catch(() => null)
+    }
   }
   return { ok: r.ok, status: r.status, data: Array.isArray(data) ? data[0] : data }
 }
@@ -402,6 +407,25 @@ const removeFreeField = async (id) => (await sbRest(`free_fields?id=eq.${encodeU
 // capped) for the products / free_fields `benefits` column
 const cleanBenefits = (v) =>
   Array.isArray(v) ? v.map((s) => String(s).trim()).filter(Boolean).slice(0, 30) : []
+
+// sanitize an incoming Listening Method object for the `method` jsonb column
+const cleanMethod = (m) => {
+  if (!m || typeof m !== 'object') return null
+  const str = (v, n) => String(v ?? '').slice(0, n)
+  return {
+    headline: str(m.headline, 120),
+    intro: str(m.intro, 800),
+    steps: Array.isArray(m.steps)
+      ? m.steps.slice(0, 12).map((s) => ({
+          id: str(s && s.id ? s.id : Math.random().toString(36).slice(2), 24),
+          icon: str(s && s.icon ? s.icon : 'sparkle', 16),
+          title: str(s && s.title, 80),
+          body: str(s && s.body, 500),
+        }))
+      : [],
+    pills: Array.isArray(m.pills) ? m.pills.map((p) => str(p, 48).trim()).filter(Boolean).slice(0, 10) : [],
+  }
+}
 
 // --- conversation delete (clears all messages in a thread) ---------
 const removeConversation = async (conversationId) =>
@@ -872,6 +896,7 @@ const server = http.createServer(async (req, res) => {
       sold_count: Math.max(0, parseInt(b.sold_count, 10) || 0),
       benefits: cleanBenefits(b.benefits),
     }
+    if (b.method !== undefined) row.method = cleanMethod(b.method)
     const out = await insertProduct(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { product: out.data })
@@ -891,6 +916,7 @@ const server = http.createServer(async (req, res) => {
     if (b.image_url !== undefined) patch.image_url = b.image_url || null
     if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
     if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
+    if (b.method !== undefined) patch.method = cleanMethod(b.method)
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateProductRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
@@ -1480,6 +1506,7 @@ const server = http.createServer(async (req, res) => {
       audio_url: b.audio_url || null,
       benefits: cleanBenefits(b.benefits),
     }
+    if (b.method !== undefined) row.method = cleanMethod(b.method)
     const out = await insertFreeField(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { freeField: out.data })
@@ -1496,6 +1523,7 @@ const server = http.createServer(async (req, res) => {
     if (b.image_url !== undefined) patch.image_url = b.image_url || null
     if (b.audio_url !== undefined) patch.audio_url = b.audio_url || null
     if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
+    if (b.method !== undefined) patch.method = cleanMethod(b.method)
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateFreeFieldRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })

@@ -20,6 +20,7 @@ const normalizeFreeField = (row) => ({
   sold: Number(row.sold_count) || 0,
   hasAudio: !!row.audio_url,
   benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
+  method: row.method && typeof row.method === 'object' ? row.method : null,
   freq: 200,
 })
 
