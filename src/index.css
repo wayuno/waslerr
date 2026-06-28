@@ -6723,3 +6723,21 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 @media (prefers-reduced-motion: reduce) {
   .wf-lm-overlay, .wf-lm-panel, .wf-lm-card { animation: none !important; }
 }
+
+/* admin Listening Method editor (field edit form) */
+.wf-me { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.wf-me-blocks { display: flex; flex-direction: column; gap: 10px; }
+.wf-me-block { border: 1px solid var(--wf-rule); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: rgba(255, 255, 255, 0.02); }
+.wf-me-block-top { display: flex; align-items: center; gap: 10px; }
+.wf-me-ic { width: 30px; height: 30px; padding: 0; border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 8px; background: none; color: var(--wf-gold); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.wf-me-ic:hover { background: rgba(212, 175, 55, 0.08); }
+.wf-me-num { font-family: var(--wf-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--wf-gold); }
+.wf-me-del { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #e7a78f; background: rgba(142, 42, 12, 0.25); border: 1px solid rgba(142, 42, 12, 0.4); }
+.wf-me-del:hover { background: rgba(142, 42, 12, 0.4); }
+.wf-me-add { align-self: flex-start; border: 1px dashed rgba(212, 175, 55, 0.4); background: none; color: var(--wf-gold); font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 9px; padding: 9px 14px; cursor: pointer; }
+.wf-me-add:hover { background: rgba(212, 175, 55, 0.06); border-color: rgba(212, 175, 55, 0.7); }
+.wf-me-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.wf-me-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border: 1px solid rgba(212, 175, 55, 0.35); border-radius: 999px; }
+.wf-me-pill input { width: 110px; background: none; border: none; outline: none; color: #eef0f4; font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.wf-me-pill button { border: none; background: none; color: #e7a78f; cursor: pointer; font-size: 11px; }
+.wf-me-pill-add { color: var(--wf-gold); border-style: dashed; cursor: pointer; background: none; font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 12px; }
