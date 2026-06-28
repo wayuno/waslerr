@@ -8,7 +8,7 @@ import { useMagnetic } from '../hooks/useMagnetic'
 import StoryCard, { Stars } from '../components/StoryCard'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 import { averageOf } from '../lib/wall'
-import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight } from '../components/icons'
+import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, StarIcon, CheckIcon } from '../components/icons'
 
 const CATS = {
   desire: { label: 'Desire', cls: '', ph: 'wf-card-ph-desire' },
@@ -16,8 +16,6 @@ const CATS = {
   wealth: { label: 'Wealth', cls: 'wealth', ph: 'wf-card-ph-wealth' },
 }
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
-const SPEC_PAID = ['Slightly audible', 'Desire Code', 'Akashic Field', 'Lifetime access', '30-day guarantee']
-const SPEC_FREE = ['Free forever', 'Instant download', 'FLAC + MP3', 'No card required']
 
 const priceOf = (f) =>
   f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
@@ -112,9 +110,20 @@ export default function Detail() {
             <h1 className="wf-detail-title" data-reveal>
               {f.title}
             </h1>
-            <span className="wf-card-sub" data-reveal style={{ marginBottom: 18 }}>
-              by Waslerr
-            </span>
+            <div className="wf-detail-by" data-reveal>
+              <span>by Waslerr</span>
+              <span className="wf-detail-rate">
+                <StarIcon size={13} /> {rating}
+              </span>
+              {free
+                ? sold > 0 && <span>{soldStr} downloads</span>
+                : (
+                  <>
+                    {sold > 0 && <span>{soldStr} sold</span>}
+                    <span>lifetime access</span>
+                  </>
+                )}
+            </div>
 
             {free ? (
               <div className="wf-free-priceline" data-reveal>
@@ -127,23 +136,20 @@ export default function Detail() {
               </div>
             )}
 
-            <div className="wf-detail-metaline" data-reveal>
-              {free ? (
-                <>
-                  {sold > 0 && <>{soldStr} downloads · </>}
-                  <Stars rating={rating} /> <span className="wf-gold">{rating}</span>
-                </>
-              ) : (
-                <>
-                  <Stars rating={rating} /> <span className="wf-gold">{rating}</span>
-                  {sold > 0 && <> · {soldStr} sold</>} · lifetime access
-                </>
-              )}
-            </div>
-
             <p className="wf-detail-desc" data-reveal>
               {f.desc}
             </p>
+
+            <ul className="wf-detail-checks" data-reveal>
+              {benefits.slice(0, 3).map((b) => (
+                <li key={b}>
+                  <span className="wf-detail-check" aria-hidden="true">
+                    <CheckIcon size={13} stroke={2.6} />
+                  </span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
 
             <div className="wf-detail-cta" data-reveal>
               {free ? (
@@ -171,14 +177,6 @@ export default function Detail() {
               <button className="wf-btn wf-btn-glass wf-mag" onClick={openChat}>
                 <ChatIconBubble size={16} /> Ask a guide
               </button>
-            </div>
-
-            <div className="wf-spec-chips" data-reveal>
-              {(free ? SPEC_FREE : SPEC_PAID).map((s) => (
-                <span className="wf-spec-chip" key={s}>
-                  {s}
-                </span>
-              ))}
             </div>
           </div>
         </div>

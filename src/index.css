@@ -3457,6 +3457,58 @@ a {
   .wf-ppl-dl::after { animation: none !important; }
 }
 
+/* detail meta line: by Waslerr · ★ rating · downloads */
+.wf-detail-by {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--wf-mute);
+  margin: 10px 0 20px;
+}
+.wf-detail-by > * { display: inline-flex; align-items: center; }
+.wf-detail-by > * + *::before {
+  content: '·';
+  margin: 0 9px;
+  color: var(--wf-mute);
+}
+.wf-detail-rate { gap: 5px; color: var(--wf-gold); font-weight: 500; }
+.wf-detail-rate svg { color: var(--wf-gold); }
+
+/* field pills rendered as gold outlines (detail page) */
+.wf-detail-info .wf-card-cat {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 6px 13px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 999px;
+}
+.wf-detail-info .wf-card-cat.akashic { border-color: rgba(95, 168, 201, 0.4); }
+.wf-detail-info .wf-card-cat.wealth { border-color: rgba(127, 185, 138, 0.4); }
+.wf-detail-info .wf-free-pill {
+  color: var(--wf-gold);
+  background: none;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  animation: none;
+}
+
+/* benefit checklist in the info column */
+.wf-detail-checks { list-style: none; margin: 4px 0 26px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.wf-detail-checks li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.5; color: #cdd1da; font-weight: 300; }
+.wf-detail-check {
+  flex: none;
+  margin-top: 1px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--wf-gold);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+
 /* detail meta + stars + spec chips */
 .wf-detail-metaline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--wf-silver); margin: 0 0 22px; }
 .wf-stars-row { display: inline-flex; align-items: center; gap: 2px; color: var(--wf-gold); }
