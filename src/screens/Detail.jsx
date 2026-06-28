@@ -8,7 +8,7 @@ import { useMagnetic } from '../hooks/useMagnetic'
 import StoryCard, { Stars } from '../components/StoryCard'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 import { averageOf } from '../lib/wall'
-import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, StarIcon, CheckIcon, ChevronRight } from '../components/icons'
+import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, StarIcon, ChevronRight } from '../components/icons'
 
 const CATS = {
   desire: { label: 'Desire', cls: '', ph: 'wf-card-ph-desire' },
@@ -16,6 +16,8 @@ const CATS = {
   wealth: { label: 'Wealth', cls: 'wealth', ph: 'wf-card-ph-wealth' },
 }
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
+const SPEC_PAID = ['Slightly audible', 'Desire Code', 'Akashic Field', 'Lifetime access', '30-day guarantee']
+const SPEC_FREE = ['Free forever', 'Instant download', 'FLAC + MP3', 'No card required']
 
 const priceOf = (f) =>
   f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
@@ -144,17 +146,6 @@ export default function Detail() {
               {f.desc}
             </p>
 
-            <ul className="wf-detail-checks" data-reveal>
-              {benefits.slice(0, 3).map((b) => (
-                <li key={b}>
-                  <span className="wf-detail-check" aria-hidden="true">
-                    <CheckIcon size={13} stroke={2.6} />
-                  </span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-
             <div className="wf-detail-cta" data-reveal>
               {free ? (
                 <button
@@ -182,47 +173,42 @@ export default function Detail() {
                 <ChatIconBubble size={16} /> Ask a guide
               </button>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ===== BENEFITS ===== */}
-      <section className="wf-benefits">
-        <div className="wf-container" style={{ maxWidth: 820 }}>
-          <div className="wf-head-block wf-center" style={{ marginBottom: 38 }}>
-            <div className="wf-eyebrow" data-reveal>
-              What this field rewires
-            </div>
-            <h2 className="wf-h2" data-reveal>
-              {free ? 'What you wake up to.' : 'The benefits, in full.'}
-            </h2>
-          </div>
-          <div className={`wf-benefits-x${benefitsOpen ? ' open' : ''}`}>
-            <button
-              className="wf-benefits-trigger"
-              aria-expanded={benefitsOpen}
-              onClick={() => setBenefitsOpen((o) => !o)}
-            >
-              <span className="wf-bx-lead">
-                <span className="wf-bx-spark" aria-hidden="true" />
-                <span className="wf-bx-label">
-                  {benefitsOpen ? 'The benefits' : 'See the benefits'}
-                  <span className="wf-bx-count">{benefits.length}</span>
+            <div className="wf-spec-chips" data-reveal>
+              {(free ? SPEC_FREE : SPEC_PAID).map((s) => (
+                <span className="wf-spec-chip" key={s}>
+                  {s}
                 </span>
-              </span>
-              <span className="wf-bx-chev" aria-hidden="true">
-                <ChevronRight size={16} />
-              </span>
-            </button>
-            <div className="wf-benefits-reveal" hidden={!benefitsOpen}>
-              <ol className="wf-benefits-list">
-                {benefits.map((b, i) => (
-                  <li className="wf-benefit-item" key={b} style={{ '--bi': i }}>
-                    <span className="wf-benefit-no">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="wf-benefit-text">{b}</span>
-                  </li>
-                ))}
-              </ol>
+              ))}
+            </div>
+
+            <div className={`wf-benefits-x${benefitsOpen ? ' open' : ''}`}>
+              <button
+                className="wf-benefits-trigger"
+                aria-expanded={benefitsOpen}
+                onClick={() => setBenefitsOpen((o) => !o)}
+              >
+                <span className="wf-bx-lead">
+                  <span className="wf-bx-spark" aria-hidden="true" />
+                  <span className="wf-bx-label">
+                    {benefitsOpen ? (free ? 'What you wake up to' : 'The benefits') : 'See the benefits'}
+                    <span className="wf-bx-count">{benefits.length}</span>
+                  </span>
+                </span>
+                <span className="wf-bx-chev" aria-hidden="true">
+                  <ChevronRight size={16} />
+                </span>
+              </button>
+              <div className="wf-benefits-reveal" hidden={!benefitsOpen}>
+                <ol className="wf-benefits-list">
+                  {benefits.map((b, i) => (
+                    <li className="wf-benefit-item" key={b} style={{ '--bi': i }}>
+                      <span className="wf-benefit-no">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="wf-benefit-text">{b}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           </div>
         </div>
