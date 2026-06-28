@@ -222,12 +222,8 @@ export default function PosterPlayer({ field, saved, onDownload }) {
 
   return (
     <div className={`wf-poster-player${playing ? ' playing' : ''}`} style={{ '--ppl-tint': tint }}>
-      {/* dark photo reflection (behind everything) */}
-      <div
-        className="wf-ppl-reflect"
-        aria-hidden="true"
-        style={img ? { backgroundImage: `url("${img}")` } : undefined}
-      />
+      {/* colour fill from the artwork — pure CSS background, CORS-proof */}
+      {img && <span className="wf-ppl-reflect" style={{ backgroundImage: `url("${img}")` }} aria-hidden="true" />}
 
       <span className="wf-ppl-badge">
         <span className="wf-ppl-badge-in">
