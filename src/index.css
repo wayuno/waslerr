@@ -3519,13 +3519,94 @@ a {
 
 /* benefits band — single centered column, glowing dot pointers */
 .wf-benefits { position: relative; z-index: 2; border-top: 1px solid var(--wf-rule); margin-top: 72px; padding: 70px 0; }
-.wf-benefits-panel { border-radius: 20px; border: 1px solid var(--wf-rule); background: linear-gradient(180deg, rgba(212, 175, 55, 0.05), rgba(255, 255, 255, 0.012)); padding: 14px 34px; }
-.wf-benefit-row { display: flex; align-items: flex-start; gap: 16px; padding: 16px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.055); border-radius: 10px; transition: background 0.35s var(--wf-ease); }
-.wf-benefit-row:last-child { border-bottom: none; }
-.wf-benefit-dot { flex: none; margin-top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--wf-grad); box-shadow: 0 0 8px rgba(212, 175, 55, 0.6); transition: transform 0.3s var(--wf-ease), box-shadow 0.3s; }
+/* collapsible benefits expander */
+.wf-benefits-x {
+  max-width: 620px;
+  margin: 0 auto;
+  border-radius: 18px;
+  border: 1px solid var(--wf-rule);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.05), rgba(255, 255, 255, 0.012));
+  transition: border-color 0.4s var(--wf-ease), box-shadow 0.4s var(--wf-ease);
+}
+.wf-benefits-x.open {
+  border-color: rgba(212, 175, 55, 0.32);
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.08), 0 26px 60px rgba(0, 0, 0, 0.4);
+}
+.wf-benefits-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.wf-bx-lead { display: inline-flex; align-items: center; gap: 14px; }
+.wf-bx-spark {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wf-grad);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.7);
+  animation: wf-bx-spark 3.2s var(--wf-ease) infinite;
+}
+.wf-bx-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--wf-serif);
+  font-size: 21px;
+  font-weight: 500;
+  color: #f1f2f6;
+}
+.wf-bx-count {
+  font-family: var(--wf-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--wf-gold);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.wf-bx-chev {
+  flex: none;
+  display: inline-flex;
+  color: var(--wf-mute);
+  transform: rotate(90deg);
+  transition: transform 0.4s var(--wf-ease), color 0.4s;
+}
+.wf-benefits-x.open .wf-bx-chev { transform: rotate(-90deg); color: var(--wf-gold); }
+.wf-benefits-reveal { padding: 0 26px 8px; }
+.wf-benefits-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--wf-rule); }
+.wf-benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 17px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  animation: wf-bx-in 0.45s var(--wf-ease) both;
+  animation-delay: calc(var(--bi) * 0.05s);
+}
+.wf-benefit-item:last-child { border-bottom: none; }
+.wf-benefit-no {
+  flex: none;
+  margin-top: 2px;
+  font-family: var(--wf-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--wf-gold);
+}
 .wf-benefit-text { font-size: 15.5px; line-height: 1.55; color: #cdd1da; font-weight: 300; }
-.wf-benefit-row:hover { background: rgba(212, 175, 55, 0.06); }
-.wf-benefit-row:hover .wf-benefit-dot { transform: scale(1.5); box-shadow: 0 0 14px rgba(212, 175, 55, 0.9); }
+@keyframes wf-bx-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes wf-bx-spark { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) {
+  .wf-benefit-item { animation: none !important; }
+  .wf-bx-spark { animation: none !important; }
+}
 
 /* reviews summary band on the detail page */
 .wf-rsum { position: relative; z-index: 2; border-top: 1px solid var(--wf-rule); padding: 62px 0 82px; }
@@ -3584,7 +3665,9 @@ a {
 /* benefits/reviews mobile padding */
 @media (max-width: 640px) {
   .wf-benefits, .wf-rsum { padding: 48px 0 54px; margin-top: 48px; }
-  .wf-benefits-panel { padding: 14px 18px; }
+  .wf-benefits-trigger { padding: 18px; }
+  .wf-benefits-reveal { padding: 0 18px 6px; }
+  .wf-bx-label { font-size: 16px; }
   .wf-benefit-text { font-size: 15px; }
   .wf-rsum-avg { font-size: 48px; }
   .wf-rsum-actions { width: 100%; }
