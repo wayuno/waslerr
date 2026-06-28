@@ -484,11 +484,20 @@ export default function Checkout() {
 
                     <div className="wf-pp-listen wf-pp-anim">
                       <div className="wf-pp-radar" aria-hidden="true">
-                        <span className="wf-pp-radar-ring" />
+                        <span className="wf-pp-radar-ring r1" />
                         <span className="wf-pp-radar-ring r2" />
-                        <span className="wf-pp-radar-dash" />
+                        <span className="wf-pp-radar-ring r3" />
+                        <span className="wf-pp-radar-cv" />
+                        <span className="wf-pp-radar-ch" />
+                        <span className="wf-pp-radar-ping" />
+                        <span className="wf-pp-radar-ping b" />
+                        <span className="wf-pp-radar-sweep" />
+                        <span className="wf-pp-radar-core" />
                       </div>
-                      <span className="wf-pp-eyebrow gold">Live</span>
+                      <span className="wf-pp-eyebrow gold">
+                        <span className="wf-pp-live-dot" aria-hidden="true" />
+                        Live
+                      </span>
                       <h3 className="wf-pp-listen-title">Listening for your payment</h3>
                       <p className="wf-pp-listen-sub">
                         The moment PayPal confirms, your field unlocks automatically. Keep this tab open.
