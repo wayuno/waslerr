@@ -4231,6 +4231,11 @@ a {
      scale-down win over that inline value without touching any JS. */
   .wf-orbit-wrap { transform: scale(0.62) !important; }
 
+  /* Hero entrance must never leave content hidden on touch. The fade-up adds
+     `.in` from a rAF/timeout that in-app browsers can throttle, so on any touch
+     device we show the hero copy + CTAs immediately (no JS dependency). */
+  [data-anim] { opacity: 1 !important; transform: none !important; transition: none !important; }
+
   /* desktop-only cursor effects stay off on touch */
   .wf-glow,
   .wf-trail,

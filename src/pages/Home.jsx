@@ -25,6 +25,14 @@ const EMBERS = [
 function DecryptText({ text, order = 0, className, style }) {
   const [out, setOut] = useState(text)
   useEffect(() => {
+    // On touch / reduced-motion, skip the scramble entirely — show the final
+    // text immediately. In-app mobile browsers throttle rAF, which left the
+    // headline mid-scramble (or blank); plain static text is reliable there.
+    if (typeof window !== 'undefined' && window.matchMedia &&
+        (window.matchMedia('(hover: none)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      setOut(text)
+      return
+    }
     const glyphs = 'abcdefghijklmnopqrstuvwxyz'
     const start = performance.now() + 360 + order * 240
     const dur = 720
