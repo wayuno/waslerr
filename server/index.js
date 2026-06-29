@@ -575,6 +575,20 @@ const getMessages = async (conversationId) => {
   const r = await sbRest(`support_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`)
   return r.ok ? r.json() : []
 }
+const getMessageById = async (id) => {
+  const r = await sbRest(`support_messages?id=eq.${encodeURIComponent(id)}&limit=1`)
+  const d = await r.json().catch(() => [])
+  return Array.isArray(d) && d[0] ? d[0] : null
+}
+const updateMessage = async (id, patch) => {
+  const r = await sbRest(`support_messages?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(patch),
+  })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, data: Array.isArray(d) ? d[0] : d }
+}
 
 // --- offers (field offered in chat → pay → deliver) ----------------
 const insertOffer = async (row) => {
@@ -818,17 +832,28 @@ const resolveConvEmails = (msgs, offers) => {
 const offerEmail = (o, convEmail) =>
   o.customer_email ? String(o.customer_email).toLowerCase() : (o.conversation_id ? convEmail.get(o.conversation_id) || null : null)
 
+const isRequestBody = (body) => /^✦\s*CUSTOM CODE REQUEST/i.test(String(body || '').trim())
 const getPeople = async () => {
   const mr = await sbRest('support_messages?order=created_at.desc&limit=1000')
   const msgs = mr.ok ? await mr.json() : []
   const offers = await listAllOffers()
   const convEmail = resolveConvEmails(msgs, offers)
+  // offer answering a given request message (prefer a live, non-cancelled one)
+  const offerByReq = new Map()
+  for (const o of offers) {
+    if (o.request_message_id == null) continue
+    const k = String(o.request_message_id)
+    const cur = offerByReq.get(k)
+    if (!cur || cur.status === 'cancelled' || o.status !== 'cancelled') offerByReq.set(k, o)
+  }
   const keyFor = (cid) => convEmail.get(cid) || `anon:${cid}`
   const people = new Map()
   const ensure = (key, email) => {
     let p = people.get(key)
     if (!p) {
-      p = { key, email: email || null, displayName: email || 'Guest', lastBody: '', lastAt: null, count: 0, requestCount: 0, conversationIds: [] }
+      // pendingCount = open custom requests (not delivered, not rejected); lastFrom
+      // drives the unread/NEW dot in the admin list.
+      p = { key, email: email || null, displayName: email || 'Guest', lastBody: '', lastAt: null, lastFrom: null, count: 0, requestCount: 0, pendingCount: 0, conversationIds: [] }
       people.set(key, p)
     }
     return p
@@ -838,7 +863,14 @@ const getPeople = async () => {
     const p = ensure(keyFor(m.conversation_id), email)
     p.count++
     if (!p.conversationIds.includes(m.conversation_id)) p.conversationIds.push(m.conversation_id)
-    if (!p.lastAt || (m.created_at && m.created_at > p.lastAt)) { p.lastAt = m.created_at; p.lastBody = m.body }
+    if (!p.lastAt || (m.created_at && m.created_at > p.lastAt)) { p.lastAt = m.created_at; p.lastBody = m.body; p.lastFrom = m.sender }
+    // open custom-code request? (from the customer, no delivered offer, not rejected)
+    if (m.sender === 'user' && isRequestBody(m.body)) {
+      const rejected = !!(m.meta && m.meta.rejected)
+      const off = offerByReq.get(String(m.id))
+      const delivered = !!off && (off.status === 'delivered' || off.production_status === 'delivered')
+      if (!rejected && !delivered) p.pendingCount++
+    }
   }
   for (const o of offers) {
     const email = offerEmail(o, convEmail)
@@ -1614,6 +1646,29 @@ const server = http.createServer(async (req, res) => {
     const out = await updateOffer(offerId, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed', detail: 'Run the request_workspace.sql migration to add these columns.' })
     return sendJson(res, 200, { offer: adminOffer(out.data || { ...offer, ...patch }) })
+  }
+
+  // 4c) admin rejects (or re-opens) a ✦ CUSTOM CODE REQUEST message. Flags the
+  //     request closed so it drops out of the pending count; cancels a still-
+  //     unpaid linked offer so the customer can't pay a declined request.
+  if (/^\/api\/admin\/requests\/[^/]+\/reject$/.test(url) && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const messageId = decodeURIComponent(url.split('/')[4] || '')
+    const b = await readBody(req)
+    const rejected = b.rejected !== false // default true
+    const msg = await getMessageById(messageId)
+    if (!msg) return sendJson(res, 404, { error: 'not_found' })
+    const out = await updateMessage(messageId, { meta: { ...(msg.meta || {}), rejected } })
+    if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
+    if (rejected && msg.conversation_id) {
+      const linked = await listOffersForConversation(msg.conversation_id)
+      for (const o of linked) {
+        if (String(o.request_message_id || '') === String(messageId) && o.status === 'sent') {
+          await updateOffer(o.id, { status: 'cancelled' })
+        }
+      }
+    }
+    return sendJson(res, 200, { ok: true, rejected })
   }
 
   // 5) customer (or admin) downloads the delivered file — gated by conversationId
