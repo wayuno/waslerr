@@ -52,6 +52,13 @@ export function normalizeReview(row) {
 }
 
 // Normalize a DB row to the shape the UI components already use.
+// audio bundle for the client (keeps path so the admin edit form can preserve
+// existing files; the bucket is private so paths alone aren't downloadable)
+export const cleanAudioList = (a) =>
+  Array.isArray(a)
+    ? a.filter((x) => x && x.path).map((x) => ({ path: String(x.path), name: String(x.name || 'Audio'), size: Number(x.size) || 0 }))
+    : []
+
 export function normalizeProduct(row) {
   const price = Number(row.price) || 0
   return {
@@ -63,7 +70,8 @@ export function normalizeProduct(row) {
     desc: row.description || '',
     image_url: row.image_url || null,
     sold: Number(row.sold_count) || 0,
-    hasAudio: !!row.audio_url,
+    hasAudio: !!row.audio_url || (Array.isArray(row.audios) && row.audios.length > 0),
+    audios: cleanAudioList(row.audios),
     benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
     method: row.method && typeof row.method === 'object' ? row.method : null,
     versions: Array.isArray(row.versions) ? row.versions : [],

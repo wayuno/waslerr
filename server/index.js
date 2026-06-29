@@ -151,7 +151,7 @@ const sbHeaders = () => ({
 // Newer columns added by later migrations. If a write fails only because one of
 // these isn't in the table yet, we transparently retry without them so
 // publishing/editing keeps working (they persist once the column is added).
-const OPTIONAL_COLS = ['benefits', 'method', 'versions']
+const OPTIONAL_COLS = ['benefits', 'method', 'versions', 'audios']
 const missingOptionalCol = (data) => {
   try {
     const s = JSON.stringify(data || '').toLowerCase()
@@ -437,17 +437,35 @@ const cleanMethod = (m) => {
   }
 }
 
+// sanitize a bundle of audio files for the `audios` jsonb column
+const cleanAudios = (a) =>
+  Array.isArray(a)
+    ? a
+        .filter((x) => x && x.path)
+        .slice(0, 30)
+        .map((x) => ({
+          path: String(x.path).slice(0, 400),
+          name: String(x.name || 'Audio').slice(0, 200),
+          size: Math.max(0, Number(x.size) || 0),
+        }))
+    : []
+
 // sanitize an incoming versions list for the `versions` jsonb column
 const cleanVersions = (v) =>
   Array.isArray(v)
-    ? v.slice(0, 20).map((x, i) => ({
-        id: Number(x && x.id) || i + 1,
-        name: String(x && x.name ? x.name : 'Version').slice(0, 60),
-        price: Math.max(0, Number(x && x.price) || 0),
-        tagline: String(x && x.tagline ? x.tagline : '').slice(0, 160),
-        audio: String(x && x.audio ? x.audio : ''), // storage path of this version's gated audio
-        method: x && x.method ? cleanMethod(x.method) : null, // each cut can have its own listening method
-      }))
+    ? v.slice(0, 20).map((x, i) => {
+        const audios = cleanAudios(x && x.audios)
+        return {
+          id: Number(x && x.id) || i + 1,
+          name: String(x && x.name ? x.name : 'Version').slice(0, 60),
+          price: Math.max(0, Number(x && x.price) || 0),
+          tagline: String(x && x.tagline ? x.tagline : '').slice(0, 160),
+          // legacy single path = first file (keeps old downloads working)
+          audio: String(x && x.audio ? x.audio : (audios[0] ? audios[0].path : '')),
+          audios, // full bundle — buyers of this version get them all
+          method: x && x.method ? cleanMethod(x.method) : null, // each cut can have its own listening method
+        }
+      })
     : []
 
 // --- conversation delete (clears all messages in a thread) ---------
@@ -1066,6 +1084,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (b.method !== undefined) row.method = cleanMethod(b.method)
     if (b.versions !== undefined) row.versions = cleanVersions(b.versions)
+    if (b.audios !== undefined) {
+      row.audios = cleanAudios(b.audios)
+      if (!row.audio_url && row.audios[0]) row.audio_url = row.audios[0].path // legacy mirror
+    }
     const out = await insertProduct(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { product: out.data })
@@ -1087,6 +1109,10 @@ const server = http.createServer(async (req, res) => {
     if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
     if (b.method !== undefined) patch.method = cleanMethod(b.method)
     if (b.versions !== undefined) patch.versions = cleanVersions(b.versions)
+    if (b.audios !== undefined) {
+      patch.audios = cleanAudios(b.audios)
+      patch.audio_url = patch.audios[0] ? patch.audios[0].path : (b.audio_url || null) // legacy mirror
+    }
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateProductRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })
@@ -1712,18 +1738,27 @@ const server = http.createServer(async (req, res) => {
 
   // gated field audio: free fields are open; a paid field needs a valid paid
   // order reference for that field (the buyer's secret) or an admin token.
+  // A field/version can hold a BUNDLE of files — `?list=1` returns the entitled
+  // file list (names only), `?i=<index>` redirects to that file's signed URL.
   if (/^\/api\/fields\/[^/]+\/audio$/.test(url) && method === 'GET') {
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
     const id = url.split('/')[3]
     const ref = parsedUrl.searchParams.get('ref') || ''
+    const wantList = parsedUrl.searchParams.get('list') === '1'
+    const idx = Math.max(0, parseInt(parsedUrl.searchParams.get('i') || '0', 10) || 0)
     const paid = await getProductById(id)
     const freeF = paid ? null : await getFreeFieldById(id)
     const field = paid || freeF
     if (!field) return sendJson(res, 404, { error: 'field_not_found' })
-    if (!field.audio_url) return sendJson(res, 404, { error: 'no_audio' })
+
+    // a field's bundle = `audios`, falling back to the legacy single `audio_url`
+    const bundleOf = (obj, legacy) =>
+      Array.isArray(obj && obj.audios) && obj.audios.length
+        ? obj.audios
+        : (legacy ? [{ path: legacy, name: 'Audio', size: 0 }] : [])
+    let files = bundleOf(field, field.audio_url)
 
     const isFree = !!freeF || Number(field.price) === 0
-    let audioPath = field.audio_url
     if (!isFree) {
       // must prove purchase (paid order ref for this field) — or be admin
       let allowed = false
@@ -1731,10 +1766,11 @@ const server = http.createServer(async (req, res) => {
         const order = await getOrderByRef(ref)
         if (order && order.field_id === id && (order.status === 'paid' || order.status === 'delivered')) {
           allowed = true
-          // deliver the exact version they bought, if it has its own audio
+          // serve the exact version they bought, if it has its own audio bundle
           if (order.version_id != null && Array.isArray(paid && paid.versions)) {
             const v = paid.versions.find((x) => Number(x.id) === Number(order.version_id))
-            if (v && v.audio) audioPath = v.audio
+            const vfiles = v ? bundleOf(v, v.audio) : []
+            if (vfiles.length) files = vfiles
           }
         }
       }
@@ -1744,10 +1780,14 @@ const server = http.createServer(async (req, res) => {
       }
       if (!allowed) return sendJson(res, 403, { error: 'not_purchased' })
     }
-    if (!audioPath) return sendJson(res, 404, { error: 'no_audio' })
+    if (!files.length) return sendJson(res, 404, { error: 'no_audio' })
+    // names + sizes only — downloads go through this same endpoint by index
+    if (wantList) return sendJson(res, 200, { files: files.map((f, i) => ({ name: f.name || `Audio ${i + 1}`, size: f.size || 0, i })) })
+    const pick = files[idx] || files[0]
+    if (!pick || !pick.path) return sendJson(res, 404, { error: 'no_audio' })
     // paid audio lives in field-audio, free audio in its own free-audio bucket
     const bucket = freeF ? 'free-audio' : 'field-audio'
-    const signed = await signedDownloadUrl(audioPath, bucket, 120)
+    const signed = await signedDownloadUrl(pick.path, bucket, 120)
     if (!signed) return sendJson(res, 502, { error: 'sign_failed' })
     res.writeHead(302, { Location: signed, 'Cache-Control': 'no-store' })
     return res.end()
@@ -1767,6 +1807,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (b.method !== undefined) row.method = cleanMethod(b.method)
     if (b.versions !== undefined) row.versions = cleanVersions(b.versions)
+    if (b.audios !== undefined) {
+      row.audios = cleanAudios(b.audios)
+      if (!row.audio_url && row.audios[0]) row.audio_url = row.audios[0].path // legacy mirror
+    }
     const out = await insertFreeField(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
     return sendJson(res, 200, { freeField: out.data })
@@ -1785,6 +1829,10 @@ const server = http.createServer(async (req, res) => {
     if (b.benefits !== undefined) patch.benefits = cleanBenefits(b.benefits)
     if (b.method !== undefined) patch.method = cleanMethod(b.method)
     if (b.versions !== undefined) patch.versions = cleanVersions(b.versions)
+    if (b.audios !== undefined) {
+      patch.audios = cleanAudios(b.audios)
+      patch.audio_url = patch.audios[0] ? patch.audios[0].path : (b.audio_url || null) // legacy mirror
+    }
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateFreeFieldRow(id, patch)
     if (!out.ok) return sendJson(res, 502, { error: 'update_failed' })

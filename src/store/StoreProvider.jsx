@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { getSupabase, loadConfig, normalizeProduct, normalizeReview } from '../lib/supabase'
+import { getSupabase, loadConfig, normalizeProduct, normalizeReview, cleanAudioList } from '../lib/supabase'
 import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
 import { WALL_KEY, loadWall, saveWall } from '../lib/wall'
 
@@ -18,7 +18,8 @@ const normalizeFreeField = (row) => ({
   desc: row.description || '',
   image_url: row.image_url || null,
   sold: Number(row.sold_count) || 0,
-  hasAudio: !!row.audio_url,
+  hasAudio: !!row.audio_url || (Array.isArray(row.audios) && row.audios.length > 0),
+  audios: cleanAudioList(row.audios),
   benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
   method: row.method && typeof row.method === 'object' ? row.method : null,
   versions: Array.isArray(row.versions) ? row.versions : [],
@@ -636,15 +637,18 @@ export function StoreProvider({ children }) {
     [getToken, reloadProducts, loadFreeFields],
   )
 
-  // upload an audio file (paid bucket) and return its storage path — used by the
-  // admin version editor to attach a per-version gated audio
-  const uploadAudio = useCallback(
-    async (file) => {
+  // upload several audio files → [{ path, name, size }] (a field/version bundle)
+  const uploadAudios = useCallback(
+    async (files, isFree = false) => {
       const token = await getToken()
       if (!token) return { error: 'Not authorized.' }
-      const au = await uploadAudioViaApi(file, token)
-      if (au.error) return { error: au.error }
-      return { path: au.path }
+      const out = []
+      for (const f of files) {
+        const au = await uploadAudioViaApi(f, token, isFree)
+        if (au.error) return { error: au.error }
+        out.push({ path: au.path, name: f.name, size: f.size })
+      }
+      return { audios: out }
     },
     [getToken],
   )
@@ -686,7 +690,7 @@ export function StoreProvider({ children }) {
         const res = await fetch('/api/admin/free-fields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, benefits: form.benefits || [], method: form.method, image_url, audio_url }),
+          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, benefits: form.benefits || [], method: form.method, audios: form.audios, image_url, audio_url }),
         })
         if (!res.ok) return { error: `Publish failed (${res.status})` }
         await loadFreeFields()
@@ -1196,7 +1200,7 @@ export function StoreProvider({ children }) {
     selectedId,
     selectedProduct,
     checkoutVersionId,
-    uploadAudio,
+    uploadAudios,
     findProduct,
     openDetail,
     goCheckout,
