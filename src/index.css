@@ -792,9 +792,29 @@ a {
   display: flex;
   gap: 16px;
   justify-content: center;
-  margin-top: 42px;
+  margin-top: clamp(36px, 5.5vh, 56px);
   flex-wrap: wrap;
 }
+/* the two field lines between the headline and the CTAs */
+.wf-hero-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  align-items: center;
+  margin-top: clamp(28px, 4.5vh, 46px);
+}
+.wf-hero-line {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: var(--wf-sans);
+  font-weight: 300;
+  font-size: clamp(15px, 1.5vw, 19px);
+  color: #a8a094;
+  text-align: left;
+}
+.wf-hero-line-dot { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #d4af6a; }
+.wf-hero-line-name { color: #e4ca8c; font-family: var(--wf-serif); font-style: italic; font-size: 1.18em; }
 .wf-trust {
   display: flex;
   align-items: center;

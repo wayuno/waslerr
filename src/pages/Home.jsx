@@ -153,8 +153,23 @@ export default function Home({ onNavigate }) {
         <h1 className="wf-hero-h1" data-anim>
           <DecryptText text="Reprogram the mind." order={0} />
           <br />
-          <DecryptText text="Reshape your reality." order={1} className="accent" />
+          <DecryptText text="Reshape your reality" order={1} className="accent" />
         </h1>
+
+        <div className="wf-hero-lines">
+          <div className="wf-hero-line" data-anim>
+            <span className="wf-hero-line-dot" aria-hidden="true" />
+            <span>
+              <span className="wf-hero-line-name">Akashic fields</span> · for shifting consciousness directly
+            </span>
+          </div>
+          <div className="wf-hero-line" data-anim>
+            <span className="wf-hero-line-dot" aria-hidden="true" />
+            <span>
+              <span className="wf-hero-line-name">Desire code</span> · for imprinting new reality on consciousness
+            </span>
+          </div>
+        </div>
 
         <div className="wf-hero-cta" data-anim>
           <button className="wf-btn wf-btn-gold wf-mag" onClick={() => onNavigate({ page: 'fields' })}>
