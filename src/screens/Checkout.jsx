@@ -551,13 +551,16 @@ export default function Checkout() {
               </>
             )}
 
+            {/* CTA — no data-reveal here: it swaps content between states, and the
+                reveal observer's .in class would be stripped by React on re-render,
+                leaving this critical button stuck invisible (opacity:0). */}
             {free ? (
-              <button className="wf-form-submit wf-mag wf-co-continue" data-reveal onClick={enterVerify}>
+              <button className="wf-form-submit wf-mag wf-co-continue" onClick={enterVerify}>
                 <span>Get your field</span>
                 <span className="wf-co-arrow" aria-hidden="true">→</span>
               </button>
             ) : fullUnlock && unlockState === 'unlocked' ? (
-              <button className="wf-form-submit wf-mag wf-co-continue wf-access-btn" data-reveal onClick={claimFullUnlock} disabled={creating}>
+              <button className="wf-form-submit wf-mag wf-co-continue wf-access-btn" onClick={claimFullUnlock} disabled={creating}>
                 <span className="wf-confetti" aria-hidden="true">
                   {['6%', '17%', '29%', '41%', '53%', '64%', '76%', '88%', '12%', '35%', '59%', '83%'].map((left, i) => (
                     <span key={i} className="wf-confetti-bit" style={{ left, animationDelay: `${(i % 4) * 0.14}s`, animationDuration: `${1.5 + (i % 3) * 0.4}s`, background: i % 2 ? 'var(--wf-gold)' : 'var(--wf-gold-2)' }} />
@@ -567,7 +570,7 @@ export default function Checkout() {
                 <span className="wf-co-arrow" aria-hidden="true">→</span>
               </button>
             ) : (
-              <button className="wf-form-submit wf-mag wf-co-continue" data-reveal onClick={enterVerify} disabled={unlockState === 'unlocking'}>
+              <button className="wf-form-submit wf-mag wf-co-continue" onClick={enterVerify} disabled={unlockState === 'unlocking'}>
                 <span>{`Continue with ${methodLabel}`}</span>
                 <span className="wf-co-arrow" aria-hidden="true">→</span>
               </button>
