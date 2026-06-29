@@ -23,9 +23,10 @@ export default function VersionPicker({ field, isFree, onSelect }) {
   const selected = versions.find((v) => v.id === sel) || versions[0] || null
 
   useEffect(() => {
-    onSelect?.(selected || null)
+    // free fields aren't priced per version — don't push a version up
+    onSelect?.(isFree ? null : selected || null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sel, versions])
+  }, [sel, versions, isFree])
 
   if (isFree || versions.length === 0) return null
 
@@ -44,13 +45,6 @@ export default function VersionPicker({ field, isFree, onSelect }) {
           </span>
         ))}
       </div>
-
-      {selected && (
-        <div className="wf-vp-detail" key={selected.id}>
-          <span className="wf-vp-price">${selected.price}</span>
-          {selected.tagline && <span className="wf-vp-tagline">{selected.tagline}</span>}
-        </div>
-      )}
     </div>
   )
 }

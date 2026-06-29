@@ -148,14 +148,14 @@ export default function Detail() {
               </div>
             ) : (
               <div className="wf-detail-price" data-reveal>
-                {f.price || `$${total}`}
+                {selVersion ? `$${selVersion.price}` : f.price || `$${total}`}
               </div>
             )}
 
             <VersionPicker field={f} isFree={free} onSelect={setSelVersion} />
 
             <p className="wf-detail-desc" data-reveal>
-              {f.desc}
+              {selVersion?.tagline || f.desc}
             </p>
 
             <div className="wf-detail-cta" data-reveal>
