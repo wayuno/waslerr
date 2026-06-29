@@ -2012,8 +2012,9 @@ a {
 
 @media (max-width: 420px) {
   .wf-wordmark { font-size: 11px; letter-spacing: 0.14em; }
-  .wf-hero-cta { flex-direction: column; }
-  .wf-hero-cta .wf-btn { width: 100%; }
+  /* keep the two CTAs side by side (not stacked) — they share the row */
+  .wf-hero-cta { flex-direction: row; flex-wrap: nowrap; gap: 10px; }
+  .wf-hero-cta .wf-btn { width: auto; flex: 1 1 0; min-width: 0; padding: 13px 10px; font-size: 13px; white-space: nowrap; }
 }
 
 /* ============================================================
