@@ -288,7 +288,7 @@ export default function Detail() {
       </footer>
       </div>
 
-      {methodOpen && <ListeningMethod field={f} isFree={free} onClose={() => setMethodOpen(false)} />}
+      {methodOpen && <ListeningMethod field={f} isFree={free} method={selVersion?.method} editable={!selVersion} onClose={() => setMethodOpen(false)} />}
     </div>
   )
 }

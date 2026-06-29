@@ -9,6 +9,7 @@ const normVersions = (raw) =>
           name: String(v.name || 'Version'),
           price: Math.max(0, Number(v.price) || 0),
           tagline: String(v.tagline || ''),
+          method: v.method && typeof v.method === 'object' ? v.method : null,
         }))
     : []
 

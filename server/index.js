@@ -446,6 +446,7 @@ const cleanVersions = (v) =>
         price: Math.max(0, Number(x && x.price) || 0),
         tagline: String(x && x.tagline ? x.tagline : '').slice(0, 160),
         audio: String(x && x.audio ? x.audio : ''), // storage path of this version's gated audio
+        method: x && x.method ? cleanMethod(x.method) : null, // each cut can have its own listening method
       }))
     : []
 

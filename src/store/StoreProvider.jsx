@@ -686,7 +686,7 @@ export function StoreProvider({ children }) {
         const res = await fetch('/api/admin/free-fields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, benefits: form.benefits || [], image_url, audio_url }),
+          body: JSON.stringify({ title: form.title, line: form.line, description: form.description, benefits: form.benefits || [], method: form.method, image_url, audio_url }),
         })
         if (!res.ok) return { error: `Publish failed (${res.status})` }
         await loadFreeFields()

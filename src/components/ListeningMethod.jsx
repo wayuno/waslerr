@@ -5,10 +5,13 @@ import { ICON_KEYS, Glyph, uid, normalizeMethod } from './methodShared'
 
 // The Listening Method modal: the written ritual for a field, with an
 // admin-only block editor (add / edit / delete) that auto-saves per product.
-export default function ListeningMethod({ field, isFree, onClose }) {
+export default function ListeningMethod({ field, isFree, onClose, method, editable = true }) {
   const { isAdmin, updateProduct } = useStore()
+  // when showing a specific version's method, it's display-only here — the admin
+  // edits version methods from the Field control version editor, not this modal.
+  const canEdit = isAdmin && editable
   const [edit, setEdit] = useState(false)
-  const [data, setData] = useState(() => normalizeMethod(field.method, field.title))
+  const [data, setData] = useState(() => normalizeMethod(method ?? field.method, field.title))
   const saveTimer = useRef()
 
   // lock scroll + close on Esc
@@ -27,7 +30,7 @@ export default function ListeningMethod({ field, isFree, onClose }) {
   // edit + debounce-save to the product's `method` column
   const update = (next) => {
     setData(next)
-    if (!isAdmin) return
+    if (!canEdit) return
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       updateProduct(field.id, isFree, { method: next })
@@ -52,7 +55,7 @@ export default function ListeningMethod({ field, isFree, onClose }) {
     <div className="wf-lm-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`wf-lm-panel${edit ? ' editing' : ''}`} role="dialog" aria-label="The listening method">
         <div className="wf-lm-bar">
-          {isAdmin ? (
+          {canEdit ? (
             <button className={`wf-lm-admin${edit ? ' on' : ''}`} onClick={() => setEdit((e) => !e)}>
               {edit ? 'Done editing' : 'Admin · edit blocks'}
             </button>
