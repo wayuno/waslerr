@@ -3827,6 +3827,25 @@ a {
 .wf-detail-metaline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--wf-silver); margin: 0 0 22px; }
 .wf-stars-row { display: inline-flex; align-items: center; gap: 2px; color: var(--wf-gold); }
 .wf-stars-row svg { display: block; }
+/* downloadable audio bundle on the field page */
+.wf-tracklist { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.wf-tracklist-label { font-family: var(--wf-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--wf-mute); }
+.wf-track {
+  display: flex; align-items: center; gap: 10px;
+  text-align: left;
+  padding: 11px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--wf-rule);
+  background: var(--wf-glass);
+  color: #e7e9ee;
+  font-family: var(--wf-sans);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: border-color 0.25s var(--wf-ease), background 0.25s var(--wf-ease);
+}
+.wf-track:hover { border-color: var(--wf-gold); background: var(--wf-glass-2); }
+.wf-track svg { color: var(--wf-gold); flex: none; }
+
 .wf-spec-chips { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
 .wf-spec-chip { font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--wf-silver); background: var(--wf-glass); border: 1px solid var(--wf-rule); padding: 8px 13px; border-radius: 999px; }
 .wf-btn-gold.is-saved { opacity: 0.92; }
@@ -5500,6 +5519,15 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 /* current image preview + "asset set" hint inside the edit panels */
 .wf-edit-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--wf-rule); margin: 2px 0 4px; display: block; }
 .wf-asset-set { font-size: 12px; color: #4bc882; margin: 2px 0 4px; }
+/* multi-audio bundle editor (admin) */
+.wf-audio-list { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 6px; }
+.wf-audio-chip { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #d7dae1; background: var(--wf-glass); border: 1px solid var(--wf-rule); border-radius: 9px; padding: 6px 10px; }
+.wf-audio-chip.new { border-color: rgba(212, 175, 55, 0.4); }
+.wf-audio-chip button { margin-left: auto; background: none; border: none; color: var(--wf-mute); cursor: pointer; font-size: 13px; line-height: 1; }
+.wf-audio-chip button:hover { color: #e0432f; }
+.wf-audio-mini { font-family: var(--wf-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--wf-rule); color: var(--wf-mute); }
+.wf-audio-mini.set { color: #4bc882; border-color: rgba(75, 200, 130, 0.4); }
+.wf-audio-mini.new { color: var(--wf-gold); border-color: rgba(212, 175, 55, 0.45); }
 
 /* ============================================================
    FIELDS — empty state ("New fields are on the way")

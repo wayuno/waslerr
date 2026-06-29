@@ -29,6 +29,7 @@ export default function Detail() {
   const [benefitsOpen, setBenefitsOpen] = useState(false)
   const [methodOpen, setMethodOpen] = useState(false)
   const [selVersion, setSelVersion] = useState(null)
+  const [tracks, setTracks] = useState([]) // entitled audio files (bundle) for download
   const ref = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
@@ -41,6 +42,28 @@ export default function Detail() {
     setBenefitsOpen(false)
     setMethodOpen(false)
     setSelVersion(null)
+  }, [selectedProduct])
+  // load the buyer's (or free) entitled audio bundle so we can offer every file
+  useEffect(() => {
+    setTracks([])
+    const fld = selectedProduct
+    if (!fld) return
+    const isFree = priceOf(fld) === 0
+    let purchaseRef = ''
+    let purchased = false
+    try {
+      purchased = localStorage.getItem(`wf_purchased_${fld.id}`) === '1'
+      const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
+      purchaseRef = (orders.find((o) => o.id === fld.id || o.fieldId === fld.id || o.name === fld.title)?.ref) || ''
+    } catch { /* ignore */ }
+    if (!((isFree && fld.hasAudio) || purchased)) return
+    const u = `/api/fields/${fld.id}/audio?list=1${isFree ? '' : `&ref=${encodeURIComponent(purchaseRef)}`}`
+    let cancel = false
+    fetch(u)
+      .then((r) => (r.ok ? r.json() : { files: [] }))
+      .then((d) => { if (!cancel) setTracks(Array.isArray(d.files) ? d.files : []) })
+      .catch(() => {})
+    return () => { cancel = true }
   }, [selectedProduct])
 
   if (!selectedProduct) return null
@@ -76,10 +99,14 @@ export default function Detail() {
   // free fields are free to everyone, so anyone can share a story for them;
   // paid fields still require a purchase
   const canShare = ownsThis || free
-  const downloadAudio = () => {
+  const downloadTrack = (i) => {
     const base = `/api/fields/${f.id}/audio`
-    window.open(free ? base : `${base}?ref=${encodeURIComponent(purchaseRef)}`, '_blank')
+    const q = []
+    if (!free) q.push(`ref=${encodeURIComponent(purchaseRef)}`)
+    if (i != null) q.push(`i=${i}`)
+    window.open(q.length ? `${base}?${q.join('&')}` : base, '_blank')
   }
+  const downloadAudio = () => downloadTrack(0)
 
   const fieldStories = wall.filter((r) => r.field === f.id)
   const featured = [...fieldStories].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts).slice(0, 3)
@@ -193,6 +220,17 @@ export default function Detail() {
                 Listen method
               </button>
             </div>
+
+            {tracks.length > 1 && (
+              <div className="wf-tracklist" data-reveal>
+                <span className="wf-tracklist-label">{free ? 'All' : 'Your'} {tracks.length} tracks</span>
+                {tracks.map((t) => (
+                  <button key={t.i} className="wf-track" onClick={() => { setSaved(true); downloadTrack(t.i) }}>
+                    <DownloadIcon size={14} /> {t.name}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="wf-spec-chips" data-reveal>
               {(free ? SPEC_FREE : SPEC_PAID).map((s) => (

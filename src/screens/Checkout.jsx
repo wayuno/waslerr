@@ -217,7 +217,7 @@ export default function Checkout() {
     try {
       localStorage.setItem(`wf_purchased_${f.id}`, '1')
       const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-      orders.unshift({ id: reference, name: f.title, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
+      orders.unshift({ id: reference, fieldId: f.id, name: f.title, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
       localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
     } catch { /* ignore */ }
   }

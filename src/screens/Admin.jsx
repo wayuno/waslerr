@@ -4,6 +4,7 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import MethodEditor from '../components/MethodEditor'
+import AudioBundleEditor from '../components/AudioBundleEditor'
 import { normalizeMethod, defaultMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
@@ -106,7 +107,7 @@ export default function Admin() {
     addProduct,
     deleteProduct,
     updateProduct,
-    uploadAudio,
+    uploadAudios,
     addFreeField,
     deleteFreeField,
     announcements,
@@ -139,11 +140,10 @@ export default function Admin() {
   // product add form
   const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [], method: defaultMethod('') })
   const [file, setFile] = useState(null)
-  const [audioFile, setAudioFile] = useState(null)
+  const [audioFiles, setAudioFiles] = useState([]) // new field: bundle of audio files
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const fileInputRef = useRef(null)
-  const audioInputRef = useRef(null)
 
   // per-field edit panel
   const [editId, setEditId] = useState(null)
@@ -151,12 +151,12 @@ export default function Admin() {
   // version chooser + editor (paid fields): pencil shows Main/version choices once
   // a field has versions; the editor persists each version to the field
   const [verPickId, setVerPickId] = useState(null)
-  const [verEdit, setVerEdit] = useState(null) // { fieldId, isFree, id|null, name, price, tagline, audio }
-  const [verAudio, setVerAudio] = useState(null)
+  const [verEdit, setVerEdit] = useState(null) // { fieldId, isFree, id|null, name, price, tagline, audios, method }
+  const [verAudioFiles, setVerAudioFiles] = useState([]) // new files to add to this version
   const [verBusy, setVerBusy] = useState(false)
   const [verErr, setVerErr] = useState('')
   const [editImg, setEditImg] = useState(null)
-  const [editAudio, setEditAudio] = useState(null)
+  const [editAudioFiles, setEditAudioFiles] = useState([]) // new files to add when editing
   const [editBusy, setEditBusy] = useState(false)
   const [editErr, setEditErr] = useState('')
 
@@ -474,13 +474,20 @@ export default function Admin() {
     }
     setBusy(true)
     const priceNum = parseFloat(String(form.price).replace(/[^0-9.]/g, '')) || 0
+    // upload the audio bundle first (free fields → free bucket)
+    let audios = []
+    if (audioFiles.length) {
+      const up = await uploadAudios(audioFiles, priceNum === 0)
+      if (up?.error) { setBusy(false); return setErr(up.error) }
+      audios = up.audios
+    }
     // price 0 → goes to the separate free_fields table; otherwise to products
     const res =
       priceNum === 0
         ? await addFreeField(
-            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.', benefits: form.benefits, method: form.method },
+            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.', benefits: form.benefits, method: form.method, audios },
             file,
-            audioFile,
+            null,
           )
         : await addProduct(
             {
@@ -490,9 +497,10 @@ export default function Admin() {
               description: form.desc.trim() || 'A new Waslerr field.',
               benefits: form.benefits,
               method: form.method,
+              audios,
             },
             file,
-            audioFile,
+            null,
           )
     setBusy(false)
     if (res?.error) {
@@ -501,16 +509,15 @@ export default function Admin() {
     }
     setForm({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [], method: defaultMethod('') })
     setFile(null)
-    setAudioFile(null)
+    setAudioFiles([])
     if (fileInputRef.current) fileInputRef.current.value = ''
-    if (audioInputRef.current) audioInputRef.current.value = ''
   }
 
   // open/save the per-field edit panel
   const openEdit = (p, isFree) => {
     setEditErr('')
     setEditImg(null)
-    setEditAudio(null)
+    setEditAudioFiles([])
     setEditId(p.id)
     setEditForm({
       title: p.title || '',
@@ -519,6 +526,7 @@ export default function Admin() {
       desc: p.desc || '',
       benefits: Array.isArray(p.benefits) ? p.benefits : [],
       method: normalizeMethod(p.method, p.title),
+      audios: Array.isArray(p.audios) ? p.audios : [], // existing bundle (with paths)
       isFree,
     })
   }
@@ -526,9 +534,16 @@ export default function Admin() {
     setEditErr('')
     if (!editForm.title.trim()) return setEditErr('Title is required.')
     setEditBusy(true)
-    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method }
+    // upload any newly-added files, then keep them alongside the existing bundle
+    let audios = editForm.audios || []
+    if (editAudioFiles.length) {
+      const up = await uploadAudios(editAudioFiles, editForm.isFree)
+      if (up?.error) { setEditBusy(false); return setEditErr(up.error) }
+      audios = [...audios, ...up.audios]
+    }
+    const patch = { title: editForm.title.trim(), line: editForm.category.toLowerCase(), description: editForm.desc, benefits: editForm.benefits, method: editForm.method, audios }
     if (!editForm.isFree) patch.price = parseFloat(String(editForm.price).replace(/[^0-9.]/g, '')) || 0
-    const res = await updateProduct(editId, editForm.isFree, patch, editImg, editAudio)
+    const res = await updateProduct(editId, editForm.isFree, patch, editImg, null)
     setEditBusy(false)
     if (res?.error) return setEditErr(res.error)
     setEditId(null)
@@ -549,9 +564,13 @@ export default function Admin() {
   const startVersionEdit = (p, isFree, version) => {
     setVerPickId(null)
     setEditId(null)
-    setVerAudio(null)
+    setVerAudioFiles([])
     setVerErr('')
     const vers = Array.isArray(p.versions) ? p.versions : []
+    // existing version bundle: prefer `audios`, else lift the legacy single `audio`
+    const audios = Array.isArray(version?.audios) && version.audios.length
+      ? version.audios
+      : (version?.audio ? [{ path: version.audio, name: 'Audio', size: 0 }] : [])
     setVerEdit({
       fieldId: p.id,
       isFree,
@@ -559,7 +578,7 @@ export default function Admin() {
       name: version?.name ?? 'New version',
       price: version?.price ?? (vers[vers.length - 1]?.price ?? p.priceNum ?? 0) + 33,
       tagline: version?.tagline ?? '',
-      audio: version?.audio ?? '',
+      audios,
       method: normalizeMethod(version?.method, version?.name ?? p.title),
     })
   }
@@ -572,14 +591,15 @@ export default function Admin() {
     if (!verEdit.name.trim()) return setVerErr('Version name is required.')
     setVerBusy(true)
     try {
-      let audioPath = verEdit.audio
-      if (verAudio) {
-        const up = await uploadAudio(verAudio)
+      // keep existing files + upload any newly-added ones
+      let audios = verEdit.audios || []
+      if (verAudioFiles.length) {
+        const up = await uploadAudios(verAudioFiles, verEdit.isFree)
         if (up?.error) return setVerErr(up.error)
-        audioPath = up.path
+        audios = [...audios, ...up.audios]
       }
       let versions = [...fieldVersions(verEdit.fieldId)]
-      const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audio: audioPath, method: verEdit.method }
+      const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audios, audio: audios[0]?.path || '', method: verEdit.method }
       if (verEdit.id == null) {
         const id = versions.reduce((m, v) => Math.max(m, Number(v.id) || 0), 0) + 1
         versions.push({ id, ...row })
@@ -640,10 +660,14 @@ export default function Admin() {
           <input className="wf-input" value={verEdit.tagline} onChange={(e) => setVerEdit({ ...verEdit, tagline: e.target.value })} />
         </label>
       </div>
-      <label className="wf-field">
-        <span className="wf-field-label">Version audio {verAudio ? `· new: ${verAudio.name}` : verEdit.audio ? '· set ✓ (choose to replace)' : '· none yet — buyers of this version get it'}</span>
-        <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setVerAudio(e.target.files?.[0] || null)} />
-      </label>
+      <AudioBundleEditor
+        label="Version audio"
+        hint="buyers of this version get all of these"
+        existing={verEdit.audios}
+        setExisting={(a) => setVerEdit({ ...verEdit, audios: a })}
+        pending={verAudioFiles}
+        setPending={setVerAudioFiles}
+      />
       <MethodEditor value={verEdit.method} onChange={(m) => setVerEdit({ ...verEdit, method: m })} />
       {verErr && <p className="wf-auth-error" style={{ margin: 0 }}>{verErr}</p>}
       <div className="wf-form-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
@@ -654,7 +678,7 @@ export default function Admin() {
               <TrashIcon />
             </button>
           )}
-          <button type="button" className="wf-form-submit wf-mag" onClick={saveVersion} disabled={verBusy}>{verBusy ? (verAudio ? 'Uploading audio…' : 'Saving…') : 'Save version'}</button>
+          <button type="button" className="wf-form-submit wf-mag" onClick={saveVersion} disabled={verBusy}>{verBusy ? (verAudioFiles.length ? 'Uploading audio…' : 'Saving…') : 'Save version'}</button>
         </span>
       </div>
     </div>
@@ -693,13 +717,14 @@ export default function Admin() {
         {!editImg && p.image_url && <img src={p.image_url} alt="" className="wf-edit-thumb" />}
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
       </label>
-      <label className="wf-field">
-        <span className="wf-field-label">
-          Audio {editAudio ? `· new: ${editAudio.name}` : p.hasAudio ? '· set ✓ (choose to replace)' : '· none yet'}
-        </span>
-        {!editAudio && p.hasAudio && <span className="wf-asset-set">♪ current audio is set</span>}
-        <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setEditAudio(e.target.files?.[0] || null)} />
-      </label>
+      <AudioBundleEditor
+        label="Audio files"
+        hint="buyer gets all of these"
+        existing={editForm.audios}
+        setExisting={(a) => setEditForm((f) => ({ ...f, audios: a }))}
+        pending={editAudioFiles}
+        setPending={setEditAudioFiles}
+      />
       {editErr && <p className="wf-auth-error" style={{ margin: 0 }}>{editErr}</p>}
       <div className="wf-form-row" style={{ marginTop: 4 }}>
         <button type="button" className="wf-back" onClick={() => setEditId(null)}>Cancel</button>
@@ -1474,11 +1499,13 @@ export default function Admin() {
                 <span className="wf-field-label">Artwork image {file ? `· ${file.name}` : '(optional)'}</span>
                 <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               </label>
-              <label className="wf-field">
-                <span className="wf-field-label">Audio file {audioFile ? `· ${audioFile.name}` : '(the product — gated)'}</span>
-                <input ref={audioInputRef} className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
-                <span className="wf-field-hint">Paid fields: only unlocked after the customer pays. Free fields: open to all.</span>
-              </label>
+              <AudioBundleEditor
+                label="Audio files (the product — gated)"
+                hint="add as many as you like; buyer gets all"
+                pending={audioFiles}
+                setPending={setAudioFiles}
+              />
+              <span className="wf-field-hint">Paid fields: only unlocked after the customer pays. Free fields: open to all.</span>
               {err && <p className="wf-auth-error" style={{ margin: 0 }}>{err}</p>}
               <button type="submit" className="wf-form-submit wf-mag" disabled={busy}>
                 {busy ? 'Publishing…' : (<><PlusIcon /> Publish field</>)}
