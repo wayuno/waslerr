@@ -1061,6 +1061,39 @@ export function StoreProvider({ children }) {
     [getToken],
   )
 
+  // ---- per-person support inbox (admin) ----
+  // people grouped by email (left column)
+  const listPeople = useCallback(async () => {
+    const r = await authedFetch('/api/admin/people')
+    if (!r.ok) return []
+    return (await r.json()).people || []
+  }, [authedFetch])
+  // one person's detail: union of messages + their offers (admin shape)
+  const loadPerson = useCallback(
+    async (key) => {
+      const r = await authedFetch('/api/admin/people/' + encodeURIComponent(key))
+      if (!r.ok) return null
+      return (await r.json()).person || null
+    },
+    [authedFetch],
+  )
+  // update a request workspace (production status / spec / internal note)
+  const updateRequest = useCallback(
+    async (offerId, patch) => {
+      const r = await authedFetch('/api/admin/offers/' + encodeURIComponent(offerId), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        return { error: j.detail || j.error || 'Could not save.' }
+      }
+      return { ok: true, offer: (await r.json()).offer }
+    },
+    [authedFetch],
+  )
+
   // ---- reviews wall navigation ----
   const openReviews = useCallback(
     (fieldId = null, share = false) => {
@@ -1185,6 +1218,9 @@ export function StoreProvider({ children }) {
     clearChatRequest,
     createOffer,
     deliverOffer,
+    listPeople,
+    loadPerson,
+    updateRequest,
     notifications,
     unreadCount,
     notifReadAt,

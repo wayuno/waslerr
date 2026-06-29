@@ -600,6 +600,10 @@ const listOffersForConversation = async (conversationId) => {
   const r = await sbRest(`offers?conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`)
   return r.ok ? r.json() : []
 }
+const listAllOffers = async () => {
+  const r = await sbRest('offers?order=created_at.asc&limit=500')
+  return r.ok ? r.json() : []
+}
 // client-safe shape (no storage path; download goes through the gated endpoint)
 const publicOffer = (o) => ({
   id: o.id,
@@ -620,6 +624,24 @@ const publicOffer = (o) => ({
   createdAt: o.created_at,
   paidAt: o.paid_at || null,
   deliveredAt: o.delivered_at || null,
+})
+
+// admin-only shape: everything in publicOffer + the request-workspace fields.
+// internal_note lives ONLY here — never in publicOffer (would leak to the customer).
+// productionStatus is the 4-stage production pipeline (requested→production→review→
+// delivered), kept separate from the payment `status`. Once a file is actually
+// delivered we surface 'delivered' regardless of the stored stage.
+const PRODUCTION_STAGES = ['requested', 'production', 'review', 'delivered']
+const adminOffer = (o) => ({
+  ...publicOffer(o),
+  customerEmail: o.customer_email || null,
+  productionStatus: o.status === 'delivered' ? 'delivered' : (o.production_status || 'requested'),
+  focus: o.focus || '',
+  intention: o.intention || '',
+  budget: o.budget || '',
+  lengthEstimate: o.length_estimate || '',
+  internalNote: o.internal_note || '',
+  requestedAt: o.requested_at || o.created_at,
 })
 
 // Idempotent: when an offer's order is confirmed paid, flip the offer to `paid`
@@ -762,6 +784,96 @@ const getConversations = async () => {
     }
   }
   return [...map.values()]
+}
+
+// ---- per-person inbox -------------------------------------------------------
+// A "person" groups every conversation + every offer (custom-code request) that
+// belongs to the same customer email. Email is the join key, resolved per
+// conversation from message emails first, then offer.customer_email. Threads
+// with no resolvable email fall into a per-conversation `anon:<cid>` bucket so
+// nothing is ever dropped. All read-time — no extra tables.
+const resolveConvEmails = (msgs, offers) => {
+  // Order-independent: the EARLIEST signed-in email (by created_at) wins for a
+  // conversation, regardless of whether the caller sorted msgs asc or desc — so
+  // the people list and the person detail always bucket a conversation the same
+  // way (a conversation that carried two different emails can't diverge).
+  const first = new Map() // conversation_id -> { email, at }
+  for (const m of msgs) {
+    if (!m.email) continue
+    const at = m.created_at || ''
+    const prev = first.get(m.conversation_id)
+    if (!prev || at < prev.at) first.set(m.conversation_id, { email: String(m.email).toLowerCase(), at })
+  }
+  const convEmail = new Map()
+  for (const [cid, v] of first) convEmail.set(cid, v.email)
+  // offers fill in conversations that have no email-bearing message
+  for (const o of offers) {
+    if (o.customer_email && o.conversation_id && !convEmail.has(o.conversation_id)) {
+      convEmail.set(o.conversation_id, String(o.customer_email).toLowerCase())
+    }
+  }
+  return convEmail
+}
+const offerEmail = (o, convEmail) =>
+  o.customer_email ? String(o.customer_email).toLowerCase() : (o.conversation_id ? convEmail.get(o.conversation_id) || null : null)
+
+const getPeople = async () => {
+  const mr = await sbRest('support_messages?order=created_at.desc&limit=1000')
+  const msgs = mr.ok ? await mr.json() : []
+  const offers = await listAllOffers()
+  const convEmail = resolveConvEmails(msgs, offers)
+  const keyFor = (cid) => convEmail.get(cid) || `anon:${cid}`
+  const people = new Map()
+  const ensure = (key, email) => {
+    let p = people.get(key)
+    if (!p) {
+      p = { key, email: email || null, displayName: email || 'Guest', lastBody: '', lastAt: null, count: 0, requestCount: 0, conversationIds: [] }
+      people.set(key, p)
+    }
+    return p
+  }
+  for (const m of msgs) {
+    const email = convEmail.get(m.conversation_id) || null
+    const p = ensure(keyFor(m.conversation_id), email)
+    p.count++
+    if (!p.conversationIds.includes(m.conversation_id)) p.conversationIds.push(m.conversation_id)
+    if (!p.lastAt || (m.created_at && m.created_at > p.lastAt)) { p.lastAt = m.created_at; p.lastBody = m.body }
+  }
+  for (const o of offers) {
+    const email = offerEmail(o, convEmail)
+    const key = email || (o.conversation_id ? `anon:${o.conversation_id}` : null)
+    if (!key) continue
+    const p = ensure(key, email)
+    p.requestCount++
+    if (o.conversation_id && !p.conversationIds.includes(o.conversation_id)) p.conversationIds.push(o.conversation_id)
+  }
+  return [...people.values()].sort((a, b) => String(b.lastAt || '').localeCompare(String(a.lastAt || '')))
+}
+
+const getPersonDetail = async (key) => {
+  const mr = await sbRest('support_messages?order=created_at.asc&limit=1000')
+  const allMsgs = mr.ok ? await mr.json() : []
+  const allOffers = await listAllOffers()
+  const convEmail = resolveConvEmails(allMsgs, allOffers)
+  let conversationIds = []
+  let email = null
+  let offers = []
+  if (key.startsWith('anon:')) {
+    const cid = key.slice(5)
+    conversationIds = [cid]
+    offers = allOffers.filter((o) => o.conversation_id === cid && !o.customer_email)
+  } else {
+    email = key.toLowerCase()
+    const ids = new Set()
+    for (const m of allMsgs) if (convEmail.get(m.conversation_id) === email) ids.add(m.conversation_id)
+    offers = allOffers.filter((o) => offerEmail(o, convEmail) === email)
+    for (const o of offers) if (o.conversation_id) ids.add(o.conversation_id)
+    conversationIds = [...ids]
+  }
+  const messages = allMsgs
+    .filter((m) => conversationIds.includes(m.conversation_id))
+    .map((m) => ({ id: m.id, from: m.sender, text: m.body, at: m.created_at, kind: m.kind || 'text', meta: m.meta || null, conversationId: m.conversation_id }))
+  return { key, email, displayName: email || 'Guest', conversationIds, messages, offers: offers.map(adminOffer) }
 }
 
 // --- static file serving ---
@@ -1458,6 +1570,33 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { offer: publicOffer(out.data || { ...offer, status: 'delivered' }) })
   }
 
+  // 4b) admin updates a request workspace (production status / spec / internal note)
+  //     PATCH /api/admin/offers/:id  { productionStatus?, focus?, intention?, budget?, lengthEstimate?, internalNote? }
+  //     Production status is the *production* pipeline — orthogonal to payment
+  //     `status` (an unpaid offer can still move to review). Returns the admin
+  //     shape (incl. internal_note, which never appears in publicOffer).
+  if (/^\/api\/admin\/offers\/[^/]+$/.test(url) && method === 'PATCH') {
+    if (!(await requireAdmin(req, res))) return
+    const offerId = decodeURIComponent(url.split('/')[4] || '')
+    const b = await readBody(req)
+    const offer = await getOffer(offerId)
+    if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
+    const patch = {}
+    if (b.productionStatus !== undefined) {
+      if (!PRODUCTION_STAGES.includes(b.productionStatus)) return sendJson(res, 400, { error: 'bad_status' })
+      patch.production_status = b.productionStatus
+    }
+    if (b.focus !== undefined) patch.focus = String(b.focus).slice(0, 200)
+    if (b.intention !== undefined) patch.intention = String(b.intention).slice(0, 4000)
+    if (b.budget !== undefined) patch.budget = String(b.budget).slice(0, 80)
+    if (b.lengthEstimate !== undefined) patch.length_estimate = String(b.lengthEstimate).slice(0, 80)
+    if (b.internalNote !== undefined) patch.internal_note = String(b.internalNote).slice(0, 4000)
+    if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
+    const out = await updateOffer(offerId, patch)
+    if (!out.ok) return sendJson(res, 502, { error: 'update_failed', detail: 'Run the request_workspace.sql migration to add these columns.' })
+    return sendJson(res, 200, { offer: adminOffer(out.data || { ...offer, ...patch }) })
+  }
+
   // 5) customer (or admin) downloads the delivered file — gated by conversationId
   if (/^\/api\/offers\/[^/]+\/download$/.test(url) && method === 'GET') {
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
@@ -1618,6 +1757,18 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/admin/conversations' && method === 'GET') {
     if (!(await requireAdmin(req, res))) return
     return sendJson(res, 200, { conversations: await getConversations() })
+  }
+  // per-person inbox: the list of people (grouped by email) for the left column
+  if (url === '/api/admin/people' && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    return sendJson(res, 200, { people: await getPeople() })
+  }
+  // one person's full detail: union of their messages + their offers (admin shape)
+  if (url.startsWith('/api/admin/people/') && method === 'GET') {
+    if (!(await requireAdmin(req, res))) return
+    const key = decodeURIComponent(url.slice('/api/admin/people/'.length))
+    if (!key) return sendJson(res, 400, { error: 'bad_request' })
+    return sendJson(res, 200, { person: await getPersonDetail(key) })
   }
   // Binance Pay self-test (admin) — reveals whether the keys are valid Binance
   // Pay MERCHANT credentials. Bad keys / a non-merchant account fail here.
