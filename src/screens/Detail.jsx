@@ -24,7 +24,7 @@ const priceOf = (f) =>
   f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
 
 export default function Detail() {
-  const { selectedProduct, goCheckout, openChat, navigate, addToCart, openReviews, openDetail, products, wall, purchasedIds } = useStore()
+  const { selectedProduct, goCheckout, openChat, navigate, addToCart, openReviews, openDetail, products, wall } = useStore()
   const [saved, setSaved] = useState(false)
   const [benefitsOpen, setBenefitsOpen] = useState(false)
   const [methodOpen, setMethodOpen] = useState(false)
@@ -94,11 +94,6 @@ export default function Detail() {
   } catch {
     /* ignore */
   }
-  // owns this field? (local flag OR server-confirmed orders) — gates posting a story
-  const ownsThis = isPurchased || (purchasedIds || []).includes(String(f.id))
-  // free fields are free to everyone, so anyone can share a story for them;
-  // paid fields still require a purchase
-  const canShare = ownsThis || free
   const downloadTrack = (i) => {
     const base = `/api/fields/${f.id}/audio`
     const q = []
@@ -283,19 +278,9 @@ export default function Detail() {
               </div>
             </div>
             <div className="wf-rsum-actions">
-              {canShare ? (
-                <button className="wf-btn wf-btn-gold wf-mag" onClick={() => openReviews(f.id, true)}>
-                  Share your story
-                </button>
-              ) : (
-                <button className="wf-btn wf-btn-gold wf-mag wf-btn-locked" onClick={goCheckout} title="Purchase the field to post your story">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="4" y="11" width="16" height="9" rx="2" />
-                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                  </svg>
-                  Purchase to share your story
-                </button>
-              )}
+              <button className="wf-btn wf-btn-gold wf-mag" onClick={() => openReviews(f.id, true)}>
+                Share your story
+              </button>
               <button className="wf-btn wf-btn-glass wf-mag" onClick={() => openReviews(f.id, false)}>
                 Read the wall <ArrowRight size={14} />
               </button>

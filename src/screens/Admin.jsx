@@ -972,8 +972,7 @@ export default function Admin() {
   const submitAdminReview = async (e) => {
     e.preventDefault()
     setRvErr('')
-    const field = rvForm.field || allFieldOptions[0]?.id
-    if (!field) return setRvErr('Pick a field.')
+    const field = rvForm.field || '' // '' = general review (no specific field)
     if (!rvForm.name.trim()) return setRvErr('Add a name.')
     if (rvForm.text.trim().length < 4) return setRvErr('Add a short story.')
     setRvBusy(true)
@@ -1638,12 +1637,13 @@ export default function Admin() {
                 Add a review
               </div>
               <label className="wf-field">
-                <span className="wf-field-label">Field</span>
+                <span className="wf-field-label">Field (optional)</span>
                 <select
                   className="wf-select"
-                  value={rvForm.field || allFieldOptions[0]?.id || ''}
+                  value={rvForm.field || ''}
                   onChange={(e) => setRvForm({ ...rvForm, field: e.target.value })}
                 >
+                  <option value="">— General (no field) —</option>
                   {allFieldOptions.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.title}
