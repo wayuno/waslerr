@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Background from '../components/Background'
 import ProductCard from '../components/ProductCard'
 import { useReveal } from '../hooks/useReveal'
@@ -54,7 +54,15 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
   const cats = [...new Set(products.map((p) => p.line).filter(Boolean))]
   const CHIPS = [{ cat: 'all', label: 'All fields' }, ...cats.map((c) => ({ cat: c, label: KNOWN_LABELS[c] || cap(c) }))]
   const [cat, setCat] = useState(cats.includes(initialCat) ? initialCat : 'all')
+  const [sort, setSort] = useState('featured') // featured | price-asc | price-desc
   const [count, setCount] = useState(products.length)
+  // sort the catalogue by price (featured = original order)
+  const ordered = useMemo(() => {
+    const arr = [...products]
+    if (sort === 'price-asc') arr.sort((a, b) => (a.priceNum || 0) - (b.priceNum || 0))
+    else if (sort === 'price-desc') arr.sort((a, b) => (b.priceNum || 0) - (a.priceNum || 0))
+    return arr
+  }, [products, sort])
   // small grace so the empty card never flashes before the catalogue loads
   const [settled, setSettled] = useState(false)
   useReveal(ref)
@@ -93,7 +101,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
       }
     })
     setCount(shown)
-  }, [cat, products])
+  }, [cat, ordered])
 
   return (
     <div className="wf-app" ref={ref}>
@@ -127,6 +135,12 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
           {count} {KNOWN_LABELS[cat] || cap(cat)}
           {cat === 'all' ? '' : ' fields'}
         </div>
+        <div className="wf-sortbar" data-reveal>
+          <span className="wf-sort-label">Sort by price</span>
+          <button className={`wf-sort-chip${sort === 'featured' ? ' active' : ''}`} onClick={() => setSort('featured')}>Featured</button>
+          <button className={`wf-sort-chip${sort === 'price-asc' ? ' active' : ''}`} onClick={() => setSort('price-asc')}>Low → high</button>
+          <button className={`wf-sort-chip${sort === 'price-desc' ? ' active' : ''}`} onClick={() => setSort('price-desc')}>High → low</button>
+        </div>
       </section>
 
       <section className="wf-section" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 28px 100px' }}>
@@ -138,7 +152,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
           />
         )}
         <div className={`wf-grid${products.length < 3 ? ' wf-grid--few' : ''}`} ref={gridRef} style={showEmpty ? { display: 'none' } : undefined}>
-          {products.map((f) => (
+          {ordered.map((f) => (
             <ProductCard key={f.id} field={f} />
           ))}
         </div>

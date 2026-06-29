@@ -921,6 +921,36 @@ a {
   letter-spacing: 0.1em;
   color: var(--wf-mute);
 }
+/* price sort bar (Fields page) */
+.wf-sortbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.wf-sort-label {
+  font-family: var(--wf-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wf-mute);
+  margin-right: 4px;
+}
+.wf-sort-chip {
+  font-family: var(--wf-sans);
+  font-size: 12px;
+  color: var(--wf-silver);
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-rule);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.3s var(--wf-ease);
+}
+.wf-sort-chip:hover { border-color: rgba(212, 175, 55, 0.4); color: #eef0f4; }
+.wf-sort-chip.active { color: #0d0b07; background: var(--wf-grad); border-color: transparent; }
 
 /* ============================================================
    Card grid + product card
