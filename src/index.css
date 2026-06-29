@@ -4223,24 +4223,14 @@ a {
    so nothing lags or "disappears".
    ================================================================ */
 @media (hover: none), (max-width: 640px) {
-  /* Keep the full hero "planet" on phones too. The orbit field (conic rays,
-     blue core, spinning dot, dashed ring + resonance rings) used to be hidden
-     on mobile — now it shows, scaled down so the whole ring reads like it does
-     on desktop, and the hero is clipped so it can't bleed into the next section. */
-  .wf-hero { overflow: hidden; }
-  /* the hero JS writes an inline transform (pointer parallax) every frame — on
-     touch there's no pointer so it's identity; !important lets the mobile
-     scale-down win over that inline value without touching any JS.
-     will-change:auto stops the orbit from being a persistently-promoted GPU
-     layer — on phones that scaled+clipped layer rendered a visible vertical
-     seam down the middle of the hero. */
-  .wf-orbit-wrap { transform: scale(0.62) !important; will-change: auto !important; }
-  /* big translucent blur layers band badly on mobile GPUs (the warm/blue glows
-     showed as a hard half-tint). Keep the planet + all its spin animations, just
-     drop/soften the heavy blurs that cause the artifact. */
-  .wf-orbit-blue { filter: none !important; }
-  .wf-hero-glow-warm { filter: blur(14px) !important; opacity: 0.5; }
-  .wf-hero-glow-gold { filter: blur(10px) !important; }
+  /* The heavy hero "planet" (conic rays + blurred core + spinning layers)
+     glitches on real mobile GPUs — a vertical seam + glow banding that don't
+     reproduce on desktop and can't be fixed reliably across devices. So it's
+     hidden on phones entirely; the hero keeps a soft, static glow + clean copy.
+     Desktop still shows the full animated planet. */
+  .wf-orbit-wrap { display: none !important; }
+  .wf-hero-glow-warm,
+  .wf-hero-glow-gold { filter: none !important; animation: none !important; }
 
   /* Hero entrance must never leave content hidden on touch. The fade-up adds
      `.in` from a rAF/timeout that in-app browsers can throttle, so on any touch
