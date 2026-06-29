@@ -7066,22 +7066,6 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-vp-add:hover { background: rgba(212, 175, 55, 0.06); border-color: rgba(212, 175, 55, 0.7); }
 @keyframes wf-vp-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-.wf-vp-detail { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-top: 16px; animation: wf-vp-up 0.4s var(--wf-ease); }
-@keyframes wf-vp-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.wf-vp-price {
-  font-family: var(--wf-serif);
-  font-weight: 500;
-  font-size: 34px;
-  background: var(--wf-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: var(--wf-gold-2);
-}
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .wf-vp-price { color: transparent; }
-}
-.wf-vp-tagline { font-size: 14px; color: var(--wf-silver); font-weight: 300; }
-
 .wf-vp-edit {
   margin-top: 16px;
   padding: 16px;
@@ -7094,7 +7078,7 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wf-vp-chip.active, .wf-vp-add, .wf-vp-detail { animation: none !important; }
+  .wf-vp-chip.active, .wf-vp-add { animation: none !important; }
 }
 
 /* admin versions editor (field edit form) */
