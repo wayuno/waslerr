@@ -137,7 +137,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
             onReset={() => setCat('all')}
           />
         )}
-        <div className="wf-grid" ref={gridRef} style={showEmpty ? { display: 'none' } : undefined}>
+        <div className={`wf-grid${products.length < 3 ? ' wf-grid--few' : ''}`} ref={gridRef} style={showEmpty ? { display: 'none' } : undefined}>
           {products.map((f) => (
             <ProductCard key={f.id} field={f} />
           ))}
