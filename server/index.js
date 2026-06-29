@@ -1237,6 +1237,19 @@ const server = http.createServer(async (req, res) => {
       ...(versionId != null ? { version_id: versionId } : {}),
     }
 
+    // FULL UNLOCK: a valid coupon covered the entire price → comp the order as
+    // delivered right now so the buyer gets the field with no payment step.
+    // Server-authoritative: the discount was computed from the DB coupon above,
+    // so the client can't fake a free field.
+    if (couponCode && amount <= 0) {
+      orderRow.status = 'delivered'
+      orderRow.txid = 'COUPON'
+      const out = await insertOrder({ ...orderRow, amount: 0 })
+      if (!out.ok) return sendJson(res, 502, { error: 'order_failed' })
+      incrementCouponUse(couponCode).catch(() => {})
+      return sendJson(res, 200, { reference, amount: 0, fullUnlock: true, method: 'coupon', fieldTitle: product.title })
+    }
+
     let binance = null
     if (methodSel === 'binance' && binanceConfigured()) {
       const created = await binanceCreateOrder({ reference, amount, goodsName: product.title })

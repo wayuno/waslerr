@@ -3,7 +3,7 @@ import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { PayPalMark, BinanceMark, CloseIcon, CheckIcon } from '../components/icons'
+import { PayPalMark, BinanceMark, CheckIcon } from '../components/icons'
 import ManualVerify from '../components/ManualVerify'
 import PayPalButtons from '../components/PayPalButtons'
 import { loadConfig } from '../lib/supabase'
@@ -102,6 +102,8 @@ export default function Checkout() {
   const [couponMsg, setCouponMsg] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponBusy, setCouponBusy] = useState(false)
+  const [unlockState, setUnlockState] = useState('idle') // idle | unlocking | unlocked
+  const [unlockT, setUnlockT] = useState(0) // elapsed ms of the unlock animation (rAF clock)
 
   // Verify stage
   const [creating, setCreating] = useState(false)
@@ -188,6 +190,23 @@ export default function Checkout() {
 
   useEffect(() => () => clearInterval(pollRef.current), [])
 
+  // Drive the unlock animation from a JS clock (rAF). CSS @keyframes can stall
+  // in some embeds, so the padlock transforms + the live total countdown all
+  // read from this elapsed-time value instead.
+  useEffect(() => {
+    if (unlockState !== 'unlocking') return
+    let raf
+    const t0 = performance.now()
+    const loop = (now) => {
+      const t = now - t0
+      setUnlockT(t)
+      if (t >= 1560) { setUnlockState('unlocked'); return }
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [unlockState])
+
   if (!selectedProduct) return null
 
   const f = selectedProduct
@@ -203,6 +222,21 @@ export default function Checkout() {
     : 0
   const clientPayable = Math.max(0, total - discount)
   const payable = serverAmount != null ? serverAmount : clientPayable
+  // a coupon that covers the whole price → no payment, direct access to the field
+  const fullUnlock = !!appliedCoupon && clientPayable === 0 && total > 0
+  // unlock-animation timeline (ms), all eased off the rAF clock `unlockT`
+  const easeOut = (p) => { p = Math.min(1, Math.max(0, p)); return 1 - Math.pow(1 - p, 3) }
+  const uT = unlockT
+  const popP = easeOut(uT / 400)
+  const shakeP = uT >= 420 && uT < 900 ? (uT - 420) / 480 : -1
+  const u = {
+    lockOpacity: uT < 400 ? popP : 1,
+    lockScale: uT < 400 ? 0.5 + 0.5 * popP + 0.1 * Math.sin(popP * Math.PI) : 1,
+    lockRot: shakeP >= 0 ? Math.sin(shakeP * Math.PI * 6) * 8 * (1 - shakeP) : 0,
+    shackle: uT >= 820 ? easeOut(Math.min(1, (uT - 820) / 540)) : 0,
+    burst: uT >= 840 ? Math.min(1, (uT - 840) / 720) : 0,
+  }
+  const animTotal = uT < 560 ? total : uT < 1440 ? Math.round(total + (clientPayable - total) * easeOut((uT - 560) / 880)) : clientPayable
   const methodLabel = payMethod === 'binance' ? 'Binance Pay' : 'PayPal'
   const cat = CAT[f.line] || { label: 'Field', cls: 'gold' }
 
@@ -289,13 +323,61 @@ export default function Checkout() {
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase()
-    if (!code) return
+    if (!code) { setCouponMsg('Enter a code to continue.'); return }
     setCouponBusy(true)
     setCouponMsg('')
     const res = await applyCoupon(code, f.id) // validated against this field server-side
     setCouponBusy(false)
-    if (res?.error) { setCouponMsg(res.error); return }
+    if (res?.error) { setCouponMsg("That code isn't valid. Check and try again."); return }
     setAppliedCoupon({ code, type: res.coupon.type, value: res.coupon.value })
+    setUnlockT(0)
+    setUnlockState('unlocking') // play the unlock reveal + count the total down
+  }
+
+  const resetCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponMsg('')
+    setUnlockT(0)
+    setUnlockState('idle')
+  }
+
+  // full unlock: a coupon covered the whole price — the server comps the order
+  // as delivered (no payment), then we go straight to the field.
+  const claimFullUnlock = async () => {
+    setCreating(true)
+    setCreateError('')
+    try {
+      const r = await fetch('/api/checkout/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldId: f.id, versionId: checkoutVersionId ?? null, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }),
+      })
+      const d = await r.json().catch(() => ({}))
+      setCreating(false)
+      if (!r.ok || !d.reference) { setCreateError('Could not unlock the field. Please try again.'); return }
+      // server is authoritative: only grant free access if IT comped the order.
+      // otherwise payment is still due — fall through to the normal pay flow.
+      if (!d.fullUnlock) {
+        setReference(d.reference)
+        setServerAmount(d.amount)
+        setBinanceLinks(d.binance || null)
+        setCountdown(15 * 60)
+        setPhase(0)
+        setStage('verify')
+        return
+      }
+      try {
+        localStorage.setItem(`wf_purchased_${f.id}`, '1')
+        const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
+        orders.unshift({ id: d.reference, fieldId: f.id, name: f.title, method: 'coupon', amount: 0, ref: d.reference, txn: 'COUPON', ts: Date.now() })
+        localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
+      } catch { /* ignore */ }
+      goDelivered({ fieldId: f.id, method: 'coupon', amount: 0, ref: d.reference, txn: 'COUPON' })
+    } catch {
+      setCreating(false)
+      setCreateError('Network error. Please try again.')
+    }
   }
 
   const copyField = async (text, key) => {
@@ -384,12 +466,13 @@ export default function Checkout() {
             ) : (
               <>
                 <div className="wf-field-label" data-reveal style={{ marginBottom: 14 }}>Payment method</div>
-                <div className="wf-pay-list" data-reveal>
+                <div className={`wf-pay-list${fullUnlock && unlockState === 'unlocked' ? ' wf-pay-covered' : ''}`} data-reveal>
                   {METHODS.map((m) => (
                     <button
                       key={m.id}
                       className={`wf-pay-option${payMethod === m.id ? ' selected' : ''}`}
                       onClick={() => setPayMethod(m.id)}
+                      disabled={fullUnlock && unlockState === 'unlocked'}
                     >
                       <span className="wf-pay-radio" aria-hidden="true" />
                       <span className={`wf-pay-mark ${m.id}`}>
@@ -401,44 +484,93 @@ export default function Checkout() {
                       </span>
                     </button>
                   ))}
+                  {fullUnlock && unlockState === 'unlocked' && (
+                    <div className="wf-pay-cover">Covered in full — payment not required.</div>
+                  )}
                 </div>
 
                 <div className="wf-field-label" data-reveal style={{ margin: '22px 0 10px' }}>Discount code</div>
-                {appliedCoupon ? (
-                  <div className="wf-coupon-applied" data-reveal>
-                    <span>
-                      <strong>{appliedCoupon.code}</strong> applied ·{' '}
-                      {appliedCoupon.type === 'percent' ? `${appliedCoupon.value}% off` : `$${appliedCoupon.value} off`}
-                    </span>
-                    <button type="button" aria-label="Remove coupon" onClick={() => { setAppliedCoupon(null); setCouponInput('') }}>
-                      <CloseIcon size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="wf-coupon-row" data-reveal>
-                    <input
-                      className="wf-input"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
-                      placeholder="Enter code"
-                    />
-                    <button type="button" className="wf-coupon-apply wf-mag" onClick={handleApplyCoupon} disabled={couponBusy}>{couponBusy ? '…' : 'Apply'}</button>
+
+                {unlockState === 'idle' && (
+                  <>
+                    <div className="wf-coupon-row" data-reveal>
+                      <input
+                        className="wf-input"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        placeholder="Enter code"
+                      />
+                      <button type="button" className="wf-coupon-apply wf-mag" onClick={handleApplyCoupon} disabled={couponBusy}>{couponBusy ? '…' : 'Apply'}</button>
+                    </div>
+                    {couponMsg && <p className="wf-auth-error" style={{ marginTop: 10 }}>{couponMsg}</p>}
+                  </>
+                )}
+
+                {unlockState === 'unlocking' && (
+                  <div className="wf-unlock" data-reveal>
+                    <div className="wf-unlock-stage">
+                      <span className="wf-unlock-burst" style={{ transform: `translate(-50%,-50%) scale(${0.4 + u.burst * 2.4})`, opacity: u.burst > 0 ? (1 - u.burst) * 0.85 : 0 }} />
+                      <svg className="wf-unlock-lock" width="60" height="60" viewBox="0 0 48 48" aria-hidden="true" style={{ opacity: u.lockOpacity, transform: `scale(${u.lockScale}) rotate(${u.lockRot}deg)` }}>
+                        <path d="M16 23 V16 a8 8 0 0 1 16 0 V23" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" style={{ transformOrigin: '16px 23px', transform: `translateY(${-u.shackle * 7}px) rotate(${-u.shackle * 26}deg)` }} />
+                        <rect x="11" y="23" width="26" height="19" rx="4" fill="currentColor" />
+                        <circle cx="24" cy="31" r="2.6" fill="#1a1407" />
+                        <rect x="22.7" y="32" width="2.6" height="6" rx="1.3" fill="#1a1407" />
+                      </svg>
+                    </div>
+                    <div className="wf-unlock-amt">${animTotal}</div>
+                    <div className="wf-unlock-cap">Unlocking…</div>
                   </div>
                 )}
-                {couponMsg && <p className="wf-auth-error" style={{ marginTop: 10 }}>{couponMsg}</p>}
 
-                <div className="wf-co-total-row" data-reveal>
-                  <span>Total</span>
-                  <span className="wf-co-total-amt">${clientPayable}</span>
-                </div>
+                {unlockState === 'unlocked' && appliedCoupon && (
+                  <div className={`wf-unlocked${fullUnlock ? ' full' : ''}`} data-reveal>
+                    <div className="wf-unlocked-top">
+                      <span className="wf-unlocked-tag">
+                        {fullUnlock
+                          ? 'Access granted · no payment needed'
+                          : `Unlocked · ${appliedCoupon.code} · ${appliedCoupon.type === 'percent' ? `${appliedCoupon.value}% off` : `$${appliedCoupon.value} off`}`}
+                      </span>
+                      <button type="button" className="wf-unlocked-remove" onClick={resetCoupon}>Remove</button>
+                    </div>
+                    {discount > 0 && <div className="wf-unlocked-saved">You saved ${discount}</div>}
+                    <div className="wf-unlocked-total">
+                      {discount > 0 && <span className="wf-unlocked-strike">${total}</span>}
+                      <span className="wf-unlocked-now">{fullUnlock ? 'Free' : `$${clientPayable}`}</span>
+                    </div>
+                  </div>
+                )}
+
+                {unlockState !== 'unlocked' && (
+                  <div className="wf-co-total-row" data-reveal>
+                    <span>Total</span>
+                    <span className="wf-co-total-amt">${unlockState === 'unlocking' ? animTotal : clientPayable}</span>
+                  </div>
+                )}
               </>
             )}
 
-            <button className="wf-form-submit wf-mag wf-co-continue" data-reveal onClick={enterVerify}>
-              <span>{free ? 'Get your field' : `Continue with ${methodLabel}`}</span>
-              <span className="wf-co-arrow" aria-hidden="true">→</span>
-            </button>
+            {free ? (
+              <button className="wf-form-submit wf-mag wf-co-continue" data-reveal onClick={enterVerify}>
+                <span>Get your field</span>
+                <span className="wf-co-arrow" aria-hidden="true">→</span>
+              </button>
+            ) : fullUnlock && unlockState === 'unlocked' ? (
+              <button className="wf-form-submit wf-mag wf-co-continue wf-access-btn" data-reveal onClick={claimFullUnlock} disabled={creating}>
+                <span className="wf-confetti" aria-hidden="true">
+                  {['6%', '17%', '29%', '41%', '53%', '64%', '76%', '88%', '12%', '35%', '59%', '83%'].map((left, i) => (
+                    <span key={i} className="wf-confetti-bit" style={{ left, animationDelay: `${(i % 4) * 0.14}s`, animationDuration: `${1.5 + (i % 3) * 0.4}s`, background: i % 2 ? 'var(--wf-gold)' : 'var(--wf-gold-2)' }} />
+                  ))}
+                </span>
+                <span>{creating ? 'Unlocking…' : 'Enter your field'}</span>
+                <span className="wf-co-arrow" aria-hidden="true">→</span>
+              </button>
+            ) : (
+              <button className="wf-form-submit wf-mag wf-co-continue" data-reveal onClick={enterVerify} disabled={unlockState === 'unlocking'}>
+                <span>{`Continue with ${methodLabel}`}</span>
+                <span className="wf-co-arrow" aria-hidden="true">→</span>
+              </button>
+            )}
           </>
         )}
 
