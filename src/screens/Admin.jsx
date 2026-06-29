@@ -215,11 +215,13 @@ export default function Admin() {
   const [reqErr, setReqErr] = useState('')
   const [reqFlash, setReqFlash] = useState(false)
 
-  // offer builder + delivery composer
-  const [offerForm, setOfferForm] = useState({ name: '', description: '', amount: '', deliveryEstimate: '6–7 days', includes: [], includeInput: '' })
-  const [offerBusy, setOfferBusy] = useState(false)
-  const [offerErr, setOfferErr] = useState('')
-  const [showOfferBuilder, setShowOfferBuilder] = useState(false)
+  // inline responder for a custom-code request block (amount + description → offer)
+  const [respondTo, setRespondTo] = useState(null) // the request message id being answered
+  const [respondAmount, setRespondAmount] = useState('')
+  const [respondDesc, setRespondDesc] = useState('')
+  const [respondBusy, setRespondBusy] = useState(false)
+  const [respondErr, setRespondErr] = useState('')
+  // delivery composer
   const [deliverFiles, setDeliverFiles] = useState([])
   const [deliverNote, setDeliverNote] = useState('')
   const [deliverBusy, setDeliverBusy] = useState(false)
@@ -408,8 +410,16 @@ export default function Admin() {
   const maxUnits = topFields.length ? Math.max(1, topFields[0].units) : 1
   const categoryOptions = [...new Set([...paidProducts.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
   const allFieldOptions = [...paidProducts, ...freeFields]
-  // active offer in the open support thread + a lookup for rendering cards
+  // lookups for rendering thread cards
   const offerById = Object.fromEntries(convOffers.map((o) => [o.id, o]))
+  // offer answering a given request message (prefer the live, non-cancelled one)
+  const offerByRequest = {}
+  for (const o of convOffers) {
+    if (o.requestMessageId == null) continue
+    const k = String(o.requestMessageId)
+    const cur = offerByRequest[k]
+    if (!cur || cur.status === 'cancelled' || o.status !== 'cancelled') offerByRequest[k] = o
+  }
   const activeOffer = [...convOffers].reverse().find((o) => o.status !== 'cancelled') || null
   const activeFree = activeOffer && Number(activeOffer.amount) === 0
   const convStatus =
@@ -418,12 +428,6 @@ export default function Admin() {
       : activeOffer.status === 'paid' ? (activeFree ? 'Free' : 'Paid')
       : activeOffer.status === 'delivered' ? 'Delivered'
       : 'New request'
-  // After a completed delivery the order is done — only re-offer "Create field"
-  // if the customer has sent a fresh request since the last delivery.
-  const deliveredAtMs = activeOffer?.deliveredAt ? Date.parse(activeOffer.deliveredAt) : 0
-  const newRequestAfterDelivery =
-    activeOffer?.status === 'delivered' &&
-    thread.some((m) => m.from === 'user' && (Date.parse(m.at || 0) || 0) > deliveredAtMs)
 
   const publishAnnouncement = async (e) => {
     e.preventDefault()
@@ -739,36 +743,57 @@ export default function Admin() {
     })
   }
 
-  // ---- offers (create field, deliver) ----
-  const addInclude = () => {
-    const v = offerForm.includeInput.trim()
-    if (!v) return
-    setOfferForm((f) => ({ ...f, includes: [...f.includes, v].slice(0, 12), includeInput: '' }))
+  // ---- custom-code requests: a ✦ CUSTOM CODE REQUEST chat message ----
+  const isCustomReq = (m) => m.from === 'user' && /^✦\s*CUSTOM CODE REQUEST/i.test(String(m.text || '').trim())
+  // pull { focus, intention } out of the request body
+  const parseReq = (text) => {
+    const body = String(text || '').replace(/^✦\s*CUSTOM CODE REQUEST\s*/i, '')
+    const lines = body.split('\n')
+    let focus = ''
+    const rest = []
+    for (const ln of lines) {
+      const fm = ln.match(/^\s*Focus:\s*(.*)$/i)
+      if (fm && !focus) focus = fm[1].trim()
+      else rest.push(ln)
+    }
+    if (!focus) return { focus: (lines[0] || '').trim(), intention: lines.slice(1).join('\n').trim() }
+    return { focus, intention: rest.join('\n').trim() }
   }
-  const sendOffer = async (e) => {
-    e.preventDefault()
-    setOfferErr('')
-    const amount = parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) || 0
-    if (!offerForm.name.trim()) return setOfferErr('Add a field name.')
-    if (amount < 0) return setOfferErr('Amount can’t be negative.') // 0 = free
-    setOfferBusy(true)
+  const openResponder = (m) => {
+    setRespondTo(m.id)
+    setRespondAmount('')
+    setRespondDesc('')
+    setRespondErr('')
+  }
+  // answer a request block inline → create the offer the customer pays for
+  const sendRequestOffer = async (m) => {
+    setRespondErr('')
+    if (!activeConv) return setRespondErr('No conversation selected.')
+    const amount = parseFloat(String(respondAmount).replace(/[^0-9.]/g, '')) || 0
+    if (amount < 0) return setRespondErr('Amount can’t be negative.') // 0 = free gift
+    const { focus, intention } = parseReq(m.text)
+    setRespondBusy(true)
     const res = await createOffer(activeConv, {
-      name: offerForm.name.trim(),
-      description: offerForm.description.trim(),
+      name: focus || 'Custom field',
+      description: respondDesc.trim(),
       amount,
       currency: 'USD',
-      deliveryEstimate: offerForm.deliveryEstimate.trim() || '6–7 days',
-      includes: offerForm.includes,
+      deliveryEstimate: '6–7 days',
+      requestMessageId: m.id,
+      focus,
+      intention,
     })
-    setOfferBusy(false)
-    if (res?.error) return setOfferErr(res.error)
-    setOfferForm({ name: '', description: '', amount: '', deliveryEstimate: '6–7 days', includes: [], includeInput: '' })
-    setShowOfferBuilder(false)
-    // the server supersedes any prior unpaid offer — reflect that locally too
-    setConvOffers((prev) => [...prev.map((o) => (o.status === 'sent' ? { ...o, status: 'cancelled' } : o)), res.offer])
-    // open the new request's workspace tab right away
+    setRespondBusy(false)
+    if (res?.error) return setRespondErr(res.error)
+    // the server supersedes only a prior unpaid offer for THIS request
+    setConvOffers((prev) => [
+      ...prev.map((o) => (String(o.requestMessageId || '') === String(m.id) && o.status === 'sent' ? { ...o, status: 'cancelled' } : o)),
+      res.offer,
+    ])
+    setRespondTo(null)
+    // open this request's workspace tab (delivery happens there after payment)
     if (res.offer?.id != null) { setActiveTab(String(res.offer.id)); setReqDraftFor(null) }
-    showToast(amount === 0 ? 'Free field created — open its workspace to deliver' : 'Field offered — awaiting payment')
+    showToast(amount === 0 ? 'Free field sent — open its workspace to deliver' : 'Offer sent — awaiting payment')
   }
   const submitDelivery = async (offerId) => {
     setDeliverErr('')
@@ -917,7 +942,64 @@ export default function Admin() {
     return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
-  // the chat thread + create-field builder + reply box (the "Conversation" tab)
+  // a ✦ CUSTOM CODE REQUEST message, rendered as an actionable card: price it +
+  // send the offer inline, then watch its status (awaiting payment → paid →
+  // delivered) right here. Delivery itself happens in the request's workspace tab.
+  const renderRequestCard = (m) => {
+    const { focus, intention } = parseReq(m.text)
+    const offer = offerByRequest[String(m.id)]
+    const responding = respondTo === m.id
+    const freeNow = parseFloat(String(respondAmount).replace(/[^0-9.]/g, '')) === 0 && respondAmount !== ''
+    const delivered = offer ? stageOf(offer) === 'delivered' : false
+    return (
+      <div key={m.id} className="wf-reqcard">
+        <span className="wf-reqcard-eyebrow">✦ Custom code request</span>
+        <span className="wf-reqcard-focus">{focus || 'Custom field'}</span>
+        {intention && <p className="wf-reqcard-intent">{intention}</p>}
+
+        {!offer && !responding && (
+          <button type="button" className="wf-reqcard-respond" onClick={() => openResponder(m)}>
+            Respond with an offer →
+          </button>
+        )}
+
+        {responding && (
+          <div className="wf-reqcard-form">
+            <input className="wf-input" value={respondAmount} onChange={(e) => setRespondAmount(e.target.value)} placeholder="$ amount (0 = free)" autoFocus />
+            <textarea className="wf-textarea" rows="2" value={respondDesc} onChange={(e) => setRespondDesc(e.target.value)} placeholder="Short note for the customer (optional)…" />
+            {freeNow && <p className="wf-offer-free-note">Free field — the customer pays nothing; deliver it right away from the workspace tab.</p>}
+            {respondErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{respondErr}</p>}
+            <div className="wf-form-row" style={{ marginTop: 4 }}>
+              <button type="button" className="wf-back" onClick={() => setRespondTo(null)}>Cancel</button>
+              <button type="button" className="wf-form-submit wf-mag" disabled={respondBusy} onClick={() => sendRequestOffer(m)}>
+                {respondBusy ? 'Sending…' : freeNow ? 'Send free field →' : 'Send offer →'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {offer && !responding && (
+          <div className="wf-reqcard-status">
+            <span className="wf-reqcard-amt">{Number(offer.amount) === 0 ? 'Free' : `$${offer.amount}`}</span>
+            <span className={`wf-reqcard-badge wf-reqcard-badge--${delivered ? 'delivered' : offer.status}`}>
+              {delivered ? 'Delivered ✓' : offer.status === 'paid' ? 'Paid ✓' : offer.status === 'sent' ? 'Awaiting payment' : offer.status}
+            </span>
+            {!delivered && (
+              <button type="button" className="wf-reqcard-link" onClick={() => { setActiveTab(String(offer.id)); setReqDraftFor(null) }}>
+                {offer.status === 'paid' ? 'Deliver →' : 'Open workspace →'}
+              </button>
+            )}
+            {offer.status === 'sent' && (
+              <button type="button" className="wf-reqcard-change" onClick={() => openResponder(m)}>Change offer</button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // the chat thread + reply box (the "Conversation" tab). Offers are created by
+  // answering a request card above — there is no separate "create field" form.
   const renderConversation = () => (
     <>
       <div className="wf-thread-head">
@@ -926,8 +1008,12 @@ export default function Admin() {
       <div className="wf-thread" ref={threadRef}>
         {thread.length === 0 && <p className="wf-detail-desc" style={{ margin: 0 }}>No messages yet.</p>}
         {thread.map((m, i) => {
+          // the customer's custom-code request → actionable card
+          if (isCustomReq(m)) return renderRequestCard(m)
+          // the offer card is folded into its request card — don't double-render it
           if (m.kind === 'offer' && m.meta?.offerId) {
             const o = offerById[m.meta.offerId]
+            if (o?.requestMessageId) return null
             return (
               <div key={m.id || i} className="wf-msg-offer">
                 <span className="wf-mo-eyebrow">✦ Field sent</span>
@@ -949,50 +1035,6 @@ export default function Admin() {
           )
         })}
       </div>
-
-      {/* create-field builder — turns a request into an offer; its workspace tab then appears */}
-      {(!activeOffer || activeOffer.status === 'sent' || newRequestAfterDelivery) && (
-        showOfferBuilder ? (
-          <form className="wf-offer-builder" onSubmit={sendOffer}>
-            <div className="wf-eyebrow" style={{ marginBottom: 2 }}>
-              {activeOffer?.status === 'sent' ? '✦ Replace with a new field' : '✦ Create field'}
-            </div>
-            <input className="wf-input" value={offerForm.name} onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })} placeholder="Field name (e.g. Focus & productivity field)" />
-            <textarea className="wf-textarea" rows="2" value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="Short description…" />
-            <div className="wf-form-row">
-              <input className="wf-input" value={offerForm.amount} onChange={(e) => setOfferForm({ ...offerForm, amount: e.target.value })} placeholder="$ amount (0 = free)" />
-              <input className="wf-input" value={offerForm.deliveryEstimate} onChange={(e) => setOfferForm({ ...offerForm, deliveryEstimate: e.target.value })} placeholder="Delivery time (e.g. 6–7 days)" />
-            </div>
-            {parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' && (
-              <p className="wf-offer-free-note">Free field — the customer pays nothing and you can deliver it right away.</p>
-            )}
-            <div className="wf-offer-inc-row">
-              <input className="wf-input" value={offerForm.includeInput} onChange={(e) => setOfferForm({ ...offerForm, includeInput: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInclude() } }} placeholder="Add an 'includes' point + Enter" />
-              <button type="button" className="wf-coupon-apply" onClick={addInclude}>Add</button>
-            </div>
-            {offerForm.includes.length > 0 && (
-              <div className="wf-offer-inc-chips">
-                {offerForm.includes.map((it, i) => (
-                  <span key={i} className="wf-offer-inc-chip" onClick={() => setOfferForm((f) => ({ ...f, includes: f.includes.filter((_, j) => j !== i) }))}>
-                    {it} ✕
-                  </span>
-                ))}
-              </div>
-            )}
-            {offerErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{offerErr}</p>}
-            <div className="wf-form-row" style={{ marginTop: 6 }}>
-              <button type="button" className="wf-back" onClick={() => setShowOfferBuilder(false)}>Cancel</button>
-              <button type="submit" className="wf-form-submit wf-mag" disabled={offerBusy}>
-                {offerBusy ? 'Sending…' : parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' ? 'Send free field →' : 'Send field →'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <button className="wf-offer-create-btn" onClick={() => setShowOfferBuilder(true)}>
-            {activeOffer?.status === 'sent' ? '✦ Send a different field' : '✦ Create field'}
-          </button>
-        )
-      )}
 
       <form className="wf-chat-input" onSubmit={sendReply} style={{ marginTop: 10 }}>
         <input className="wf-input" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply as Waslerr admin…" />

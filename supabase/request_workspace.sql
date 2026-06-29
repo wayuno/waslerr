@@ -22,6 +22,11 @@ alter table public.offers
   add column if not exists requested_at     timestamptz default now(),
   add column if not exists budget           text,
   add column if not exists length_estimate  text,
-  add column if not exists internal_note    text;
+  add column if not exists internal_note    text,
+  -- links an offer back to the customer's ✦ CUSTOM CODE REQUEST chat message, so
+  -- the admin can answer that exact request inline and the request block shows
+  -- its own payment status. text = the support_messages uuid as text.
+  add column if not exists request_message_id text;
 
 create index if not exists offers_prodstatus_idx on public.offers (production_status);
+create index if not exists offers_reqmsg_idx     on public.offers (request_message_id);

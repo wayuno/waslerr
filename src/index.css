@@ -2919,6 +2919,46 @@ a {
 
 .wf-rw-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 4px; }
 
+/* custom-code request card (inside the Conversation thread) */
+.wf-reqcard {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(40, 33, 14, 0.55), rgba(20, 18, 12, 0.8));
+}
+.wf-reqcard-eyebrow { font-family: var(--wf-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--wf-gold); }
+.wf-reqcard-focus { font-family: var(--wf-serif); font-size: 18px; color: #f4ead0; line-height: 1.2; }
+.wf-reqcard-intent { margin: 0; font-size: 13px; line-height: 1.55; color: var(--wf-silver); white-space: pre-wrap; }
+.wf-reqcard-respond {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--wf-gold);
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--wf-gold-2);
+  font-family: var(--wf-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s var(--wf-ease);
+}
+.wf-reqcard-respond:hover { background: rgba(212, 175, 55, 0.18); }
+.wf-reqcard-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.wf-reqcard-status { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--wf-rule); }
+.wf-reqcard-amt { font-size: 15px; font-weight: 600; color: var(--wf-gold); }
+.wf-reqcard-badge { font-family: var(--wf-mono); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--wf-rule); color: var(--wf-mute); }
+.wf-reqcard-badge--sent { color: #e3b341; border-color: rgba(227, 179, 65, 0.4); background: rgba(227, 179, 65, 0.08); }
+.wf-reqcard-badge--paid { color: #4bc882; border-color: rgba(75, 200, 130, 0.4); background: rgba(75, 200, 130, 0.08); }
+.wf-reqcard-badge--delivered { color: #4bc882; border-color: rgba(75, 200, 130, 0.5); background: rgba(75, 200, 130, 0.16); }
+.wf-reqcard-link { margin-left: auto; background: none; border: none; color: var(--wf-gold-2); font-family: var(--wf-sans); font-size: 12.5px; cursor: pointer; }
+.wf-reqcard-link:hover { text-decoration: underline; }
+.wf-reqcard-change { background: none; border: none; color: var(--wf-mute); font-family: var(--wf-sans); font-size: 12px; cursor: pointer; }
+.wf-reqcard-change:hover { color: var(--wf-silver); }
+
 @media (max-width: 760px) {
   .wf-inbox { grid-template-columns: 1fr; }
   .wf-inbox .wf-convo-list { max-height: 280px; }
@@ -5421,9 +5461,6 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-deliver-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(75,200,130,0.3); border-top-color: #4bc882; animation: wf-spin 0.8s linear infinite; flex-shrink: 0; }
 .wf-deliver-hint { font-size: 11px; color: var(--wf-mute); }
 /* customer — multiple delivered files */
-.wf-offer-create-btn { width: 100%; margin-top: 4px; background: var(--wf-glass); border: 1px dashed rgba(212,175,55,0.4); color: var(--wf-gold); border-radius: 11px; padding: 11px; font-size: 13.5px; cursor: pointer; font-family: var(--wf-sans); transition: border-color 0.2s, background 0.2s; }
-.wf-offer-create-btn:hover { border-color: var(--wf-gold); background: var(--wf-glass-2); }
-.wf-offer-builder { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid rgba(212,175,55,0.3); border-radius: 12px; margin-top: 4px; background: var(--wf-glass); }
 .wf-offer-chip { display: inline-flex; align-items: center; padding: 0 12px; font-size: 12px; color: var(--wf-mute); border: 1px solid var(--wf-rule); border-radius: 9px; white-space: nowrap; }
 .wf-offer-inc-row { display: flex; gap: 8px; }
 .wf-offer-inc-row .wf-input { flex: 1; }
