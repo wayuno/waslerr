@@ -465,29 +465,30 @@ export default function Checkout() {
               <p className="wf-detail-desc" data-reveal>This field is on the house — no payment required.</p>
             ) : (
               <>
-                <div className="wf-field-label" data-reveal style={{ marginBottom: 14 }}>Payment method</div>
-                <div className={`wf-pay-list${fullUnlock && unlockState === 'unlocked' ? ' wf-pay-covered' : ''}`} data-reveal>
-                  {METHODS.map((m) => (
-                    <button
-                      key={m.id}
-                      className={`wf-pay-option${payMethod === m.id ? ' selected' : ''}`}
-                      onClick={() => setPayMethod(m.id)}
-                      disabled={fullUnlock && unlockState === 'unlocked'}
-                    >
-                      <span className="wf-pay-radio" aria-hidden="true" />
-                      <span className={`wf-pay-mark ${m.id}`}>
-                        {m.id === 'paypal' ? <PayPalMark size={28} /> : <BinanceMark size={32} />}
-                      </span>
-                      <span className="wf-pay-text">
-                        <span className="wf-pay-name">{m.label}</span>
-                        <span className="wf-pay-desc">{m.desc}</span>
-                      </span>
-                    </button>
-                  ))}
-                  {fullUnlock && unlockState === 'unlocked' && (
-                    <div className="wf-pay-cover">Covered in full — payment not required.</div>
-                  )}
-                </div>
+                {/* payment method is irrelevant once a coupon covers the full price */}
+                {!(fullUnlock && unlockState === 'unlocked') && (
+                  <>
+                    <div className="wf-field-label" data-reveal style={{ marginBottom: 14 }}>Payment method</div>
+                    <div className="wf-pay-list" data-reveal>
+                      {METHODS.map((m) => (
+                        <button
+                          key={m.id}
+                          className={`wf-pay-option${payMethod === m.id ? ' selected' : ''}`}
+                          onClick={() => setPayMethod(m.id)}
+                        >
+                          <span className="wf-pay-radio" aria-hidden="true" />
+                          <span className={`wf-pay-mark ${m.id}`}>
+                            {m.id === 'paypal' ? <PayPalMark size={28} /> : <BinanceMark size={32} />}
+                          </span>
+                          <span className="wf-pay-text">
+                            <span className="wf-pay-name">{m.label}</span>
+                            <span className="wf-pay-desc">{m.desc}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 <div className="wf-field-label" data-reveal style={{ margin: '22px 0 10px' }}>Discount code</div>
 

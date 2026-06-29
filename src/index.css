@@ -4853,11 +4853,6 @@ body:has(.wf-mobile-menu.open) .wf-fab { display: none !important; }
 .wf-unlocked-now { font-family: var(--wf-serif); font-size: 26px; font-weight: 600; background: var(--wf-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .wf-unlocked.full .wf-unlocked-now { background: none; -webkit-text-fill-color: #6fe0a0; color: #6fe0a0; }
 
-/* --- payment covered (full unlock) --- */
-.wf-pay-list { position: relative; }
-.wf-pay-covered .wf-pay-option { opacity: 0.4; filter: grayscale(0.4); }
-.wf-pay-cover { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 13.5px; color: var(--wf-silver); background: rgba(8, 7, 5, 0.55); border-radius: 12px; padding: 0 16px; }
-
 /* --- enter-your-field (full unlock) button + confetti --- */
 .wf-access-btn { position: relative; overflow: hidden; }
 .wf-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }

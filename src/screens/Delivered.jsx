@@ -20,7 +20,8 @@ export default function Delivered() {
 
   const params = deliveredParams || {}
   const f = findProduct(params.fieldId)
-  const methodLabel = params.method === 'binance' ? 'Binance Pay' : 'PayPal'
+  const isComp = params.method === 'coupon' // unlocked with a full-discount code
+  const methodLabel = isComp ? 'Discount code' : params.method === 'binance' ? 'Binance Pay' : 'PayPal'
   const amt = params.amount != null ? `$${params.amount}` : '—'
   const ref_ = params.ref || '—'
   const txn = params.txn || '—'
@@ -52,12 +53,12 @@ export default function Delivered() {
         </div>
 
         <div className="wf-delivered-body" data-reveal>
-          <div className="wf-eyebrow" style={{ marginBottom: 14 }}>Payment verified</div>
+          <div className="wf-eyebrow" style={{ marginBottom: 14 }}>{isComp ? 'Access granted' : 'Payment verified'}</div>
           <h1 className="wf-detail-title" style={{ fontStyle: 'italic', marginBottom: 12 }}>
             Your field is unlocked.
           </h1>
           <p className="wf-detail-desc" style={{ maxWidth: 440, margin: '0 auto 36px' }}>
-            {amt} via {methodLabel} verified · lifetime access granted.
+            {isComp ? 'Unlocked with your code · lifetime access granted.' : `${amt} via ${methodLabel} verified · lifetime access granted.`}
           </p>
 
           {/* Receipt card */}
@@ -67,8 +68,8 @@ export default function Delivered() {
               <span>{fieldName}</span>
             </div>
             <div className="wf-receipt-row" style={{ animationDelay: '0.15s' }}>
-              <span>Paid</span>
-              <span>{amt} · {methodLabel}</span>
+              <span>{isComp ? 'Price' : 'Paid'}</span>
+              <span>{isComp ? 'Free · Discount code' : `${amt} · ${methodLabel}`}</span>
             </div>
             <div className="wf-receipt-row" style={{ animationDelay: '0.25s' }}>
               <span>Reference</span>
