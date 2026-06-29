@@ -1942,10 +1942,30 @@ a {
   .wf-eyebrow { font-size: 11px; letter-spacing: 0.24em; }
 
   /* card grids breathe */
-  .wf-grid,
   .wf-lines-grid,
   .wf-join-grid,
   .wf-cmt-grid { gap: 16px; }
+
+  /* product grid: two-up on phones (cards read far better in pairs than as
+     one giant column). Shrink the card internals to suit the narrower tile. */
+  .wf-grid,
+  .wf-grid--few { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; justify-content: stretch; }
+  .wf-card { border-radius: 14px; }
+  .wf-card-media { height: 150px; }
+  .wf-card-media.free { height: 132px; }
+  .wf-card-media-ph { font-size: 44px; }
+  .wf-card-body { padding: 14px 14px 16px; }
+  .wf-card-title { font-size: 17px; margin-bottom: 4px; }
+  .wf-card-sub { font-size: 11px; margin-bottom: 3px; }
+  .wf-card-cat { font-size: 9.5px; letter-spacing: 0.08em; margin-bottom: 9px; }
+  .wf-desc { display: none; }                                  /* Fix 3: hide description on mobile */
+  .wf-card-foot { flex-direction: column; align-items: flex-start; gap: 9px; }
+  .wf-price { font-size: 21px; }
+  .wf-price.free { font-size: 18px; }
+  .wf-readmore { font-size: 11.5px; }
+  .wf-getfree { font-size: 11.5px; padding: 8px 13px; }
+  .wf-badge { font-size: 9px; padding: 4px 8px; top: 10px; left: 10px; letter-spacing: 0.1em; }
+  .wf-play { width: 38px; height: 38px; bottom: 10px; right: 10px; }
   .wf-form-row { grid-template-columns: 1fr; }
   .wf-form-card,
   .wf-success { padding: 26px 22px; }
@@ -4181,17 +4201,17 @@ a {
    so nothing lags or "disappears".
    ================================================================ */
 @media (hover: none), (max-width: 640px) {
-  /* heavy hero orbit layers off; keep resonance rings but static */
-  .wf-orbit-conic,
-  .wf-orbit-blue,
-  .wf-orbit-spin,
-  .wf-orbit-dash { display: none !important; }
-  .wf-orbit-ring,
-  .wf-orbit-flat { animation: none !important; }
-  .wf-resonance .r1,
-  .wf-resonance .r2,
-  .wf-resonance .r3 { animation: none !important; opacity: 0.4; }
-  .wf-resonance .core { animation: none !important; }
+  /* Keep the full hero "planet" on phones too. The orbit field (conic rays,
+     blue core, spinning dot, dashed ring + resonance rings) used to be hidden
+     on mobile — now it shows, scaled down so the whole ring reads like it does
+     on desktop, and the hero is clipped so it can't bleed into the next section. */
+  .wf-hero { overflow: hidden; }
+  /* the hero JS writes an inline transform (pointer parallax) every frame — on
+     touch there's no pointer so it's identity; !important lets the mobile
+     scale-down win over that inline value without touching any JS. */
+  .wf-orbit-wrap { transform: scale(0.62) !important; }
+
+  /* desktop-only cursor effects stay off on touch */
   .wf-glow,
   .wf-trail,
   .wf-cursor,
