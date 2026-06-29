@@ -18,13 +18,13 @@ const normVersions = (raw) =>
 // versions from the Field control panel, not here.
 export default function VersionPicker({ field, isFree, onSelect }) {
   const versions = useMemo(() => normVersions(field.versions), [field.versions])
-  const [sel, setSel] = useState(() => versions[0]?.id ?? null)
+  const [sel, setSel] = useState('main') // 'main' = the base field, else a version id
 
-  const selected = versions.find((v) => v.id === sel) || versions[0] || null
+  const selectedVersion = sel === 'main' ? null : versions.find((v) => v.id === sel) || null
 
   useEffect(() => {
-    // free fields aren't priced per version — don't push a version up
-    onSelect?.(isFree ? null : selected || null)
+    // 'main' (or a free field) → the base field's price/desc/audio; else the chosen cut
+    onSelect?.(isFree ? null : selectedVersion)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, versions, isFree])
 
@@ -37,8 +37,13 @@ export default function VersionPicker({ field, isFree, onSelect }) {
       </div>
 
       <div className="wf-vp-chips">
+        <span className={`wf-vp-chip${sel === 'main' ? ' active' : ''}`}>
+          <button className="wf-vp-chip-btn" onClick={() => setSel('main')}>
+            {field.title || 'Main'}
+          </button>
+        </span>
         {versions.map((v) => (
-          <span key={v.id} className={`wf-vp-chip${v.id === (selected && selected.id) ? ' active' : ''}`}>
+          <span key={v.id} className={`wf-vp-chip${v.id === sel ? ' active' : ''}`}>
             <button className="wf-vp-chip-btn" onClick={() => setSel(v.id)}>
               {v.name || 'Untitled'}
             </button>
