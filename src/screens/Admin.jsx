@@ -4,7 +4,7 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import MethodEditor from '../components/MethodEditor'
-import { normalizeMethod } from '../components/methodShared'
+import { normalizeMethod, defaultMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
 
 const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
@@ -137,7 +137,7 @@ export default function Admin() {
   useMagnetic(ref)
 
   // product add form
-  const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [] })
+  const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [], method: defaultMethod('') })
   const [file, setFile] = useState(null)
   const [audioFile, setAudioFile] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -478,7 +478,7 @@ export default function Admin() {
     const res =
       priceNum === 0
         ? await addFreeField(
-            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.', benefits: form.benefits },
+            { title: form.title.trim(), line: form.category.toLowerCase(), description: form.desc.trim() || 'A free Waslerr field.', benefits: form.benefits, method: form.method },
             file,
             audioFile,
           )
@@ -489,6 +489,7 @@ export default function Admin() {
               price: priceNum,
               description: form.desc.trim() || 'A new Waslerr field.',
               benefits: form.benefits,
+              method: form.method,
             },
             file,
             audioFile,
@@ -498,7 +499,7 @@ export default function Admin() {
       setErr(res.error)
       return
     }
-    setForm({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [] })
+    setForm({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [], method: defaultMethod('') })
     setFile(null)
     setAudioFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -559,6 +560,7 @@ export default function Admin() {
       price: version?.price ?? (vers[vers.length - 1]?.price ?? p.priceNum ?? 0) + 33,
       tagline: version?.tagline ?? '',
       audio: version?.audio ?? '',
+      method: normalizeMethod(version?.method, version?.name ?? p.title),
     })
   }
   const fieldVersions = (id) => {
@@ -577,7 +579,7 @@ export default function Admin() {
         audioPath = up.path
       }
       let versions = [...fieldVersions(verEdit.fieldId)]
-      const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audio: audioPath }
+      const row = { name: verEdit.name.trim(), price: Math.max(0, Number(verEdit.price) || 0), tagline: verEdit.tagline, audio: audioPath, method: verEdit.method }
       if (verEdit.id == null) {
         const id = versions.reduce((m, v) => Math.max(m, Number(v.id) || 0), 0) + 1
         versions.push({ id, ...row })
@@ -642,6 +644,7 @@ export default function Admin() {
         <span className="wf-field-label">Version audio {verAudio ? `· ${verAudio.name}` : verEdit.audio ? '(audio set — choose to replace)' : '(buyers of this version get it)'}</span>
         <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setVerAudio(e.target.files?.[0] || null)} />
       </label>
+      <MethodEditor value={verEdit.method} onChange={(m) => setVerEdit({ ...verEdit, method: m })} />
       {verErr && <p className="wf-auth-error" style={{ margin: 0 }}>{verErr}</p>}
       <div className="wf-form-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
         <button type="button" className="wf-back" onClick={() => setVerEdit(null)}>Cancel</button>
@@ -1454,6 +1457,7 @@ export default function Admin() {
                 <textarea className="wf-textarea" rows="3" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="What does this field encode?" />
               </label>
               <BenefitsEditor list={form.benefits} setList={(b) => setForm((f) => ({ ...f, benefits: b }))} />
+              <MethodEditor value={form.method} onChange={(m) => setForm((f) => ({ ...f, method: m }))} />
               <label className="wf-field">
                 <span className="wf-field-label">Artwork image {file ? `· ${file.name}` : '(optional)'}</span>
                 <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
