@@ -143,13 +143,6 @@ export default function Home({ onNavigate }) {
           ))}
         </div>
 
-        <div data-anim>
-          <span className="wf-pill">
-            <i />
-            Subliminal audio · engineered for the subconscious
-          </span>
-        </div>
-
         <h1 className="wf-hero-h1" data-anim>
           <DecryptText text="Reprogram the mind." order={0} />
           <br />
@@ -173,10 +166,10 @@ export default function Home({ onNavigate }) {
 
         <div className="wf-hero-cta" data-anim>
           <button className="wf-btn wf-btn-gold wf-mag" onClick={() => onNavigate({ page: 'fields' })}>
-            Start your transformation
+            Shift your reality
           </button>
           <button className="wf-btn wf-btn-glass wf-mag" onClick={() => onNavigate({ page: 'home', section: 'wf-free' })}>
-            Try a field free
+            Tune in
           </button>
         </div>
 
