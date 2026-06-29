@@ -641,7 +641,7 @@ export default function Admin() {
         </label>
       </div>
       <label className="wf-field">
-        <span className="wf-field-label">Version audio {verAudio ? `· ${verAudio.name}` : verEdit.audio ? '(audio set — choose to replace)' : '(buyers of this version get it)'}</span>
+        <span className="wf-field-label">Version audio {verAudio ? `· new: ${verAudio.name}` : verEdit.audio ? '· set ✓ (choose to replace)' : '· none yet — buyers of this version get it'}</span>
         <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setVerAudio(e.target.files?.[0] || null)} />
       </label>
       <MethodEditor value={verEdit.method} onChange={(m) => setVerEdit({ ...verEdit, method: m })} />
@@ -687,11 +687,17 @@ export default function Admin() {
         <MethodEditor value={editForm.method} onChange={(m) => setEditForm((f) => ({ ...f, method: m }))} />
       )}
       <label className="wf-field">
-        <span className="wf-field-label">Replace image {editImg ? `· ${editImg.name}` : '(keep current)'}</span>
+        <span className="wf-field-label">
+          Image {editImg ? `· new: ${editImg.name}` : p.image_url ? '· set ✓ (choose to replace)' : '· none yet'}
+        </span>
+        {!editImg && p.image_url && <img src={p.image_url} alt="" className="wf-edit-thumb" />}
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
       </label>
       <label className="wf-field">
-        <span className="wf-field-label">Replace audio {editAudio ? `· ${editAudio.name}` : p.hasAudio ? '(audio set — keep current)' : '(no audio yet)'}</span>
+        <span className="wf-field-label">
+          Audio {editAudio ? `· new: ${editAudio.name}` : p.hasAudio ? '· set ✓ (choose to replace)' : '· none yet'}
+        </span>
+        {!editAudio && p.hasAudio && <span className="wf-asset-set">♪ current audio is set</span>}
         <input className="wf-input wf-file" type="file" accept="audio/*" onChange={(e) => setEditAudio(e.target.files?.[0] || null)} />
       </label>
       {editErr && <p className="wf-auth-error" style={{ margin: 0 }}>{editErr}</p>}
@@ -1373,7 +1379,10 @@ export default function Admin() {
                 {paidProducts.map((p) => (
                   <div key={p.id}>
                     <div className="wf-admin-row">
-                      <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
+                      <span
+                        className={`wf-admin-ico ${phClass(p.line)}`}
+                        style={p.image_url ? { backgroundImage: `url(${p.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                      >{p.image_url ? '' : 'W'}</span>
                       <div className="wf-admin-row-text">
                         <span className="wf-admin-row-title">
                           {p.title} {p.hasAudio && <span className="wf-audio-tag">♪ audio</span>}
@@ -1404,7 +1413,10 @@ export default function Admin() {
                 {freeFields.map((p) => (
                   <div key={p.id}>
                     <div className="wf-admin-row">
-                      <span className={`wf-admin-ico ${phClass(p.line)}`}>{p.image_url ? '' : 'W'}</span>
+                      <span
+                        className={`wf-admin-ico ${phClass(p.line)}`}
+                        style={p.image_url ? { backgroundImage: `url(${p.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                      >{p.image_url ? '' : 'W'}</span>
                       <div className="wf-admin-row-text">
                         <span className="wf-admin-row-title">
                           {p.title} {p.hasAudio && <span className="wf-audio-tag">♪ audio</span>}
