@@ -314,6 +314,7 @@ a {
   font-weight: 500;
   color: #0d0b07;
   background: var(--wf-grad);
+  background-color: #d4af37; /* solid fallback so the button is never transparent if the gradient layer fails to paint (some mobile in-app browsers) */
   padding: 15px 30px;
   box-shadow: 0 10px 40px rgba(212, 175, 55, 0.24), 0 0 0 1px rgba(246, 231, 180, 0.4);
 }
@@ -4243,8 +4244,21 @@ a {
 
   /* Hero entrance must never leave content hidden on touch. The fade-up adds
      `.in` from a rAF/timeout that in-app browsers can throttle, so on any touch
-     device we show the hero copy + CTAs immediately (no JS dependency). */
-  [data-anim] { opacity: 1 !important; transform: none !important; transition: none !important; }
+     device we show the hero copy + CTAs immediately (no JS dependency). The
+     explicit hero-content selectors are belt-and-suspenders: even if a webview
+     mis-evaluates [data-anim], the headline, field lines and BOTH buttons stay
+     visible. */
+  [data-anim],
+  .wf-hero-h1,
+  .wf-hero-lines,
+  .wf-hero-line,
+  .wf-hero-cta,
+  .wf-hero-cta .wf-btn {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    visibility: visible !important;
+  }
 
   /* desktop-only cursor effects stay off on touch */
   .wf-glow,
