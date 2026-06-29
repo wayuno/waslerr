@@ -40,7 +40,7 @@ function WallEmpty({ isAll, onShare }) {
 }
 
 export default function Reviews() {
-  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady, purchasedIds } = useStore()
+  const { products, wall, addReview, reviewField, reviewShare, clearReviewShare, navigate, openDetail, showToast, loggedIn, authReady } = useStore()
   const ref = useRef(null)
   const formRef = useRef(null)
   useReveal(ref)
@@ -52,7 +52,9 @@ export default function Reviews() {
   }, [authReady, loggedIn, navigate])
 
   const [filter, setFilter] = useState('all')
-  const [form, setForm] = useState({ name: '', field: reviewField || products[0]?.id || '', text: '' })
+  // field is optional now — anyone can share a general experience; if they came
+  // from a specific field page it's tagged to that field, otherwise it's general
+  const [form, setForm] = useState({ name: '', field: reviewField || '', text: '' })
   const [err, setErr] = useState('')
   const [freshId, setFreshId] = useState(null)
   const [photos, setPhotos] = useState([]) // up to 2 uploaded image URLs
@@ -61,16 +63,9 @@ export default function Reviews() {
   const MAX_PHOTOS = 2
 
   const prodMap = Object.fromEntries(products.map((p) => [p.id, p]))
-  const nameOf = (id) => prodMap[id]?.title || 'a Waslerr field'
-  const catOf = (id) => prodMap[id]?.line || 'desire'
+  const nameOf = (id) => prodMap[id]?.title || '' // general/unknown → no field chip
+  const catOf = (id) => prodMap[id]?.line || '' // general/unknown → only under "All"
   const clsOf = (id) => CAT_CLS[catOf(id)] || ''
-
-  // Fields the visitor can review: ones they bought, plus free fields (free to all).
-  const reviewableProducts = products.filter(
-    (p) => purchasedIds.includes(String(p.id)) || Number(p.priceNum) === 0,
-  )
-  const canReviewField = (id) =>
-    purchasedIds.includes(String(id)) || Number(prodMap[id]?.priceNum) === 0
 
   const sorted = [...wall].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts)
   const shown = sorted.filter((r) => {
@@ -79,17 +74,10 @@ export default function Reviews() {
     return catOf(r.field) === filter
   })
 
-  // deep-link: ?f preselects the field; #share scrolls to the form
+  // deep-link: ?f tags the story to a field; #share scrolls to the form
   useEffect(() => {
     if (reviewField) setForm((prev) => ({ ...prev, field: reviewField }))
   }, [reviewField])
-  // keep the selected field to one the user can actually review
-  useEffect(() => {
-    if (reviewableProducts.length && !canReviewField(form.field)) {
-      setForm((prev) => ({ ...prev, field: reviewableProducts[0].id }))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchasedIds, products])
   useEffect(() => {
     if (reviewShare) {
       const t = setTimeout(() => {
@@ -146,13 +134,11 @@ export default function Reviews() {
   const submit = async (e) => {
     e.preventDefault()
     setErr('')
-    if (!reviewableProducts.length) return setErr('Get a field first to post your story.')
-    if (!canReviewField(form.field)) return setErr('You can only review a field you own or a free field.')
     if (!form.name.trim()) return setErr('Add your name.')
     if (form.text.trim().length < 8) return setErr('Tell us a little more about what changed.')
     setBusy(true)
     const item = await addReview({
-      field: form.field,
+      field: form.field || '', // general experience when no field
       name: form.name.trim(),
       text: form.text.trim(),
       images: photos,
@@ -217,28 +203,8 @@ export default function Reviews() {
         )}
       </section>
 
-      {/* ===== SHARE FORM (buyers only) ===== */}
+      {/* ===== SHARE FORM (open to everyone) ===== */}
       <section className="wf-section" style={{ maxWidth: 640, margin: '0 auto', padding: '10px 28px 80px' }} ref={formRef}>
-        {!reviewableProducts.length ? (
-          <div className="wf-share-locked" data-reveal>
-            <div className="wf-share-lock-icon" aria-hidden="true">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="11" width="16" height="9" rx="2" />
-                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-              </svg>
-            </div>
-            <h2 className="wf-detail-title" style={{ fontSize: 'clamp(24px,3vw,30px)', marginBottom: 8 }}>
-              Purchase a field to post your story.
-            </h2>
-            <p className="wf-page-lead" style={{ margin: '0 auto 22px', maxWidth: 460 }}>
-              The wall is open to read for everyone — but only listeners who own a field can share a story.
-              Get yours, then come back and tell the wall what changed.
-            </p>
-            <button className="wf-btn wf-btn-gold wf-mag" onClick={() => navigate('fields')}>
-              Browse fields
-            </button>
-          </div>
-        ) : (
         <form className="wf-form-card wf-share-form" data-reveal onSubmit={submit}>
           <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
             Share your story
@@ -247,27 +213,15 @@ export default function Reviews() {
             Tell the wall what changed.
           </h2>
 
-          <div className="wf-form-row">
-            <label className="wf-field">
-              <span className="wf-field-label">Your name</span>
-              <input
-                className="wf-input"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="First name or initial"
-              />
-            </label>
-            <label className="wf-field">
-              <span className="wf-field-label">Which field</span>
-              <select className="wf-select" value={form.field} onChange={(e) => setForm({ ...form, field: e.target.value })}>
-                {reviewableProducts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <label className="wf-field">
+            <span className="wf-field-label">Your name</span>
+            <input
+              className="wf-input"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="First name or initial"
+            />
+          </label>
 
           <label className="wf-field">
             <span className="wf-field-label">What changed</span>
@@ -318,7 +272,6 @@ export default function Reviews() {
           </button>
           <p className="wf-form-note">Be honest — real stories help others choose.</p>
         </form>
-        )}
       </section>
 
       <footer className="wf-subfoot">

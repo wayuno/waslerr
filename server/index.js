@@ -1957,10 +1957,10 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/admin/reviews' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
     const b = await readBody(req)
-    const field = (b.field || '').toString()
+    const field = (b.field || '').toString() // optional — '' = general review
     const name = (b.name || '').toString().trim()
     const text = (b.text || '').toString().trim()
-    if (!field || !name || text.length < 4) return sendJson(res, 400, { error: 'bad_request', detail: 'field, name and a story (4+ chars) are required' })
+    if (!name || text.length < 4) return sendJson(res, 400, { error: 'bad_request', detail: 'name and a story (4+ chars) are required' })
     const row = {
       field,
       name: name.slice(0, 80),
