@@ -1077,6 +1077,22 @@ export function StoreProvider({ children }) {
     },
     [authedFetch],
   )
+  // reject (or re-open) a custom-code request message
+  const rejectRequest = useCallback(
+    async (messageId, rejected = true) => {
+      const r = await authedFetch('/api/admin/requests/' + encodeURIComponent(messageId) + '/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejected }),
+      })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        return { error: j.detail || j.error || 'Could not update request.' }
+      }
+      return { ok: true, rejected }
+    },
+    [authedFetch],
+  )
   // update a request workspace (production status / spec / internal note)
   const updateRequest = useCallback(
     async (offerId, patch) => {
@@ -1221,6 +1237,7 @@ export function StoreProvider({ children }) {
     listPeople,
     loadPerson,
     updateRequest,
+    rejectRequest,
     notifications,
     unreadCount,
     notifReadAt,

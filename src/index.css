@@ -2749,6 +2749,8 @@ a {
 .wf-person:hover { border-color: rgba(212, 175, 55, 0.3); }
 .wf-person.active { border-color: var(--wf-gold); background: var(--wf-glass-2); }
 .wf-person-top { display: flex; align-items: center; gap: 8px; }
+.wf-person.unread .wf-person-name { color: #fff; font-weight: 500; }
+.wf-person-new { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--wf-grad); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.16); animation: wf-pillpulse 1.8s ease-in-out infinite; }
 .wf-person-name {
   font-size: 13.5px;
   color: #eef0f4;
@@ -2947,6 +2949,12 @@ a {
   transition: background 0.2s var(--wf-ease);
 }
 .wf-reqcard-respond:hover { background: rgba(212, 175, 55, 0.18); }
+.wf-reqcard-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.wf-reqcard-reject { background: none; border: none; color: var(--wf-mute); font-family: var(--wf-sans); font-size: 12.5px; cursor: pointer; padding: 4px 2px; }
+.wf-reqcard-reject:hover { color: #e0432f; }
+.wf-reqcard-badge--rejected { color: #e0432f; border-color: rgba(224, 67, 47, 0.4); background: rgba(224, 67, 47, 0.08); }
+.wf-reqcard--rejected { opacity: 0.7; }
+.wf-reqcard--rejected .wf-reqcard-focus { text-decoration: line-through; text-decoration-color: rgba(224, 67, 47, 0.5); }
 .wf-reqcard-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .wf-reqcard-status { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--wf-rule); }
 .wf-reqcard-amt { font-size: 15px; font-weight: 600; color: var(--wf-gold); }

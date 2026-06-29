@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
@@ -120,6 +120,7 @@ export default function Admin() {
     listPeople,
     loadPerson,
     updateRequest,
+    rejectRequest,
     showToast,
     communityLinks,
     setCommunityLinks,
@@ -214,6 +215,20 @@ export default function Admin() {
   const [reqBusy, setReqBusy] = useState(false)
   const [reqErr, setReqErr] = useState('')
   const [reqFlash, setReqFlash] = useState(false)
+  // which people the admin has already seen (last-read time per person key) — for
+  // the NEW/unread dot. Persisted so it survives reloads.
+  const [readMap, setReadMap] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wf_admin_read') || '{}') } catch { return {} }
+  })
+  const markRead = useCallback((key, at) => {
+    if (!key || !at) return
+    setReadMap((prev) => {
+      if (String(prev[key] || '') >= String(at)) return prev
+      const next = { ...prev, [key]: at }
+      try { localStorage.setItem('wf_admin_read', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }, [])
 
   // inline responder for a custom-code request block (amount + description → offer)
   const [respondTo, setRespondTo] = useState(null) // the request message id being answered
@@ -288,6 +303,8 @@ export default function Admin() {
       // reply / new-offer target = the conversation of the most recent message
       const lastMsg = p.messages && p.messages.length ? p.messages[p.messages.length - 1] : null
       setActiveConv(lastMsg?.conversationId || p.conversationIds?.[0] || null)
+      // opening a person marks it read (clears the NEW dot)
+      if (lastMsg) markRead(selectedPerson, lastMsg.at)
       // payment-landed toast (once per offer, skipping the first load for this person)
       offers.forEach((o) => {
         if ((o.status === 'paid' || o.status === 'delivered') && !paidSeen.current.has(o.id)) {
@@ -302,7 +319,7 @@ export default function Admin() {
     load()
     t = setInterval(load, 4000)
     return () => { cancelled = true; clearInterval(t) }
-  }, [selectedPerson, loadPerson, showToast])
+  }, [selectedPerson, loadPerson, showToast, markRead])
 
   // when the open request tab changes, load its draft (focus / budget / length /
   // internal note) once — don't clobber admin edits on every 4s poll.
@@ -795,6 +812,27 @@ export default function Admin() {
     if (res.offer?.id != null) { setActiveTab(String(res.offer.id)); setReqDraftFor(null) }
     showToast(amount === 0 ? 'Free field sent — open its workspace to deliver' : 'Offer sent — awaiting payment')
   }
+  // reject (or re-open) a custom-code request
+  const toggleReject = async (m, rejected) => {
+    if (rejected && !window.confirm('Reject this request? You can undo it afterwards.')) return
+    if (respondTo === m.id) setRespondTo(null)
+    // optimistic: flag the request message + cancel a still-unpaid linked offer
+    const cancelledOffer = rejected
+      ? convOffers.find((o) => String(o.requestMessageId || '') === String(m.id) && o.status === 'sent')
+      : null
+    setThread((prev) => prev.map((x) => (x.id === m.id ? { ...x, meta: { ...(x.meta || {}), rejected } } : x)))
+    if (cancelledOffer) {
+      setConvOffers((prev) => prev.map((o) => (o.id === cancelledOffer.id ? { ...o, status: 'cancelled' } : o)))
+    }
+    const res = await rejectRequest(m.id, rejected)
+    if (res?.error) {
+      // revert exactly what we optimistically changed
+      setThread((prev) => prev.map((x) => (x.id === m.id ? { ...x, meta: { ...(x.meta || {}), rejected: !rejected } } : x)))
+      if (cancelledOffer) setConvOffers((prev) => prev.map((o) => (o.id === cancelledOffer.id ? { ...o, status: 'sent' } : o)))
+      return showToast(res.error)
+    }
+    showToast(rejected ? 'Request declined' : 'Request re-opened')
+  }
   const submitDelivery = async (offerId) => {
     setDeliverErr('')
     if (!deliverFiles.length) return setDeliverErr('Choose at least one file to deliver.')
@@ -947,52 +985,71 @@ export default function Admin() {
   // delivered) right here. Delivery itself happens in the request's workspace tab.
   const renderRequestCard = (m) => {
     const { focus, intention } = parseReq(m.text)
-    const offer = offerByRequest[String(m.id)]
+    const linked = offerByRequest[String(m.id)]
+    // a cancelled offer (superseded, or cancelled by a reject that was undone) is
+    // treated as "no live offer" so the card offers to respond again
+    const offer = linked && linked.status !== 'cancelled' ? linked : null
     const responding = respondTo === m.id
+    const rejected = !!(m.meta && m.meta.rejected)
     const freeNow = parseFloat(String(respondAmount).replace(/[^0-9.]/g, '')) === 0 && respondAmount !== ''
     const delivered = offer ? stageOf(offer) === 'delivered' : false
     return (
-      <div key={m.id} className="wf-reqcard">
+      <div key={m.id} className={`wf-reqcard${rejected ? ' wf-reqcard--rejected' : ''}`}>
         <span className="wf-reqcard-eyebrow">✦ Custom code request</span>
         <span className="wf-reqcard-focus">{focus || 'Custom field'}</span>
         {intention && <p className="wf-reqcard-intent">{intention}</p>}
 
-        {!offer && !responding && (
-          <button type="button" className="wf-reqcard-respond" onClick={() => openResponder(m)}>
-            Respond with an offer →
-          </button>
-        )}
-
-        {responding && (
-          <div className="wf-reqcard-form">
-            <input className="wf-input" value={respondAmount} onChange={(e) => setRespondAmount(e.target.value)} placeholder="$ amount (0 = free)" autoFocus />
-            <textarea className="wf-textarea" rows="2" value={respondDesc} onChange={(e) => setRespondDesc(e.target.value)} placeholder="Short note for the customer (optional)…" />
-            {freeNow && <p className="wf-offer-free-note">Free field — the customer pays nothing; deliver it right away from the workspace tab.</p>}
-            {respondErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{respondErr}</p>}
-            <div className="wf-form-row" style={{ marginTop: 4 }}>
-              <button type="button" className="wf-back" onClick={() => setRespondTo(null)}>Cancel</button>
-              <button type="button" className="wf-form-submit wf-mag" disabled={respondBusy} onClick={() => sendRequestOffer(m)}>
-                {respondBusy ? 'Sending…' : freeNow ? 'Send free field →' : 'Send offer →'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {offer && !responding && (
+        {rejected ? (
           <div className="wf-reqcard-status">
-            <span className="wf-reqcard-amt">{Number(offer.amount) === 0 ? 'Free' : `$${offer.amount}`}</span>
-            <span className={`wf-reqcard-badge wf-reqcard-badge--${delivered ? 'delivered' : offer.status}`}>
-              {delivered ? 'Delivered ✓' : offer.status === 'paid' ? 'Paid ✓' : offer.status === 'sent' ? 'Awaiting payment' : offer.status}
-            </span>
-            {!delivered && (
-              <button type="button" className="wf-reqcard-link" onClick={() => { setActiveTab(String(offer.id)); setReqDraftFor(null) }}>
-                {offer.status === 'paid' ? 'Deliver →' : 'Open workspace →'}
-              </button>
-            )}
-            {offer.status === 'sent' && (
-              <button type="button" className="wf-reqcard-change" onClick={() => openResponder(m)}>Change offer</button>
-            )}
+            <span className="wf-reqcard-badge wf-reqcard-badge--rejected">Declined</span>
+            <button type="button" className="wf-reqcard-change" onClick={() => toggleReject(m, false)}>Undo</button>
           </div>
+        ) : (
+          <>
+            {!offer && !responding && (
+              <div className="wf-reqcard-actions">
+                <button type="button" className="wf-reqcard-respond" onClick={() => openResponder(m)}>
+                  Respond with an offer →
+                </button>
+                <button type="button" className="wf-reqcard-reject" onClick={() => toggleReject(m, true)}>Reject</button>
+              </div>
+            )}
+
+            {responding && (
+              <div className="wf-reqcard-form">
+                <input className="wf-input" value={respondAmount} onChange={(e) => setRespondAmount(e.target.value)} placeholder="$ amount (0 = free)" autoFocus />
+                <textarea className="wf-textarea" rows="2" value={respondDesc} onChange={(e) => setRespondDesc(e.target.value)} placeholder="Short note for the customer (optional)…" />
+                {freeNow && <p className="wf-offer-free-note">Free field — the customer pays nothing; deliver it right away from the workspace tab.</p>}
+                {respondErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{respondErr}</p>}
+                <div className="wf-form-row" style={{ marginTop: 4 }}>
+                  <button type="button" className="wf-back" onClick={() => setRespondTo(null)}>Cancel</button>
+                  <button type="button" className="wf-form-submit wf-mag" disabled={respondBusy} onClick={() => sendRequestOffer(m)}>
+                    {respondBusy ? 'Sending…' : freeNow ? 'Send free field →' : 'Send offer →'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {offer && !responding && (
+              <div className="wf-reqcard-status">
+                <span className="wf-reqcard-amt">{Number(offer.amount) === 0 ? 'Free' : `$${offer.amount}`}</span>
+                <span className={`wf-reqcard-badge wf-reqcard-badge--${delivered ? 'delivered' : offer.status}`}>
+                  {delivered ? 'Delivered ✓' : offer.status === 'paid' ? 'Paid ✓' : offer.status === 'sent' ? 'Awaiting payment' : offer.status}
+                </span>
+                {!delivered && (
+                  <button type="button" className="wf-reqcard-link" onClick={() => { setActiveTab(String(offer.id)); setReqDraftFor(null) }}>
+                    {offer.status === 'paid' ? 'Deliver →' : 'Open workspace →'}
+                  </button>
+                )}
+                {offer.status === 'sent' && (
+                  <>
+                    <button type="button" className="wf-reqcard-change" onClick={() => openResponder(m)}>Change offer</button>
+                    <button type="button" className="wf-reqcard-reject" onClick={() => toggleReject(m, true)}>Reject</button>
+                  </>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     )
@@ -1799,16 +1856,19 @@ export default function Admin() {
                 People · {people.length}
               </div>
               {people.length === 0 && <p className="wf-detail-desc">No messages yet.</p>}
-              {people.map((p) => (
+              {people.map((p) => {
+                const unread = p.lastFrom === 'user' && String(readMap[p.key] || '') < String(p.lastAt || '')
+                return (
                 <div className="wf-convo-wrap" key={p.key}>
                   <button
-                    className={`wf-person${selectedPerson === p.key ? ' active' : ''}`}
+                    className={`wf-person${selectedPerson === p.key ? ' active' : ''}${unread ? ' unread' : ''}`}
                     onClick={() => selectPerson(p.key)}
                   >
                     <span className="wf-person-top">
+                      {unread && <span className="wf-person-new" title="New message" aria-label="New" />}
                       <span className="wf-person-name">{p.email || `Guest · ${(p.conversationIds?.[0] || '').slice(0, 6)}`}</span>
-                      {p.requestCount > 0 && (
-                        <span className="wf-person-badge" title={`${p.requestCount} custom request${p.requestCount === 1 ? '' : 's'}`}>{p.requestCount}</span>
+                      {p.pendingCount > 0 && (
+                        <span className="wf-person-badge" title={`${p.pendingCount} open request${p.pendingCount === 1 ? '' : 's'}`}>{p.pendingCount}</span>
                       )}
                     </span>
                     <span className="wf-convo-last">{p.lastBody}</span>
@@ -1821,7 +1881,8 @@ export default function Admin() {
                     <TrashIcon />
                   </button>
                 </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="wf-form-card wf-person-pane">
