@@ -624,6 +624,7 @@ const publicOffer = (o) => ({
   createdAt: o.created_at,
   paidAt: o.paid_at || null,
   deliveredAt: o.delivered_at || null,
+  requestMessageId: o.request_message_id != null ? String(o.request_message_id) : null,
 })
 
 // admin-only shape: everything in publicOffer + the request-workspace fields.
@@ -1379,6 +1380,10 @@ const server = http.createServer(async (req, res) => {
     // amount 0 = a free gift field: there's nothing to pay, so it skips straight
     // to `paid` and the admin can deliver it right away (same delivery flow).
     const isFree = amount === 0
+    // links this offer to the customer's ✦ CUSTOM CODE REQUEST message so its
+    // request block can show this offer's status (and stay independent of other
+    // requests in the same thread)
+    const reqMsgId = b.requestMessageId != null ? String(b.requestMessageId).slice(0, 80) : null
     // find the customer email from the thread (best effort)
     const convMsgs = await getMessages(conversationId)
     const customerEmail = (convMsgs.find((m) => m.email)?.email) || null
@@ -1393,15 +1398,29 @@ const server = http.createServer(async (req, res) => {
       includes: Array.isArray(b.includes) ? b.includes.slice(0, 12).map((s) => String(s).slice(0, 120)) : [],
       status: isFree ? 'paid' : 'sent',
       paid_at: isFree ? new Date().toISOString() : null,
+      focus: (b.focus || '').toString().trim().slice(0, 200) || null,
+      intention: (b.intention || '').toString().trim().slice(0, 4000) || null,
+      request_message_id: reqMsgId,
     }
-    // Supersede any still-unpaid offer in this thread so the conversation never
-    // gets stuck on one "awaiting payment" — a new field request gets a fresh
-    // offer, and only the newest one stays payable. Paid/delivered are untouched.
+    // Supersede only a still-unpaid offer for the SAME request (re-pricing it) —
+    // other requests in this thread keep their own independent, payable offers.
     const priorOffers = await listOffersForConversation(conversationId)
     for (const o of priorOffers) {
-      if (o.status === 'sent') await updateOffer(o.id, { status: 'cancelled' })
+      if (o.status === 'sent' && String(o.request_message_id || '') === (reqMsgId || '')) {
+        await updateOffer(o.id, { status: 'cancelled' })
+      }
     }
-    const out = await insertOffer(offerRow)
+    // Insert — degrade gracefully if the request_workspace columns aren't applied
+    // yet (drop request_message_id first, then focus/intention).
+    let out = await insertOffer(offerRow)
+    if (!out.ok && offerRow.request_message_id) {
+      const { request_message_id, ...rest } = offerRow
+      out = await insertOffer(rest)
+    }
+    if (!out.ok) {
+      const { request_message_id, focus, intention, ...rest } = offerRow
+      out = await insertOffer(rest)
+    }
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.status })
     await insertMessage({
       conversation_id: conversationId,
