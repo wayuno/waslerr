@@ -513,7 +513,7 @@ export default function Admin() {
     })
   }
   const fieldVersions = (id) => {
-    const f = [...paidProducts, ...freeFieldsList].find((x) => x.id === id)
+    const f = [...paidProducts, ...freeFields].find((x) => x.id === id)
     return Array.isArray(f?.versions) ? f.versions : []
   }
   const saveVersion = async () => {
