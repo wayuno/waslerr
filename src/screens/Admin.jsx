@@ -117,6 +117,9 @@ export default function Admin() {
     setUserRole,
     createOffer,
     deliverOffer,
+    listPeople,
+    loadPerson,
+    updateRequest,
     showToast,
     communityLinks,
     setCommunityLinks,
@@ -196,12 +199,21 @@ export default function Admin() {
   // inline "sold count" edits per field id → string value
   const [soldEdits, setSoldEdits] = useState({})
 
-  // support
-  const [conversations, setConversations] = useState([])
-  const [activeConv, setActiveConv] = useState(null)
-  const [thread, setThread] = useState([])
-  const [convOffers, setConvOffers] = useState([]) // offers in the active thread
+  // support — per-person inbox
+  const [people, setPeople] = useState([])
+  const [selectedPerson, setSelectedPerson] = useState(null) // bucket key (email or anon:<cid>)
+  const [personDetail, setPersonDetail] = useState(null)
+  const [activeTab, setActiveTab] = useState('conversation') // 'conversation' | offerId
+  const [activeConv, setActiveConv] = useState(null) // reply/offer target = the person's most-recent conversation
+  const [thread, setThread] = useState([]) // union of the person's messages
+  const [convOffers, setConvOffers] = useState([]) // the person's offers (= custom-code requests)
   const [reply, setReply] = useState('')
+  // request-workspace draft (the open request tab)
+  const [reqDraft, setReqDraft] = useState({ focus: '', budget: '', lengthEstimate: '', internalNote: '' })
+  const [reqDraftFor, setReqDraftFor] = useState(null)
+  const [reqBusy, setReqBusy] = useState(false)
+  const [reqErr, setReqErr] = useState('')
+  const [reqFlash, setReqFlash] = useState(false)
 
   // offer builder + delivery composer
   const [offerForm, setOfferForm] = useState({ name: '', description: '', amount: '', deliveryEstimate: '6–7 days', includes: [], includeInput: '' })
@@ -214,22 +226,18 @@ export default function Admin() {
   const [deliverErr, setDeliverErr] = useState('')
   const [deliverPct, setDeliverPct] = useState(0)
   const [deliverElapsed, setDeliverElapsed] = useState(0)
-  const [deliveredFlashId, setDeliveredFlashId] = useState(null) // shows "order complete" for ~10s after delivery
   const paidSeen = useRef(new Set())
   const threadRef = useRef(null)
 
-  // load conversations (for stats + support); poll while on support tab
+  // load the people list (left column); poll while on the support tab
   useEffect(() => {
     if (!isAdmin) return
     let t
-    const load = async () => {
-      const r = await authedFetch('/api/admin/conversations')
-      if (r.ok) setConversations((await r.json()).conversations || [])
-    }
+    const load = async () => setPeople(await listPeople())
     load()
-    if (adminTab === 'support') t = setInterval(load, 6000)
+    if (adminTab === 'support') t = setInterval(load, 8000)
     return () => t && clearInterval(t)
-  }, [isAdmin, adminTab, authedFetch])
+  }, [isAdmin, adminTab, listPeople])
 
   // load real stats when on the stats tab
   useEffect(() => {
@@ -263,33 +271,53 @@ export default function Admin() {
     if (isAdmin && adminTab === 'reviews') reloadReviews()
   }, [isAdmin, adminTab, reloadReviews])
 
-  // load + poll the open conversation thread (messages + offers)
+  // load + poll the selected person's detail (union of messages + their offers)
   useEffect(() => {
-    if (!activeConv) return
+    if (!selectedPerson) return
     let t
+    let cancelled = false
     const load = async () => {
-      const r = await fetch('/api/chat/messages?conversationId=' + encodeURIComponent(activeConv))
-      if (!r.ok) return
-      const d = await r.json()
-      setThread(d.messages || [])
-      const offers = d.offers || []
+      const p = await loadPerson(selectedPerson)
+      if (cancelled || !p) return
+      setPersonDetail(p)
+      setThread(p.messages || [])
+      const offers = p.offers || []
       setConvOffers(offers)
-      // payment-landed toast (once per offer)
+      // reply / new-offer target = the conversation of the most recent message
+      const lastMsg = p.messages && p.messages.length ? p.messages[p.messages.length - 1] : null
+      setActiveConv(lastMsg?.conversationId || p.conversationIds?.[0] || null)
+      // payment-landed toast (once per offer, skipping the first load for this person)
       offers.forEach((o) => {
         if ((o.status === 'paid' || o.status === 'delivered') && !paidSeen.current.has(o.id)) {
-          // skip the first load (don't toast pre-existing paid offers)
-          if (paidSeen.current.size >= 0 && paidSeen.current.has('__init_' + activeConv)) {
+          if (paidSeen.current.has('__init_' + selectedPerson)) {
             showToast(`Payment received · $${o.amount}${o.customerEmail ? ' from ' + o.customerEmail : ''}`)
           }
           paidSeen.current.add(o.id)
         }
       })
-      paidSeen.current.add('__init_' + activeConv)
+      paidSeen.current.add('__init_' + selectedPerson)
     }
     load()
     t = setInterval(load, 4000)
-    return () => clearInterval(t)
-  }, [activeConv, showToast])
+    return () => { cancelled = true; clearInterval(t) }
+  }, [selectedPerson, loadPerson, showToast])
+
+  // when the open request tab changes, load its draft (focus / budget / length /
+  // internal note) once — don't clobber admin edits on every 4s poll.
+  useEffect(() => {
+    if (activeTab === 'conversation') return
+    if (reqDraftFor === activeTab) return
+    const o = convOffers.find((x) => String(x.id) === String(activeTab))
+    if (!o) return
+    setReqDraft({ focus: o.focus || '', budget: o.budget || '', lengthEstimate: o.lengthEstimate || '', internalNote: o.internalNote || '' })
+    setReqDraftFor(activeTab)
+    setReqErr('')
+    setReqFlash(false)
+    // reset the deliver composer when moving between request tabs
+    setDeliverFiles([])
+    setDeliverNote('')
+    setDeliverErr('')
+  }, [activeTab, convOffers, reqDraftFor])
 
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
@@ -738,7 +766,9 @@ export default function Admin() {
     setShowOfferBuilder(false)
     // the server supersedes any prior unpaid offer — reflect that locally too
     setConvOffers((prev) => [...prev.map((o) => (o.status === 'sent' ? { ...o, status: 'cancelled' } : o)), res.offer])
-    showToast(amount === 0 ? 'Free field sent — ready to deliver' : 'Field sent — awaiting payment')
+    // open the new request's workspace tab right away
+    if (res.offer?.id != null) { setActiveTab(String(res.offer.id)); setReqDraftFor(null) }
+    showToast(amount === 0 ? 'Free field created — open its workspace to deliver' : 'Field offered — awaiting payment')
   }
   const submitDelivery = async (offerId) => {
     setDeliverErr('')
@@ -761,11 +791,51 @@ export default function Admin() {
     setDeliverPct(0)
     setConvOffers((prev) => prev.map((o) => (o.id === offerId ? res.offer : o)))
     showToast('Field delivered ✓')
-    // flash "order complete" for ~10s, then let it fade out (admin-only cue)
-    setDeliveredFlashId(offerId)
-    setTimeout(() => setDeliveredFlashId((cur) => (cur === offerId ? null : cur)), 10000)
   }
   const fmtElapsed = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+  // ---- per-person inbox helpers ----
+  const selectPerson = (key) => {
+    setSelectedPerson(key)
+    setActiveTab('conversation')
+    setReqDraftFor(null)
+    setShowOfferBuilder(false)
+    setDeliverFiles([])
+    setDeliverNote('')
+    setDeliverErr('')
+  }
+  // production pipeline stage of an offer (delivered file always wins)
+  const stageOf = (o) => (o && o.status === 'delivered' ? 'delivered' : (o?.productionStatus || 'requested'))
+  // click a stage in the pipeline → advance/rewind production status
+  const setStage = async (offerId, stage) => {
+    setConvOffers((prev) => prev.map((o) => (o.id === offerId ? { ...o, productionStatus: stage } : o)))
+    const res = await updateRequest(offerId, { productionStatus: stage })
+    if (res?.error) return showToast(res.error)
+    setConvOffers((prev) => prev.map((o) => (o.id === offerId ? res.offer : o)))
+  }
+  // save the editable workspace fields (focus / budget / length / internal note)
+  const saveRequest = async (offerId) => {
+    setReqErr('')
+    setReqBusy(true)
+    const res = await updateRequest(offerId, {
+      focus: reqDraft.focus,
+      budget: reqDraft.budget,
+      lengthEstimate: reqDraft.lengthEstimate,
+      internalNote: reqDraft.internalNote,
+    })
+    setReqBusy(false)
+    if (res?.error) return setReqErr(res.error)
+    setConvOffers((prev) => prev.map((o) => (o.id === offerId ? res.offer : o)))
+    setReqFlash(true)
+    setTimeout(() => setReqFlash(false), 2500)
+    showToast('Request saved')
+  }
+  // pull the customer's original ✦ CUSTOM CODE REQUEST text from the thread (spec fallback)
+  const requestSpecFromThread = () => {
+    const m = [...thread].reverse().find((x) => x.from === 'user' && /^✦\s*CUSTOM CODE REQUEST/i.test((x.text || '').trim()))
+    if (!m) return ''
+    return (m.text || '').replace(/^✦\s*CUSTOM CODE REQUEST\s*/i, '').trim()
+  }
 
   // ---- admin add-review ----
   const fileToBase64 = (file) =>
@@ -829,15 +899,264 @@ export default function Admin() {
     if (await setSoldCount(id, isFree, val)) setSoldEdits((prev) => { const n = { ...prev }; delete n[id]; return n })
   }
 
-  const removeConversation = async (conversationId) => {
-    if (!window.confirm('Delete this conversation? This clears its messages permanently.')) return
-    if (await deleteConversation(conversationId)) {
-      setConversations((prev) => prev.filter((c) => c.conversationId !== conversationId))
-      if (activeConv === conversationId) {
-        setActiveConv(null)
-        setThread([])
-      }
+  const removePerson = async (person) => {
+    if (!window.confirm('Delete this person’s conversation(s)? This clears their messages permanently. Delivered fields stay accessible.')) return
+    for (const cid of person.conversationIds || []) await deleteConversation(cid)
+    setPeople((prev) => prev.filter((p) => p.key !== person.key))
+    if (selectedPerson === person.key) {
+      setSelectedPerson(null)
+      setPersonDetail(null)
+      setThread([])
+      setConvOffers([])
+      setActiveConv(null)
     }
+  }
+  const fmtDate = (s) => {
+    if (!s) return '—'
+    const d = new Date(s)
+    return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  // the chat thread + create-field builder + reply box (the "Conversation" tab)
+  const renderConversation = () => (
+    <>
+      <div className="wf-thread-head">
+        <span className={`wf-conv-pill wf-conv-pill--${convStatus.replace(/\s+/g, '').toLowerCase()}`}>{convStatus}</span>
+      </div>
+      <div className="wf-thread" ref={threadRef}>
+        {thread.length === 0 && <p className="wf-detail-desc" style={{ margin: 0 }}>No messages yet.</p>}
+        {thread.map((m, i) => {
+          if (m.kind === 'offer' && m.meta?.offerId) {
+            const o = offerById[m.meta.offerId]
+            return (
+              <div key={m.id || i} className="wf-msg-offer">
+                <span className="wf-mo-eyebrow">✦ Field sent</span>
+                <span className="wf-mo-name">{o?.name || m.text}</span>
+                <span className="wf-mo-foot">
+                  <span className="wf-mo-amt">${o?.amount ?? ''}</span>
+                  <span className={`wf-mo-status wf-mo-status--${o?.status || 'sent'}`}>{o?.status || 'sent'}</span>
+                </span>
+              </div>
+            )
+          }
+          if (m.kind === 'systemPaid') return <div key={m.id || i} className="wf-msg-sys">✓ {m.text}</div>
+          if (m.kind === 'delivery') return <div key={m.id || i} className="wf-msg-deliv">📦 {m.text}</div>
+          return (
+            <div key={m.id || i} className={`wf-msg wf-msg--${m.from}`}>
+              {m.from === 'admin' && <span className="wf-msg-who">You</span>}
+              {m.text}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* create-field builder — turns a request into an offer; its workspace tab then appears */}
+      {(!activeOffer || activeOffer.status === 'sent' || newRequestAfterDelivery) && (
+        showOfferBuilder ? (
+          <form className="wf-offer-builder" onSubmit={sendOffer}>
+            <div className="wf-eyebrow" style={{ marginBottom: 2 }}>
+              {activeOffer?.status === 'sent' ? '✦ Replace with a new field' : '✦ Create field'}
+            </div>
+            <input className="wf-input" value={offerForm.name} onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })} placeholder="Field name (e.g. Focus & productivity field)" />
+            <textarea className="wf-textarea" rows="2" value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="Short description…" />
+            <div className="wf-form-row">
+              <input className="wf-input" value={offerForm.amount} onChange={(e) => setOfferForm({ ...offerForm, amount: e.target.value })} placeholder="$ amount (0 = free)" />
+              <input className="wf-input" value={offerForm.deliveryEstimate} onChange={(e) => setOfferForm({ ...offerForm, deliveryEstimate: e.target.value })} placeholder="Delivery time (e.g. 6–7 days)" />
+            </div>
+            {parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' && (
+              <p className="wf-offer-free-note">Free field — the customer pays nothing and you can deliver it right away.</p>
+            )}
+            <div className="wf-offer-inc-row">
+              <input className="wf-input" value={offerForm.includeInput} onChange={(e) => setOfferForm({ ...offerForm, includeInput: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInclude() } }} placeholder="Add an 'includes' point + Enter" />
+              <button type="button" className="wf-coupon-apply" onClick={addInclude}>Add</button>
+            </div>
+            {offerForm.includes.length > 0 && (
+              <div className="wf-offer-inc-chips">
+                {offerForm.includes.map((it, i) => (
+                  <span key={i} className="wf-offer-inc-chip" onClick={() => setOfferForm((f) => ({ ...f, includes: f.includes.filter((_, j) => j !== i) }))}>
+                    {it} ✕
+                  </span>
+                ))}
+              </div>
+            )}
+            {offerErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{offerErr}</p>}
+            <div className="wf-form-row" style={{ marginTop: 6 }}>
+              <button type="button" className="wf-back" onClick={() => setShowOfferBuilder(false)}>Cancel</button>
+              <button type="submit" className="wf-form-submit wf-mag" disabled={offerBusy}>
+                {offerBusy ? 'Sending…' : parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' ? 'Send free field →' : 'Send field →'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <button className="wf-offer-create-btn" onClick={() => setShowOfferBuilder(true)}>
+            {activeOffer?.status === 'sent' ? '✦ Send a different field' : '✦ Create field'}
+          </button>
+        )
+      )}
+
+      <form className="wf-chat-input" onSubmit={sendReply} style={{ marginTop: 10 }}>
+        <input className="wf-input" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply as Waslerr admin…" />
+        <button className="wf-chat-send" type="submit" aria-label="Send reply">
+          <SendIcon />
+        </button>
+      </form>
+    </>
+  )
+
+  // the deliverable block inside a request workspace — gated by payment status
+  const renderDeliverComposer = (offer) => {
+    if (!offer) return null
+    if (offer.status === 'delivered') {
+      return (
+        <div className="wf-rw-delivered">
+          <span className="wf-rw-delivered-tag">✓ Delivered to the customer</span>
+          <div className="wf-deliver-files">
+            {(offer.deliveryFiles || []).map((f, i) => (
+              <span key={i} className="wf-deliver-file"><a href={`/api/offers/${offer.id}/download?conversationId=${encodeURIComponent(offer.conversationId)}&i=${i}`} target="_blank" rel="noreferrer">📄 {f.name}</a></span>
+            ))}
+          </div>
+          {offer.deliveryNote && <p className="wf-rw-delivered-note">“{offer.deliveryNote}”</p>}
+        </div>
+      )
+    }
+    if (offer.status === 'sent') {
+      return (
+        <div className="wf-rw-await">
+          <span className="wf-offer-await-dot" /> Awaiting payment · ${offer.amount} — the file can be delivered once the customer pays.
+        </div>
+      )
+    }
+    // paid / free → upload + deliver
+    return (
+      <div className="wf-rw-drop">
+        <label className="wf-field">
+          <span className="wf-field-label">Field files {deliverFiles.length ? `· ${deliverFiles.length} selected` : '· choose one or more'}</span>
+          <input
+            className="wf-input wf-file"
+            type="file"
+            multiple
+            disabled={deliverBusy}
+            onChange={(e) => setDeliverFiles((prev) => {
+              const picked = Array.from(e.target.files || [])
+              const seen = new Set(prev.map((f) => f.name + f.size))
+              return [...prev, ...picked.filter((f) => !seen.has(f.name + f.size))]
+            })}
+          />
+        </label>
+        {deliverFiles.length > 0 && (
+          <div className="wf-deliver-files">
+            {deliverFiles.map((f, i) => (
+              <span className="wf-deliver-file" key={f.name + f.size}>
+                📄 {f.name}
+                {!deliverBusy && <button type="button" aria-label="Remove file" onClick={() => setDeliverFiles((prev) => prev.filter((_, j) => j !== i))}>✕</button>}
+              </span>
+            ))}
+          </div>
+        )}
+        <textarea className="wf-textarea" rows="2" value={deliverNote} onChange={(e) => setDeliverNote(e.target.value)} placeholder="Note to the customer (optional)…" disabled={deliverBusy} />
+        {deliverErr && <p className="wf-auth-error" style={{ margin: '4px 0 0' }}>{deliverErr}</p>}
+        {deliverBusy && (
+          <div className="wf-deliver-progress" role="status" aria-live="polite">
+            <div className="wf-deliver-bar">
+              <span style={{ width: `${deliverPct}%` }} className={deliverPct >= 100 ? 'done' : ''} />
+            </div>
+            <div className="wf-deliver-prog-row">
+              <span className="wf-deliver-spin" aria-hidden="true" />
+              <span>
+                {deliverPct >= 100 ? 'Finalizing on server…' : `Uploading ${deliverFiles.length > 1 ? deliverFiles.length + ' files' : 'file'} · ${deliverPct}%`}
+                {' · '}{fmtElapsed(deliverElapsed)}
+              </span>
+            </div>
+            <span className="wf-deliver-hint">Large files can take several minutes — keep this tab open.</span>
+          </div>
+        )}
+        <button className="wf-form-submit wf-mag" style={{ marginTop: 8 }} disabled={deliverBusy} onClick={() => submitDelivery(offer.id)}>
+          {deliverBusy ? `Delivering… ${deliverPct >= 100 ? '' : deliverPct + '%'}`.trim() : 'Deliver field →'}
+        </button>
+      </div>
+    )
+  }
+
+  // a single custom-code request as a production workspace (one tab per offer)
+  const RW_STAGES = [['requested', 'Requested'], ['production', 'In production'], ['review', 'Review'], ['delivered', 'Delivered']]
+  const renderRequest = (offer) => {
+    if (!offer) return <p className="wf-detail-desc" style={{ margin: 0 }}>This request is no longer available.</p>
+    const stage = stageOf(offer)
+    const curIdx = RW_STAGES.findIndex((s) => s[0] === stage)
+    const spec = offer.intention || requestSpecFromThread() || offer.description || ''
+    return (
+      <div className="wf-rw">
+        <span className="wf-rw-badge">✦ Custom code request</span>
+        <input
+          className="wf-rw-focus"
+          value={reqDraft.focus}
+          onChange={(e) => setReqDraft((d) => ({ ...d, focus: e.target.value }))}
+          placeholder={offer.name || 'Focus / intention…'}
+        />
+
+        <div className="wf-rw-meta">
+          <div className="wf-rw-meta-cell">
+            <span className="wf-rw-meta-k">Requested</span>
+            <span className="wf-rw-meta-v">{fmtDate(offer.requestedAt || offer.createdAt)}</span>
+          </div>
+          <div className="wf-rw-meta-cell">
+            <span className="wf-rw-meta-k">Budget</span>
+            <input className="wf-rw-meta-in" value={reqDraft.budget} onChange={(e) => setReqDraft((d) => ({ ...d, budget: e.target.value }))} placeholder={Number(offer.amount) ? `$${offer.amount}` : '—'} />
+          </div>
+          <div className="wf-rw-meta-cell">
+            <span className="wf-rw-meta-k">Length</span>
+            <input className="wf-rw-meta-in" value={reqDraft.lengthEstimate} onChange={(e) => setReqDraft((d) => ({ ...d, lengthEstimate: e.target.value }))} placeholder="e.g. 20 min" />
+          </div>
+        </div>
+
+        <div className="wf-rw-pipe" role="tablist" aria-label="Production status">
+          {RW_STAGES.map(([key, label], i) => (
+            <button
+              key={key}
+              type="button"
+              className={`wf-rw-stage${i <= curIdx ? ' done' : ''}${key === stage ? ' active' : ''}`}
+              onClick={() => setStage(offer.id, key)}
+            >
+              <span className="wf-rw-stage-dot" />
+              <span className="wf-rw-stage-label">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="wf-rw-section">
+          <div className="wf-rw-section-k">Specification</div>
+          <div className="wf-rw-spec">
+            {spec ? spec : <span className="wf-rw-empty">No spec captured yet — the customer’s original request shows here.</span>}
+          </div>
+        </div>
+
+        <div className="wf-rw-section">
+          <div className="wf-rw-section-k">Deliverable</div>
+          {renderDeliverComposer(offer)}
+        </div>
+
+        <div className="wf-rw-section">
+          <div className="wf-rw-section-k">Internal note <span className="wf-rw-admin-only">admin only</span></div>
+          <textarea
+            className="wf-textarea"
+            rows="3"
+            value={reqDraft.internalNote}
+            onChange={(e) => setReqDraft((d) => ({ ...d, internalNote: e.target.value }))}
+            placeholder="Private notes — never shown to the customer…"
+          />
+        </div>
+
+        {reqErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{reqErr}</p>}
+        <div className="wf-rw-foot">
+          <button type="button" className="wf-back" onClick={() => saveRequest(offer.id)} disabled={reqBusy}>
+            {reqBusy ? 'Saving…' : reqFlash ? 'Saved ✓' : 'Save changes'}
+          </button>
+          <button type="button" className="wf-form-submit wf-mag" onClick={() => setStage(offer.id, 'delivered')} disabled={stage === 'delivered'}>
+            Mark as delivered
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -1432,25 +1751,30 @@ export default function Admin() {
         )}
 
         {adminTab === 'support' && (
-          <div className="wf-support-grid" data-reveal>
+          <div className="wf-support-grid wf-inbox" data-reveal>
             <div className="wf-convo-list">
               <div className="wf-field-label" style={{ marginBottom: 12 }}>
-                Conversations · {conversations.length}
+                People · {people.length}
               </div>
-              {conversations.length === 0 && <p className="wf-detail-desc">No messages yet.</p>}
-              {conversations.map((c) => (
-                <div className="wf-convo-wrap" key={c.conversationId}>
+              {people.length === 0 && <p className="wf-detail-desc">No messages yet.</p>}
+              {people.map((p) => (
+                <div className="wf-convo-wrap" key={p.key}>
                   <button
-                    className={`wf-convo${activeConv === c.conversationId ? ' active' : ''}`}
-                    onClick={() => setActiveConv(c.conversationId)}
+                    className={`wf-person${selectedPerson === p.key ? ' active' : ''}`}
+                    onClick={() => selectPerson(p.key)}
                   >
-                    <span className="wf-convo-name">{c.email || `Guest · ${c.conversationId.slice(0, 6)}`}</span>
-                    <span className="wf-convo-last">{c.lastBody}</span>
+                    <span className="wf-person-top">
+                      <span className="wf-person-name">{p.email || `Guest · ${(p.conversationIds?.[0] || '').slice(0, 6)}`}</span>
+                      {p.requestCount > 0 && (
+                        <span className="wf-person-badge" title={`${p.requestCount} custom request${p.requestCount === 1 ? '' : 's'}`}>{p.requestCount}</span>
+                      )}
+                    </span>
+                    <span className="wf-convo-last">{p.lastBody}</span>
                   </button>
                   <button
                     className="wf-convo-del"
                     aria-label="Delete conversation"
-                    onClick={() => removeConversation(c.conversationId)}
+                    onClick={() => removePerson(p)}
                   >
                     <TrashIcon />
                   </button>
@@ -1458,161 +1782,44 @@ export default function Admin() {
               ))}
             </div>
 
-            <div className="wf-form-card">
-              {!activeConv ? (
-                <p className="wf-detail-desc" style={{ margin: 0 }}>Select a conversation to reply.</p>
+            <div className="wf-form-card wf-person-pane">
+              {!selectedPerson ? (
+                <p className="wf-detail-desc" style={{ margin: 0 }}>Select a person to see their conversation and custom-code requests.</p>
               ) : (
                 <>
-                  <div className="wf-thread-head">
-                    <span className={`wf-conv-pill wf-conv-pill--${convStatus.replace(/\s+/g, '').toLowerCase()}`}>{convStatus}</span>
+                  <div className="wf-person-head">
+                    <span className="wf-person-head-name">{personDetail?.displayName || '…'}</span>
+                    {personDetail?.email && personDetail.email !== personDetail.displayName && (
+                      <span className="wf-person-head-mail">{personDetail.email}</span>
+                    )}
                   </div>
-                  <div className="wf-thread" ref={threadRef}>
-                    {thread.map((m, i) => {
-                      if (m.kind === 'offer' && m.meta?.offerId) {
-                        const o = offerById[m.meta.offerId]
-                        return (
-                          <div key={m.id || i} className="wf-msg-offer">
-                            <span className="wf-mo-eyebrow">✦ Field sent</span>
-                            <span className="wf-mo-name">{o?.name || m.text}</span>
-                            <span className="wf-mo-foot">
-                              <span className="wf-mo-amt">${o?.amount ?? ''}</span>
-                              <span className={`wf-mo-status wf-mo-status--${o?.status || 'sent'}`}>{o?.status || 'sent'}</span>
-                            </span>
-                          </div>
-                        )
-                      }
-                      if (m.kind === 'systemPaid') {
-                        return (
-                          <div key={m.id || i} className="wf-msg-sys">✓ {m.text}</div>
-                        )
-                      }
-                      if (m.kind === 'delivery') {
-                        return (
-                          <div key={m.id || i} className="wf-msg-deliv">📦 {m.text}</div>
-                        )
-                      }
-                      return (
-                        <div key={m.id || i} className={`wf-msg wf-msg--${m.from}`}>
-                          {m.from === 'admin' && <span className="wf-msg-who">You</span>}
-                          {m.text}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* offer-aware composer */}
-                  {activeOffer?.status === 'sent' ? (
-                    <div className="wf-offer-await">
-                      <span className="wf-offer-await-dot" /> Awaiting payment · ${activeOffer.amount}
-                      <span className="wf-offer-await-hint">Customer asked for something else? Send a new field below — it replaces this one.</span>
-                    </div>
-                  ) : activeOffer?.status === 'paid' ? (
-                    <div className="wf-offer-deliver">
-                      <div className="wf-offer-cleared">{activeFree ? '✓ Free field — ready to deliver' : '✓ Payment cleared — ready to deliver'}</div>
-                      <label className="wf-field" style={{ marginTop: 10 }}>
-                        <span className="wf-field-label">Field files {deliverFiles.length ? `· ${deliverFiles.length} selected` : '· you can pick more than one'}</span>
-                        <input
-                          className="wf-input wf-file"
-                          type="file"
-                          multiple
-                          disabled={deliverBusy}
-                          onChange={(e) => setDeliverFiles((prev) => {
-                            const picked = Array.from(e.target.files || [])
-                            const seen = new Set(prev.map((f) => f.name + f.size))
-                            return [...prev, ...picked.filter((f) => !seen.has(f.name + f.size))]
-                          })}
-                        />
-                      </label>
-                      {deliverFiles.length > 0 && (
-                        <div className="wf-deliver-files">
-                          {deliverFiles.map((f, i) => (
-                            <span className="wf-deliver-file" key={f.name + f.size}>
-                              📄 {f.name}
-                              {!deliverBusy && (
-                                <button type="button" aria-label="Remove file" onClick={() => setDeliverFiles((prev) => prev.filter((_, j) => j !== i))}>✕</button>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <textarea className="wf-textarea" rows="2" value={deliverNote} onChange={(e) => setDeliverNote(e.target.value)} placeholder="Note to the customer (optional)…" disabled={deliverBusy} />
-                      {deliverErr && <p className="wf-auth-error" style={{ margin: '4px 0 0' }}>{deliverErr}</p>}
-                      {deliverBusy && (
-                        <div className="wf-deliver-progress" role="status" aria-live="polite">
-                          <div className="wf-deliver-bar">
-                            <span style={{ width: `${deliverPct}%` }} className={deliverPct >= 100 ? 'done' : ''} />
-                          </div>
-                          <div className="wf-deliver-prog-row">
-                            <span className="wf-deliver-spin" aria-hidden="true" />
-                            <span>
-                              {deliverPct >= 100
-                                ? 'Finalizing on server…'
-                                : `Uploading ${deliverFiles.length > 1 ? deliverFiles.length + ' files' : 'file'} · ${deliverPct}%`}
-                              {' · '}{fmtElapsed(deliverElapsed)}
-                            </span>
-                          </div>
-                          <span className="wf-deliver-hint">Large files can take several minutes — keep this tab open.</span>
-                        </div>
-                      )}
-                      <button className="wf-form-submit wf-mag" style={{ marginTop: 8 }} disabled={deliverBusy} onClick={() => submitDelivery(activeOffer.id)}>
-                        {deliverBusy ? `Delivering… ${deliverPct >= 100 ? '' : deliverPct + '%'}`.trim() : 'Deliver field →'}
-                      </button>
-                    </div>
-                  ) : activeOffer?.status === 'delivered' && activeOffer.id === deliveredFlashId ? (
-                    <div className="wf-offer-done wf-offer-done--flash">✓ Field delivered — order complete</div>
-                  ) : null}
-
-                  {/* create-field builder — hidden once an order is delivered & complete,
-                      unless the customer has come back with a fresh request */}
-                  {(!activeOffer || activeOffer.status === 'sent' || newRequestAfterDelivery) && (
-                    showOfferBuilder ? (
-                      <form className="wf-offer-builder" onSubmit={sendOffer}>
-                        <div className="wf-eyebrow" style={{ marginBottom: 2 }}>
-                          {activeOffer?.status === 'sent' ? '✦ Replace with a new field' : '✦ Create field'}
-                        </div>
-                        <input className="wf-input" value={offerForm.name} onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })} placeholder="Field name (e.g. Focus & productivity field)" />
-                        <textarea className="wf-textarea" rows="2" value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="Short description…" />
-                        <div className="wf-form-row">
-                          <input className="wf-input" value={offerForm.amount} onChange={(e) => setOfferForm({ ...offerForm, amount: e.target.value })} placeholder="$ amount (0 = free)" />
-                          <input className="wf-input" value={offerForm.deliveryEstimate} onChange={(e) => setOfferForm({ ...offerForm, deliveryEstimate: e.target.value })} placeholder="Delivery time (e.g. 6–7 days)" />
-                        </div>
-                        {parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' && (
-                          <p className="wf-offer-free-note">Free field — the customer pays nothing and you can deliver it right away.</p>
-                        )}
-                        <div className="wf-offer-inc-row">
-                          <input className="wf-input" value={offerForm.includeInput} onChange={(e) => setOfferForm({ ...offerForm, includeInput: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInclude() } }} placeholder="Add an 'includes' point + Enter" />
-                          <button type="button" className="wf-coupon-apply" onClick={addInclude}>Add</button>
-                        </div>
-                        {offerForm.includes.length > 0 && (
-                          <div className="wf-offer-inc-chips">
-                            {offerForm.includes.map((it, i) => (
-                              <span key={i} className="wf-offer-inc-chip" onClick={() => setOfferForm((f) => ({ ...f, includes: f.includes.filter((_, j) => j !== i) }))}>
-                                {it} ✕
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {offerErr && <p className="wf-auth-error" style={{ margin: '2px 0 0' }}>{offerErr}</p>}
-                        <div className="wf-form-row" style={{ marginTop: 6 }}>
-                          <button type="button" className="wf-back" onClick={() => setShowOfferBuilder(false)}>Cancel</button>
-                          <button type="submit" className="wf-form-submit wf-mag" disabled={offerBusy}>
-                            {offerBusy ? 'Sending…' : parseFloat(String(offerForm.amount).replace(/[^0-9.]/g, '')) === 0 && offerForm.amount !== '' ? 'Send free field →' : 'Send field →'}
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <button className="wf-offer-create-btn" onClick={() => setShowOfferBuilder(true)}>
-                        {activeOffer?.status === 'sent' ? '✦ Send a different field' : '✦ Create field'}
-                      </button>
-                    )
-                  )}
-
-                  <form className="wf-chat-input" onSubmit={sendReply} style={{ marginTop: 10 }}>
-                    <input className="wf-input" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply as Waslerr admin…" />
-                    <button className="wf-chat-send" type="submit" aria-label="Send reply">
-                      <SendIcon />
+                  <div className="wf-tab-pills" role="tablist">
+                    <button
+                      type="button"
+                      role="tab"
+                      className={`wf-tab-pill${activeTab === 'conversation' ? ' active' : ''}`}
+                      onClick={() => setActiveTab('conversation')}
+                    >
+                      Conversation
                     </button>
-                  </form>
+                    {convOffers.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        role="tab"
+                        className={`wf-tab-pill wf-tab-pill--req${String(activeTab) === String(o.id) ? ' active' : ''}`}
+                        onClick={() => setActiveTab(String(o.id))}
+                      >
+                        <span className="wf-tab-pill-spark">✦</span>
+                        {o.name || 'Custom code'}
+                        <span className={`wf-tab-pill-dot wf-tab-pill-dot--${stageOf(o)}`} />
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeTab === 'conversation'
+                    ? renderConversation()
+                    : renderRequest(convOffers.find((o) => String(o.id) === String(activeTab)))}
                 </>
               )}
             </div>
