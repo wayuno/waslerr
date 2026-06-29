@@ -4229,8 +4229,17 @@ a {
   .wf-hero { overflow: hidden; }
   /* the hero JS writes an inline transform (pointer parallax) every frame — on
      touch there's no pointer so it's identity; !important lets the mobile
-     scale-down win over that inline value without touching any JS. */
-  .wf-orbit-wrap { transform: scale(0.62) !important; }
+     scale-down win over that inline value without touching any JS.
+     will-change:auto stops the orbit from being a persistently-promoted GPU
+     layer — on phones that scaled+clipped layer rendered a visible vertical
+     seam down the middle of the hero. */
+  .wf-orbit-wrap { transform: scale(0.62) !important; will-change: auto !important; }
+  /* big translucent blur layers band badly on mobile GPUs (the warm/blue glows
+     showed as a hard half-tint). Keep the planet + all its spin animations, just
+     drop/soften the heavy blurs that cause the artifact. */
+  .wf-orbit-blue { filter: none !important; }
+  .wf-hero-glow-warm { filter: blur(14px) !important; opacity: 0.5; }
+  .wf-hero-glow-gold { filter: blur(10px) !important; }
 
   /* Hero entrance must never leave content hidden on touch. The fade-up adds
      `.in` from a rAF/timeout that in-app browsers can throttle, so on any touch
