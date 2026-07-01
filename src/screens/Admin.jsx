@@ -7,6 +7,7 @@ import MethodEditor from '../components/MethodEditor'
 import AudioBundleEditor from '../components/AudioBundleEditor'
 import { normalizeMethod, defaultMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
+import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 
 const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
 
@@ -519,12 +520,18 @@ export default function Admin() {
     setEditImg(null)
     setEditAudioFiles([])
     setEditId(p.id)
+    // show the benefits actually displayed on the field (DB list, else the static
+    // fallback) so the admin can delete / edit the existing ones, not just add
+    const isFreeField = isFree || Number(p.priceNum) === 0
+    const seedBenefits = Array.isArray(p.benefits) && p.benefits.length
+      ? p.benefits
+      : (benefitsById[p.id]?.length ? benefitsById[p.id] : (isFreeField ? freeBenefits : genericBenefits))
     setEditForm({
       title: p.title || '',
       category: (p.line || 'desire').toUpperCase(),
       price: isFree ? '' : String(p.priceNum ?? ''),
       desc: p.desc || '',
-      benefits: Array.isArray(p.benefits) ? p.benefits : [],
+      benefits: seedBenefits,
       method: normalizeMethod(p.method, p.title),
       // existing bundle (with paths); fall back to the legacy single audio_url so it
       // shows in the editor AND is preserved on save (otherwise saving wipes the audio)
