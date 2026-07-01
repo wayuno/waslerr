@@ -357,7 +357,9 @@ const markDelivered = async (order, { txid, meta } = {}) => {
   const out = await updateOrder(order.reference, {
     status: 'delivered',
     txid: txid || order.txid || null,
-    meta: meta || order.meta || null,
+    // merge so the receipt breakdown (subtotal/discount) set at checkout survives;
+    // the raw provider payload is kept under `provider` for audit
+    meta: { ...(order.meta && typeof order.meta === 'object' ? order.meta : {}), ...(meta ? { provider: meta } : {}) },
   })
   // count the coupon redemption now that payment is confirmed (once)
   if (order.coupon) incrementCouponUse(order.coupon).catch(() => {})
@@ -1209,19 +1211,24 @@ const server = http.createServer(async (req, res) => {
     }
     if (amount <= 0) return sendJson(res, 400, { error: 'free_field', detail: 'free fields need no checkout' })
 
+    // subtotal = the field/version price BEFORE any coupon (kept for the receipt)
+    const subtotal = amount
     // server-side coupon application — validate scope (field) + limits + expiry
     let couponCode = null
+    let couponInfo = null
     if (b.coupon) {
       const c = await getCoupon((b.coupon || '').toUpperCase())
       const v = c ? validateCoupon(c, fieldId) : { ok: false, reason: 'invalid' }
       if (c && v.ok) {
         couponCode = c.code
+        couponInfo = { code: c.code, type: c.type, value: Number(c.value) || 0 }
         amount = c.type === 'percent' ? amount - Math.round((amount * Number(c.value)) / 100) : Math.max(0, amount - Number(c.value))
       } else {
         return sendJson(res, 400, { error: 'coupon_' + (v.reason || 'invalid') })
       }
     }
     amount = Math.max(0, amount)
+    const discount = Math.max(0, subtotal - amount)
 
     const reference = genReference(product.title)
     const orderRow = {
@@ -1234,6 +1241,7 @@ const server = http.createServer(async (req, res) => {
       status: 'pending',
       coupon: couponCode,
       buyer_email: (b.email || '').toString().toLowerCase() || null,
+      meta: { subtotal, discount, coupon: couponInfo }, // receipt breakdown
       ...(versionId != null ? { version_id: versionId } : {}),
     }
 
@@ -1244,6 +1252,7 @@ const server = http.createServer(async (req, res) => {
     if (couponCode && amount <= 0) {
       orderRow.status = 'delivered'
       orderRow.txid = 'COUPON'
+      orderRow.method = 'coupon' // a 100%-off coupon is not a payment method
       const out = await insertOrder({ ...orderRow, amount: 0 })
       if (!out.ok) return sendJson(res, 502, { error: 'order_failed' })
       incrementCouponUse(couponCode).catch(() => {})
@@ -1407,6 +1416,12 @@ const server = http.createServer(async (req, res) => {
         txn: o.txid || null,
         ts: Date.parse(o.created_at) || 0,
         fieldId: o.field_id,
+        versionId: o.version_id ?? null,
+        coupon: o.coupon || null,
+        currency: o.currency || 'USD',
+        status: o.status,
+        subtotal: o.meta && o.meta.subtotal != null ? Number(o.meta.subtotal) : null,
+        discount: o.meta && o.meta.discount != null ? Number(o.meta.discount) : 0,
       })),
     })
   }

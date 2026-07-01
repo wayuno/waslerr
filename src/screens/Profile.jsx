@@ -4,6 +4,7 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { PlayIcon, DownloadIcon } from '../components/icons'
+import Receipt from '../components/Receipt'
 
 const LINE_LABEL = { desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'Wealth' }
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
@@ -15,6 +16,14 @@ const fmtDate = (ts) => {
   } catch {
     return '—'
   }
+}
+
+// a 100%-off coupon order isn't paid via a provider → show "Coupon", not the method
+const payLabel = (o) => {
+  if (o.method === 'coupon' || (o.coupon && Number(o.amount) === 0)) return 'Coupon'
+  if (o.method === 'binance') return 'Binance Pay'
+  if (o.method === 'paypal') return 'PayPal'
+  return o.method || '—'
 }
 
 const TABS = [
@@ -37,6 +46,9 @@ export default function Profile() {
   const [busy, setBusy] = useState(false)
   const [orders, setOrders] = useState([]) // real, confirmed orders from Supabase
   const [customFields, setCustomFields] = useState([]) // delivered custom fields (chat offers)
+  const [dlOpen, setDlOpen] = useState(null) // owned field id whose downloads are expanded
+  const [dlFiles, setDlFiles] = useState({}) // fieldId → 'loading' | [{ name, size, i }]
+  const [receipt, setReceipt] = useState(null) // order shown in the receipt modal
 
   // not signed in → send to login
   useEffect(() => {
@@ -73,6 +85,31 @@ export default function Profile() {
   const downloadCustom = (cf, i = 0) => {
     const url = `/api/offers/${cf.id}/download?conversationId=${encodeURIComponent(cf.conversationId || '')}&i=${i}`
     window.open(url, '_blank', 'noopener')
+  }
+
+  // the buyer's order for a catalog field → carries the ref that unlocks its audio
+  const orderFor = (fieldId) => orders.find((o) => o.fieldId === fieldId)
+  // download a purchased field's audio by index (server resolves the right version from the ref)
+  const downloadOwned = (f, i = 0) => {
+    const o = orderFor(f.id)
+    if (!o) return
+    window.open(`/api/fields/${f.id}/audio?ref=${encodeURIComponent(o.ref)}&i=${i}`, '_blank', 'noopener')
+  }
+  // toggle a field's download list, lazily fetching its entitled files (names) once
+  const toggleDownloads = async (f) => {
+    const o = orderFor(f.id)
+    if (!o) return
+    const open = dlOpen === f.id
+    setDlOpen(open ? null : f.id)
+    if (open || dlFiles[f.id]) return
+    setDlFiles((m) => ({ ...m, [f.id]: 'loading' }))
+    try {
+      const r = await fetch(`/api/fields/${f.id}/audio?list=1&ref=${encodeURIComponent(o.ref)}`)
+      const d = r.ok ? await r.json() : { files: [] }
+      setDlFiles((m) => ({ ...m, [f.id]: Array.isArray(d.files) ? d.files : [] }))
+    } catch {
+      setDlFiles((m) => ({ ...m, [f.id]: [] }))
+    }
   }
 
   if (!loggedIn) return null
@@ -174,21 +211,46 @@ export default function Profile() {
               </div>
             ) : (
               <div className="wf-pf-library">
-                {owned.map((f, i) => (
-                  <button className="wf-pf-libcard" key={f.id} style={{ '--d': `${i * 0.05}s` }} onClick={() => openDetail(f.id)}>
-                    <span className={`wf-pf-thumb${f.image_url ? '' : ' ph'}`}>
-                      {f.image_url ? <img src={f.image_url} alt={f.title} loading="lazy" /> : <span className="wf-pf-thumb-mono">W</span>}
-                      <span className="wf-pf-play" aria-hidden="true">
-                        <PlayIcon />
-                      </span>
-                    </span>
-                    <div className="wf-pf-libtext">
-                      <span className="wf-pf-libtitle">{f.title}</span>
-                      <span className="wf-pf-libline">{lineLabel(f.line)}</span>
+                {owned.map((f, i) => {
+                  const files = dlFiles[f.id]
+                  const open = dlOpen === f.id
+                  return (
+                    <div className="wf-pf-libitem" key={f.id} style={{ '--d': `${i * 0.05}s` }}>
+                      <div className="wf-pf-libcard">
+                        <button className="wf-pf-thumbbtn" onClick={() => openDetail(f.id)} aria-label={`Open ${f.title}`}>
+                          <span className={`wf-pf-thumb${f.image_url ? '' : ' ph'}`}>
+                            {f.image_url ? <img src={f.image_url} alt={f.title} loading="lazy" /> : <span className="wf-pf-thumb-mono">W</span>}
+                            <span className="wf-pf-play" aria-hidden="true">
+                              <PlayIcon />
+                            </span>
+                          </span>
+                        </button>
+                        <div className="wf-pf-libtext">
+                          <span className="wf-pf-libtitle">{f.title}</span>
+                          <span className="wf-pf-libline">{lineLabel(f.line)}</span>
+                        </div>
+                        {f.hasAudio ? (
+                          <button className={`wf-pf-dl wf-mag${open ? ' on' : ''}`} onClick={() => toggleDownloads(f)}>
+                            <DownloadIcon size={15} /> Download
+                          </button>
+                        ) : (
+                          <span className="wf-pf-owned">Owned</span>
+                        )}
+                      </div>
+                      {open && (
+                        <div className="wf-pf-dllist">
+                          {files === 'loading' && <span className="wf-pf-dlnote">Loading your files…</span>}
+                          {Array.isArray(files) && files.length === 0 && <span className="wf-pf-dlnote">No audio files on this field yet.</span>}
+                          {Array.isArray(files) && files.map((file) => (
+                            <button key={file.i} className="wf-pf-dl ghost wf-mag" onClick={() => downloadOwned(f, file.i)} title={`Download ${file.name}`}>
+                              <DownloadIcon size={14} /> {file.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <span className="wf-pf-owned">Owned</span>
-                  </button>
-                ))}
+                  )
+                })}
 
                 {customFields.map((cf, i) => (
                   <div className="wf-pf-libcard wf-pf-libcard-custom" key={cf.id} style={{ '--d': `${(owned.length + i) * 0.05}s` }}>
@@ -233,18 +295,24 @@ export default function Profile() {
             ) : (
               <div className="wf-pf-orders">
                 {orders.map((o, i) => (
-                  <div className="wf-pf-order" key={o.ref || o.id || i} style={{ '--d': `${i * 0.05}s` }}>
+                  <button
+                    className="wf-pf-order wf-pf-order-btn"
+                    key={o.ref || o.id || i}
+                    style={{ '--d': `${i * 0.05}s` }}
+                    onClick={() => setReceipt(o)}
+                    title="View receipt"
+                  >
                     <span className="wf-pf-order-disc" aria-hidden="true">
                       <DownloadIcon size={16} />
                     </span>
                     <div className="wf-pf-order-text">
                       <span className="wf-pf-order-name">{o.name || 'Waslerr field'}</span>
                       <span className="wf-pf-order-meta">
-                        {fmtDate(o.ts)} · {o.method === 'binance' ? 'Binance Pay' : o.method === 'paypal' ? 'PayPal' : o.method || '—'} · {o.ref || '—'}
+                        {fmtDate(o.ts)} · {payLabel(o)} · {o.ref || '—'}
                       </span>
                     </div>
                     <span className="wf-pf-order-amt">${Number(o.amount) || 0}</span>
-                  </div>
+                  </button>
                 ))}
 
                 {customFields.map((cf, i) => (
@@ -310,6 +378,8 @@ export default function Profile() {
           ← Back to home
         </button>
       </section>
+
+      {receipt && <Receipt order={receipt} onClose={() => setReceipt(null)} />}
     </div>
   )
 }
