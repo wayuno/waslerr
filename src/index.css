@@ -1958,10 +1958,9 @@ a {
   /* hero */
   .wf-hero { padding: 104px 20px 84px; }
   .wf-hero-sub { font-size: 15.5px; margin-top: 26px; }
-  /* headline: smaller + a touch more line-height so "Reprogram the mind. /
-     Reshape your reality" sits comfortably on phones (each phrase on one line
-     on common widths, wraps gracefully on the smallest) */
-  .wf-hero-h1 { font-size: clamp(32px, 8.6vw, 44px); line-height: 1.08; max-width: 16ch; margin-top: 22px; }
+  /* headline: bigger and bolder on phones, wraps to balanced lines with room
+     to breathe (each phrase gets the width it needs) */
+  .wf-hero-h1 { font-size: clamp(40px, 10.5vw, 58px); line-height: 1.08; max-width: 18ch; margin-top: 22px; }
   .wf-hero-cta { width: 100%; margin-top: 36px; }
   .wf-hero-cta .wf-btn { flex: 1 1 auto; justify-content: center; padding: 14px 18px; }
   .wf-trust { gap: 12px; flex-wrap: wrap; justify-content: center; text-align: center; font-size: 12px; margin-top: 38px; }
