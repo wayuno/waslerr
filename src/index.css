@@ -4263,6 +4263,11 @@ a {
   .wf-cursor,
   .wf-particles { display: none !important; }
 
+  /* the looping resonance rings + starfield canvas jank/glitch on phone GPUs,
+     so drop them on touch/small screens for a clean static background */
+  .wf-resonance,
+  .wf-starfield { display: none !important; }
+
   /* hide the floating chat button on mobile — chat opens from the menu
      ("Chat with support"); the open panel closes via its own header ✕ */
   .wf-fab { display: none !important; }

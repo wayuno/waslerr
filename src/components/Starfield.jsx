@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // One global gold "starfield drift" layer behind every page: drifting +
 // twinkling gold dust over the dark base, fixed to the viewport. Crisp on
 // retina, re-fits on resize, and renders a single static frame under
-// prefers-reduced-motion.
+// prefers-reduced-motion. On phones the continuous rAF canvas is skipped
+// entirely (it janks/glitches on mobile GPUs), so the background stays clean.
 const GOLD = '233,200,118'
 const MAX_R = 2.4
 const MIN_R = 0.5
@@ -13,13 +14,15 @@ const PEAK_ALPHA = 0.9
 
 export default function Starfield() {
   const ref = useRef(null)
+  const [on, setOn] = useState(true)
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches
+    if (coarse) { setOn(false); return } // no animated canvas on phones
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const COUNT = coarse ? 120 : 190 // lighter on phones
+    const COUNT = 190
 
     let w, h, dpr, stars, raf
 
@@ -99,5 +102,5 @@ export default function Starfield() {
     }
   }, [])
 
-  return <canvas ref={ref} className="wf-starfield" aria-hidden="true" />
+  return on ? <canvas ref={ref} className="wf-starfield" aria-hidden="true" /> : null
 }
