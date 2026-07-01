@@ -1,0 +1,13 @@
+{
+  "name": "Waslerr Fields",
+  "short_name": "Waslerr",
+  "description": "Premium subliminal audio engineered for the subconscious. Reprogram the mind. Reshape your reality.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060709",
+  "theme_color": "#060709",
+  "icons": [
+    { "src": "/logo-w-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo-w-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
