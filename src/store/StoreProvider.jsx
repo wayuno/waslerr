@@ -129,6 +129,7 @@ export function StoreProvider({ children }) {
   const [freeFieldsList, setFreeFieldsList] = useState([])
   const [announcements, setAnnouncements] = useState([])
   const [articles, setArticles] = useState([])
+  const [selectedArticle, setSelectedArticle] = useState(null)
 
   // storefront catalogue = paid products + free fields (merged, memoized)
   const products = useMemo(() => [...paidProducts, ...freeFieldsList], [paidProducts, freeFieldsList])
@@ -373,6 +374,15 @@ export function StoreProvider({ children }) {
     (params) => {
       setDeliveredParams(params || null)
       navigate('delivered')
+    },
+    [navigate],
+  )
+
+  const openArticle = useCallback(
+    (article) => {
+      setSelectedArticle(article || null)
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      navigate('article')
     },
     [navigate],
   )
@@ -1273,6 +1283,8 @@ export function StoreProvider({ children }) {
     articles,
     addArticle,
     deleteArticle,
+    selectedArticle,
+    openArticle,
     deleteConversation,
     deleteUser,
     setUserRole,
