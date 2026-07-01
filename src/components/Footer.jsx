@@ -1,7 +1,5 @@
-import { XIcon, InstagramIcon, YouTubeIcon, TikTokIcon } from './icons'
 import { useStore } from '../store/StoreProvider'
 import { resolveCommunityLink } from '../lib/communityLinks'
-import Disclaimer from './Disclaimer'
 
 const COMMUNITY_FOOTER = [
   { key: 'youtube', label: 'YouTube' },
@@ -25,23 +23,6 @@ export default function Footer({ onNavigate }) {
               WASLERR&nbsp;FIELDS
             </span>
           </button>
-          <p className="wf-footer-tag">
-            Cinematic subliminal audio, engineered for the subconscious. Reprogram the mind. Reshape your reality.
-          </p>
-          <div className="wf-soc-row">
-            <a className="wf-soc" href="#" aria-label="X" onClick={(e) => e.preventDefault()}>
-              <XIcon />
-            </a>
-            <a className="wf-soc" href="#" aria-label="Instagram" onClick={(e) => e.preventDefault()}>
-              <InstagramIcon />
-            </a>
-            <a className="wf-soc" href="#" aria-label="YouTube" onClick={(e) => e.preventDefault()}>
-              <YouTubeIcon size={17} />
-            </a>
-            <a className="wf-soc" href="#" aria-label="TikTok" onClick={(e) => e.preventDefault()}>
-              <TikTokIcon />
-            </a>
-          </div>
         </div>
 
         <div>
@@ -86,18 +67,6 @@ export default function Footer({ onNavigate }) {
           </div>
         </div>
 
-        <div>
-          <div className="wf-foot-col-h">Legal</div>
-          <div className="wf-foot-links">
-            <button className="wf-flink" onClick={goHome}>Privacy</button>
-            <button className="wf-flink" onClick={goHome}>Terms</button>
-            <button className="wf-flink" onClick={goHome}>Guarantee</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="wf-footer-disclaimer">
-        <Disclaimer />
       </div>
 
       <div className="wf-footer-base">
