@@ -136,34 +136,6 @@ export const reviews = [
   { initial: 'S', name: 'Sofia A.', role: 'Designer', quote: 'Magnetism is subtle but undeniable. People lean in differently now. I feel composed instead of anxious.' },
 ]
 
-// --- FAQ ---
-export const faqs = [
-  {
-    q: 'How do subliminals actually work?',
-    a: 'Affirmations are mixed beneath the threshold of conscious hearing. Your conscious mind hears ambient sound; your subconscious receives the suggestions directly, bypassing the critical filter that normally rejects new self-beliefs.',
-  },
-  {
-    q: 'Will I be able to hear the affirmations?',
-    a: 'No. By design they sit below conscious perception — you’ll hear only the cinematic soundscape and carrier tones. That’s exactly how they slip past resistance.',
-  },
-  {
-    q: 'How often should I listen?',
-    a: 'Daily, 30–60 minutes, with headphones. Consistency matters far more than volume or duration — the subconscious responds to repetition over time.',
-  },
-  {
-    q: 'How long until I notice results?',
-    a: 'Most listeners report subtle shifts in mood and self-talk within 1–2 weeks, with more noticeable behavioural change across 4–8 weeks. Results vary by individual and consistency.',
-  },
-  {
-    q: 'Are subliminals safe?',
-    a: 'Yes. Every affirmation is positive, ethically written, and reviewed. Nothing is coercive. Avoid listening while driving or operating machinery.',
-  },
-  {
-    q: 'Can I listen while sleeping?',
-    a: 'Absolutely — the Delta-frequency fields like Lucid and Sovereign are built for it. The sleeping mind is unusually receptive, making overnight one of the most effective windows.',
-  },
-]
-
 // --- Method steps ---
 export const methodSteps = [
   { num: '01', title: 'Choose your field', body: 'Select the outcome you’re engineering — wealth, confidence, magnetism. Each field targets a specific belief system.' },
@@ -174,7 +146,6 @@ export const methodSteps = [
 
 // --- Ticker items ---
 export const tickerItems = [
-  'Lossless studio masters',
   'Instant access',
   'Headphone-optimized',
   'New fields monthly',

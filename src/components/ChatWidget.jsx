@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/StoreProvider'
-import { faqs } from '../data/content'
 import { ChatIconBubble, CloseIcon, SendIcon, CheckIcon, DownloadIcon, PayPalMark, BinanceMark } from './icons'
 
-const CHIP_LABELS = [
-  'How do they work?',
-  'Will I hear the affirmations?',
-  'How often should I listen?',
-  'When will I see results?',
-  'Are they safe?',
-  'Can I listen while sleeping?',
-]
-const CHIPS = faqs.slice(0, 6).map((f, i) => ({ q: CHIP_LABELS[i] || f.q, a: f.a }))
 const FOCUS_LABELS = {
   wealth: 'Wealth & abundance',
   confidence: 'Confidence & self-worth',
@@ -161,6 +151,7 @@ export default function ChatWidget() {
   const [text, setText] = useState('')
   const [unread, setUnread] = useState(false)
   const [checkout, setCheckout] = useState(null) // { offerId, step, method, reference, amount, payee, binance }
+  const [maximized, setMaximized] = useState(false)
   const listRef = useRef(null)
   const timers = useRef([])
   const seen = useRef(new Set())
@@ -281,15 +272,6 @@ export default function ChatWidget() {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
   }, [msgs, typing])
 
-  const faqTap = (c) => {
-    addMsg({ from: 'user', text: c.q })
-    setTyping(true)
-    later(() => {
-      setTyping(false)
-      addMsg({ from: 'bot', text: c.a })
-    }, 650)
-  }
-
   const sendTyped = (e) => {
     e.preventDefault()
     const t = text.trim()
@@ -323,7 +305,7 @@ export default function ChatWidget() {
   return (
     <>
       {chatOpen && (
-        <div className="wf-chat-panel" role="dialog" aria-label="Waslerr support">
+        <div className={`wf-chat-panel${maximized ? ' maximized' : ''}`} role="dialog" aria-label="Waslerr support">
           <div className="wf-chat-header">
             <div className="wf-chat-id">
               <span className="wf-chat-avatar">
@@ -334,9 +316,18 @@ export default function ChatWidget() {
                 <span className="wf-chat-meta">Online · typically replies in minutes</span>
               </span>
             </div>
-            <button className="wf-chat-close" aria-label="Close chat" onClick={() => setChatOpen(false)}>
-              <CloseIcon />
-            </button>
+            <div className="wf-chat-head-actions">
+              <button className="wf-chat-close" aria-label={maximized ? 'Restore chat' : 'Maximize chat'} onClick={() => setMaximized((m) => !m)}>
+                {maximized ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 4H4v6" /><path d="M20 14v6h-6" /><path d="M4 10l6-6" /><path d="M14 20l6-6" /></svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 4h5v5" /><path d="M4 15v5h5" /><path d="M20 9l-5-5" /><path d="M9 20l-5-5" /></svg>
+                )}
+              </button>
+              <button className="wf-chat-close" aria-label="Close chat" onClick={() => setChatOpen(false)}>
+                <CloseIcon />
+              </button>
+            </div>
           </div>
 
           <div className="wf-chat-list" ref={listRef}>
@@ -388,14 +379,6 @@ export default function ChatWidget() {
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="wf-chip-row">
-            {CHIPS.map((c) => (
-              <button key={c.q} className="wf-chip-q" onClick={() => faqTap(c)}>
-                {c.q}
-              </button>
-            ))}
           </div>
 
           <form className="wf-chat-input" onSubmit={sendTyped}>

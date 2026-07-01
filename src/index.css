@@ -1472,65 +1472,6 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 .wf-review .role { display: block; font-size: 11.5px; color: var(--wf-mute); }
 
 /* ============================================================
-   FAQ
-   ============================================================ */
-.wf-faq-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.wf-faq {
-  background: var(--wf-glass);
-  border: 1px solid var(--wf-rule);
-  border-radius: 14px;
-  overflow: hidden;
-  transition: border-color 0.3s, background 0.3s;
-}
-.wf-faq.open { border-color: rgba(212, 175, 55, 0.3); background: var(--wf-glass-2); }
-.wf-faq-q {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 22px 26px;
-  text-align: left;
-  color: #eef0f4;
-  font-family: var(--wf-sans);
-  font-size: 16.5px;
-  font-weight: 400;
-}
-.wf-faq-ic {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.4s var(--wf-ease);
-  color: var(--wf-gold);
-  font-size: 22px;
-  line-height: 1;
-}
-.wf-faq.open .wf-faq-ic { transform: rotate(135deg); }
-.wf-faq-a {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.5s var(--wf-ease);
-}
-.wf-faq-a p {
-  margin: 0;
-  padding: 0 26px 24px;
-  font-size: 15px;
-  line-height: 1.65;
-  color: #9298a6;
-  font-weight: 300;
-}
-
-/* ============================================================
    Join cards
    ============================================================ */
 .wf-join-grid {
@@ -2081,10 +2022,6 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   /* reviews never exceed the viewport */
   .wf-review { flex: 0 0 min(360px, 84vw); width: min(360px, 84vw); padding: 24px 22px; }
 
-  /* faq padding */
-  .wf-faq-q { font-size: 15.5px; padding: 20px 20px; }
-  .wf-faq-a p { padding: 0 20px 22px; }
-
   /* footer disclaimer reads left-aligned on its own line */
   .wf-footer-grid { gap: 32px; padding: 52px 28px 36px; }
   .wf-footer-base { flex-direction: column; }
@@ -2526,6 +2463,12 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   animation: wf-chatpop 0.42s var(--wf-ease) both;
 }
 .wf-chat-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--wf-rule); }
+.wf-chat-head-actions { display: flex; align-items: center; gap: 4px; }
+.wf-chat-panel.maximized {
+  width: min(900px, calc(100vw - 32px));
+  height: calc(100vh - 130px);
+  max-height: calc(100vh - 130px);
+}
 .wf-chat-id { display: flex; align-items: center; gap: 12px; }
 .wf-chat-avatar {
   position: relative;
@@ -2583,20 +2526,6 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 .wf-typing span:nth-child(3) { animation-delay: 0.36s; }
 
 /* FAQ quick-reply chips */
-.wf-chip-row { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 16px; border-top: 1px solid var(--wf-rule); }
-.wf-chip-q {
-  font-family: var(--wf-sans);
-  font-size: 12px;
-  color: var(--wf-silver);
-  background: var(--wf-glass);
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  padding: 7px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: border-color 0.25s, color 0.25s, background 0.25s;
-}
-.wf-chip-q:hover { border-color: var(--wf-gold); color: #f1f2f6; background: var(--wf-glass-2); }
-
 .wf-chat-input { display: flex; gap: 8px; padding: 14px 16px; border-top: 1px solid var(--wf-rule); }
 .wf-chat-input .wf-input { flex: 1; padding: 11px 14px; }
 .wf-chat-send { flex: none; width: 44px; border-radius: 9px; border: none; cursor: pointer; background: var(--wf-grad); color: #15110a; display: flex; align-items: center; justify-content: center; }
