@@ -8,7 +8,6 @@ import CartButton from './CartButton'
 // primary nav links for the DESKTOP bar (unchanged). Labels are i18n keys.
 const NAV_LINKS = [
   { key: 'nav.fields', target: { page: 'fields' } },
-  { key: 'nav.method', target: { page: 'method' } },
   { key: 'nav.updates', target: { page: 'updates' } },
   { key: 'nav.reviews', target: { page: 'reviews' } },
   { key: 'nav.custom', target: { page: 'home', section: 'wf-custom' } },
@@ -25,14 +24,6 @@ const IcFields = () => (
   <Svg>
     <circle cx="12" cy="12" r="9" />
     <circle cx="12" cy="12" r="3" />
-  </Svg>
-)
-const IcMethod = () => (
-  <Svg>
-    <path d="M8 6h13M8 12h13M8 18h13" />
-    <circle cx="3.6" cy="6" r="1.1" />
-    <circle cx="3.6" cy="12" r="1.1" />
-    <circle cx="3.6" cy="18" r="1.1" />
   </Svg>
 )
 const IcNew = () => (
@@ -150,7 +141,6 @@ export default function Nav() {
   // grouped sections for the mobile drawer
   const browse = [
     { key: 'nav.fields', icon: <IcFields />, onClick: () => go({ page: 'fields' }), active: page === 'fields' },
-    { key: 'nav.method', icon: <IcMethod />, onClick: () => go({ page: 'method' }), active: page === 'method' },
     { key: 'nav.updates', icon: <IcNew />, onClick: () => go({ page: 'updates' }), active: page === 'updates' },
     { key: 'nav.reviews', icon: <IcReviews />, onClick: () => go({ page: 'reviews' }), active: page === 'reviews' },
     { key: 'nav.community', icon: <IcCommunity />, onClick: () => go({ page: 'community' }), active: page === 'community' },

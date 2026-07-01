@@ -94,11 +94,6 @@ export default function ReviewWall() {
           <p className="wf-lead" data-reveal style={{ margin: '16px 0 0' }}>
             Every audio from Waslerr leaves an impact. Read what the listening left behind.
           </p>
-          {hasReviews && (
-            <div className="wf-rw-stat" data-reveal>
-              {wall.length.toLocaleString('en-US')} voices · every field
-            </div>
-          )}
         </div>
 
         {teaser.length > 0 && (

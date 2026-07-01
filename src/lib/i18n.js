@@ -18,7 +18,6 @@ export const LANGS = [
 // site stays in English until copy is added here key-by-key.
 const DICT = {
   'nav.fields':     { en: 'Fields',           ru: 'Поля',                  zh: '场域' },
-  'nav.method':     { en: 'Method',           ru: 'Метод',                 zh: '方法' },
   'nav.updates':    { en: "What's new",       ru: 'Новинки',               zh: '最新' },
   'nav.reviews':    { en: 'Reviews',          ru: 'Отзывы',                zh: '评价' },
   'nav.custom':     { en: 'Custom',           ru: 'На заказ',              zh: '定制' },
