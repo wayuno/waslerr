@@ -194,16 +194,8 @@ a {
 .wf-intro-logo {
   width: 56px;
   height: 56px;
-  border-radius: 13px;
-  background: var(--wf-grad);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--wf-serif);
-  font-weight: 600;
-  font-size: 33px;
-  color: #15110a;
-  box-shadow: 0 0 44px rgba(212, 175, 55, 0.5);
+  object-fit: contain;
+  filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.5));
   animation: wf-intrologo 1s var(--wf-ease) both;
 }
 .wf-intro-word {

@@ -40,7 +40,7 @@ function Shell() {
 
       {!introDone && (
         <div className={`wf-intro${introLift ? ' lift' : ''}`}>
-          <span className="wf-intro-logo">W</span>
+          <img className="wf-intro-logo" src="/logo-w.png" alt="Waslerr Fields" width="56" height="56" />
           <span className="wf-intro-word">WASLERR&nbsp;FIELDS</span>
           <span className="wf-intro-bar">
             <span />
