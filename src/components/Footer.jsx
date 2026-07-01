@@ -1,6 +1,7 @@
 import { XIcon, InstagramIcon, YouTubeIcon, TikTokIcon } from './icons'
 import { useStore } from '../store/StoreProvider'
 import { resolveCommunityLink } from '../lib/communityLinks'
+import Disclaimer from './Disclaimer'
 
 const COMMUNITY_FOOTER = [
   { key: 'youtube', label: 'YouTube' },
@@ -95,12 +96,12 @@ export default function Footer({ onNavigate }) {
         </div>
       </div>
 
+      <div className="wf-footer-disclaimer">
+        <Disclaimer />
+      </div>
+
       <div className="wf-footer-base">
         <span>© 2026 Waslerr Fields. All rights reserved.</span>
-        <span className="disclaimer">
-          Audio is designed to support mindset and self-improvement. It is not medical treatment. Individual results
-          vary.
-        </span>
       </div>
     </footer>
   )

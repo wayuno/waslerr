@@ -7,6 +7,7 @@ import { useMagnetic } from '../hooks/useMagnetic'
 import StoryCard from '../components/StoryCard'
 import ListeningMethod from '../components/ListeningMethod'
 import VersionPicker from '../components/VersionPicker'
+import Disclaimer from '../components/Disclaimer'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, ChevronRight } from '../components/icons'
 
@@ -308,6 +309,10 @@ export default function Detail() {
             </div>
           )}
         </div>
+      </section>
+
+      <section className="wf-disclaimer-wrap" data-reveal>
+        <Disclaimer />
       </section>
 
       <footer className="wf-subfoot">
