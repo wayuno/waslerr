@@ -1958,6 +1958,10 @@ a {
   /* hero */
   .wf-hero { padding: 104px 20px 84px; }
   .wf-hero-sub { font-size: 15.5px; margin-top: 26px; }
+  /* headline: smaller + a touch more line-height so "Reprogram the mind. /
+     Reshape your reality" sits comfortably on phones (each phrase on one line
+     on common widths, wraps gracefully on the smallest) */
+  .wf-hero-h1 { font-size: clamp(32px, 8.6vw, 44px); line-height: 1.08; max-width: 16ch; margin-top: 22px; }
   .wf-hero-cta { width: 100%; margin-top: 36px; }
   .wf-hero-cta .wf-btn { flex: 1 1 auto; justify-content: center; padding: 14px 18px; }
   .wf-trust { gap: 12px; flex-wrap: wrap; justify-content: center; text-align: center; font-size: 12px; margin-top: 38px; }
@@ -4227,12 +4231,17 @@ a {
    so nothing lags or "disappears".
    ================================================================ */
 @media (hover: none), (max-width: 640px) {
-  /* The heavy hero "planet" (conic rays + blurred core + spinning layers)
-     glitches on real mobile GPUs — a vertical seam + glow banding that don't
-     reproduce on desktop and can't be fixed reliably across devices. So it's
-     hidden on phones entirely; the hero keeps a soft, static glow + clean copy.
-     Desktop still shows the full animated planet. */
-  .wf-orbit-wrap { display: none !important; }
+  /* The full hero "planet" glitches on real mobile GPUs — a vertical seam +
+     glow banding from the conic-gradient rays + mask, and jank from the 3D
+     preserve-3d orbit-spin + the blurred blue core. So on phones we keep only
+     the glitch-free slice: the dashed + flat + static rings (clean 2D borders)
+     and the expanding ripples, scaled to fit. The dashed ring's slow spin still
+     reads as the "rotating" backdrop. Desktop keeps the full animated planet.
+     The parallax JS bails on (pointer: coarse), so the scale below is safe. */
+  .wf-orbit-wrap { transform: scale(0.56); }
+  .wf-orbit-conic,
+  .wf-orbit-spin,
+  .wf-orbit-blue { display: none !important; }
   .wf-hero-glow-warm,
   .wf-hero-glow-gold { filter: none !important; animation: none !important; }
 
