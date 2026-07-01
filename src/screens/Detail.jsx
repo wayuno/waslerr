@@ -24,7 +24,7 @@ const priceOf = (f) =>
   f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
 
 export default function Detail() {
-  const { selectedProduct, goCheckout, openChat, navigate, addToCart, openReviews, openDetail, products, wall } = useStore()
+  const { selectedProduct, goCheckout, openChat, navigate, addToCart, openReviews, openDetail, products, wall, showToast } = useStore()
   const [saved, setSaved] = useState(false)
   const [benefitsOpen, setBenefitsOpen] = useState(false)
   const [methodOpen, setMethodOpen] = useState(false)
@@ -110,6 +110,17 @@ export default function Detail() {
     window.open(q.length ? `${base}?${q.join('&')}` : base, '_blank')
   }
   const downloadAudio = () => downloadTrack(0)
+
+  // share this field — native Web Share when available, else copy the link
+  const shareField = async () => {
+    const url = window.location.href
+    const data = { title: f.title || 'Waslerr field', text: f.desc || 'A Waslerr field', url }
+    if (navigator.share) {
+      try { await navigator.share(data) } catch { /* cancelled */ }
+    } else {
+      try { await navigator.clipboard.writeText(url); showToast?.('Link copied') } catch { /* ignore */ }
+    }
+  }
 
   const fieldStories = wall.filter((r) => r.field === f.id)
   const featured = [...fieldStories].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.ts - a.ts).slice(0, 3)
@@ -217,6 +228,16 @@ export default function Detail() {
               )}
               <button className="wf-btn wf-btn-glass wf-mag" onClick={openChat}>
                 <ChatIconBubble size={16} /> Ask a guide
+              </button>
+              <button className="wf-btn wf-btn-glass wf-mag" onClick={shareField} aria-label="Share this field">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <path d="M8.6 13.5l6.8 4" />
+                  <path d="M15.4 6.5l-6.8 4" />
+                </svg>{' '}
+                Share
               </button>
               <button className="wf-btn wf-btn-glass wf-mag" onClick={() => setMethodOpen(true)}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -152,7 +152,7 @@ export default function Home({ onNavigate }) {
         </div>
 
         <h1 className="wf-hero-h1" data-anim>
-          <DecryptText text="Reprogram the mind." order={0} />
+          <DecryptText text="Reshape your consciousness." order={0} />
           <br />
           <DecryptText text="Reshape your reality" order={1} className="accent" />
         </h1>
@@ -174,7 +174,7 @@ export default function Home({ onNavigate }) {
 
         <div className="wf-hero-cta" data-anim>
           <button className="wf-btn wf-btn-gold wf-mag" onClick={() => onNavigate({ page: 'fields' })}>
-            Shift your reality
+            Explore catalogue
           </button>
           <button className="wf-btn wf-btn-glass wf-mag" onClick={() => onNavigate({ page: 'home', section: 'wf-free' })}>
             Tune in

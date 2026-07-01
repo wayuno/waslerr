@@ -13,7 +13,6 @@ const NAV_LINKS = [
   { key: 'nav.reviews', target: { page: 'reviews' } },
   { key: 'nav.custom', target: { page: 'home', section: 'wf-custom' } },
   { key: 'nav.community', target: { page: 'community' } },
-  { key: 'nav.faq', chat: true },
 ]
 
 // ---- menu glyphs (Lucide-style, 1.6px stroke) ----
@@ -61,13 +60,6 @@ const IcCustom = () => (
     <path d="M12 22V7" />
     <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
     <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-  </Svg>
-)
-const IcFaq = () => (
-  <Svg>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M9.2 9a3 3 0 0 1 5.7 1c0 2-3 2.4-3 4" />
-    <path d="M12 17h.01" />
   </Svg>
 )
 const IcChat = () => (
@@ -324,12 +316,6 @@ export default function Nav() {
             )}
 
             <div className="wf-mm-label">{t('menu.support')}</div>
-            <button className="wf-mlink" onClick={startChat}>
-              <span className="wf-mlink-ic">
-                <IcFaq />
-              </span>
-              <span className="wf-mlink-label">{t('nav.faq')}</span>
-            </button>
             <button className="wf-mlink" onClick={startChat}>
               <span className="wf-mlink-ic">
                 <IcChat />

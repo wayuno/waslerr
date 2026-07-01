@@ -23,7 +23,6 @@ const DICT = {
   'nav.reviews':    { en: 'Reviews',          ru: 'Отзывы',                zh: '评价' },
   'nav.custom':     { en: 'Custom',           ru: 'На заказ',              zh: '定制' },
   'nav.community':  { en: 'Community',         ru: 'Сообщество',            zh: '社区' },
-  'nav.faq':        { en: 'FAQ',              ru: 'Вопросы',               zh: '常见问题' },
   'nav.signin':     { en: 'Sign in',          ru: 'Войти',                 zh: '登录' },
   'nav.signout':    { en: 'Sign out',         ru: 'Выйти',                 zh: '退出' },
   'nav.admin':      { en: 'Admin',            ru: 'Админ',                 zh: '管理' },
