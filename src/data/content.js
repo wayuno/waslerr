@@ -146,6 +146,8 @@ export const methodSteps = [
 
 // --- Ticker items ---
 export const tickerItems = [
+  'Lossless audio',
+  'Extremely potent',
   'Instant access',
   'Headphone-optimized',
   'New fields monthly',
