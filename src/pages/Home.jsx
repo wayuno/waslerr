@@ -152,7 +152,7 @@ export default function Home({ onNavigate }) {
         </div>
 
         <h1 className="wf-hero-h1" data-anim>
-          <DecryptText text="Reshape your consciousness." order={0} />
+          <DecryptText text="Reprogram your consciousness" order={0} />
           <br />
           <DecryptText text="Reshape your reality" order={1} className="accent" />
         </h1>
@@ -248,10 +248,10 @@ export default function Home({ onNavigate }) {
               On the house
             </div>
             <h2 className="wf-h2" data-reveal style={{ fontSize: 'clamp(32px,4.6vw,52px)' }}>
-              Try a few fields, free.
+              Try a few fields for free.
             </h2>
             <p className="wf-lead" data-reveal style={{ margin: '16px 0 0' }}>
-              New to subliminals? Start here. These fields are free to keep — no card, no catch. Press play and feel the
+              New to Akashic Field? Start here. These fields are free to keep — no card, no catch. Press play and feel the
               shift.
             </p>
           </div>

@@ -5,11 +5,10 @@ import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import StoryCard from '../components/StoryCard'
-import ListeningMethod from '../components/ListeningMethod'
 import VersionPicker from '../components/VersionPicker'
 import Disclaimer from '../components/Disclaimer'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
-import { ChatIconBubble, DownloadIcon, CartIcon, ArrowRight, ChevronRight } from '../components/icons'
+import { DownloadIcon, CartIcon, ArrowRight, ChevronRight } from '../components/icons'
 
 const CATS = {
   desire: { label: 'Desire', cls: '', ph: 'wf-card-ph-desire' },
@@ -24,10 +23,9 @@ const priceOf = (f) =>
   f.priceNum != null ? Number(f.priceNum) : f.price ? parseFloat(String(f.price).replace(/[^0-9.]/g, '')) || 0 : 0
 
 export default function Detail() {
-  const { selectedProduct, goCheckout, openChat, navigate, addToCart, openReviews, openDetail, products, wall, showToast } = useStore()
+  const { selectedProduct, goCheckout, navigate, addToCart, openReviews, openDetail, products, wall, showToast } = useStore()
   const [saved, setSaved] = useState(false)
   const [benefitsOpen, setBenefitsOpen] = useState(false)
-  const [methodOpen, setMethodOpen] = useState(false)
   const [selVersion, setSelVersion] = useState(null)
   const [tracks, setTracks] = useState([]) // entitled audio files (bundle) for download
   const ref = useRef(null)
@@ -40,7 +38,6 @@ export default function Detail() {
   useEffect(() => {
     setSaved(false)
     setBenefitsOpen(false)
-    setMethodOpen(false)
     setSelVersion(null)
   }, [selectedProduct])
   // load the buyer's (or free) entitled audio bundle so we can offer every file
@@ -226,9 +223,6 @@ export default function Detail() {
                   </button>
                 </>
               )}
-              <button className="wf-btn wf-btn-glass wf-mag" onClick={openChat}>
-                <ChatIconBubble size={16} /> Ask a guide
-              </button>
               <button className="wf-btn wf-btn-glass wf-mag" onClick={shareField} aria-label="Share this field">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="18" cy="5" r="3" />
@@ -238,14 +232,6 @@ export default function Detail() {
                   <path d="M15.4 6.5l-6.8 4" />
                 </svg>{' '}
                 Share
-              </button>
-              <button className="wf-btn wf-btn-glass wf-mag" onClick={() => setMethodOpen(true)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 14v-2a9 9 0 0 1 18 0v2" />
-                  <rect x="3" y="14" width="4" height="6" rx="1.5" />
-                  <rect x="17" y="14" width="4" height="6" rx="1.5" />
-                </svg>{' '}
-                Listen method
               </button>
             </div>
 
@@ -347,8 +333,6 @@ export default function Detail() {
         </div>
       </footer>
       </div>
-
-      {methodOpen && <ListeningMethod field={f} isFree={free} method={selVersion?.method} editable={!selVersion} onClose={() => setMethodOpen(false)} />}
     </div>
   )
 }

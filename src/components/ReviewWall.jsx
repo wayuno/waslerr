@@ -92,8 +92,7 @@ export default function ReviewWall() {
             the field.
           </h2>
           <p className="wf-lead" data-reveal style={{ margin: '16px 0 0' }}>
-            Every Waslerr field leaves a trace. Read what the listening left behind — across every line, in their own
-            words.
+            Every audio from Waslerr leaves an impact. Read what the listening left behind.
           </p>
           {hasReviews && (
             <div className="wf-rw-stat" data-reveal>
@@ -136,7 +135,6 @@ export default function ReviewWall() {
             <div className="wf-rw-topbar">
               <div className="wf-rw-topbar-text">
                 <div className="wf-eyebrow">The review wall</div>
-                <h3 className="wf-rw-title">Every voice, every field.</h3>
                 <div className="wf-rw-stat">{wall.length.toLocaleString('en-US')} reviews across all fields</div>
               </div>
               <div className="wf-rw-topbar-actions">
