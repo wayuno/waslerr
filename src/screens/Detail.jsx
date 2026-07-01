@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import Background from '../components/Background'
-import PreviewPlayer from '../components/PreviewPlayer'
 import PosterPlayer from '../components/PosterPlayer'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
@@ -148,7 +147,11 @@ export default function Detail() {
                 <img src={img} alt={f.title} />
               </figure>
             ) : (
-              <PreviewPlayer field={f} />
+              <figure className="wf-poster-frame">
+                <div className={`wf-card-media-ph ${cat.ph}`} style={{ aspectRatio: '1 / 1', borderRadius: 12 }} aria-hidden="true">
+                  W
+                </div>
+              </figure>
             )}
           </div>
 
