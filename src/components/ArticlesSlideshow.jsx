@@ -3,9 +3,9 @@ import { useStore } from '../store/StoreProvider'
 
 // Homepage "The Articles" — premium hero-banner carousel.
 // Text-left / image-right split inside a single floating rounded card.
-// Auto-rotates every 8 s with a crossfade + Ken Burns zoom. Bottom-center
-// dots only. Pauses on hover.
-const AUTO_MS = 8000
+// Auto-rotates every 5 s with a crossfade + Ken Burns zoom. Bottom-center
+// pill dots only (gray inactive, white active). Swipe support on mobile.
+const AUTO_MS = 5000
 
 export default function ArticlesSlideshow() {
   const { articles } = useStore()
@@ -15,6 +15,7 @@ export default function ArticlesSlideshow() {
   const count = articles.length
   const rafRef = useRef(null)
   const startRef = useRef(0)
+  const touchX = useRef(0)
 
   useEffect(() => {
     if (idx > count - 1) setIdx(Math.max(0, count - 1))
@@ -47,6 +48,14 @@ export default function ArticlesSlideshow() {
 
   const go = (n) => setIdx(((n % count) + count) % count)
 
+  const onTouchStart = (e) => {
+    touchX.current = e.touches[0].clientX
+  }
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchX.current
+    if (Math.abs(dx) > 40) go(dx < 0 ? idx + 1 : idx - 1)
+  }
+
   return (
     <section className="wf-section wf-section--rule wf-pad" id="articles">
       <div className="wf-container">
@@ -64,6 +73,8 @@ export default function ArticlesSlideshow() {
           data-reveal
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
           {articles.map((a, i) => (
             <article
