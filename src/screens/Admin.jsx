@@ -526,7 +526,11 @@ export default function Admin() {
       desc: p.desc || '',
       benefits: Array.isArray(p.benefits) ? p.benefits : [],
       method: normalizeMethod(p.method, p.title),
-      audios: Array.isArray(p.audios) ? p.audios : [], // existing bundle (with paths)
+      // existing bundle (with paths); fall back to the legacy single audio_url so it
+      // shows in the editor AND is preserved on save (otherwise saving wipes the audio)
+      audios: Array.isArray(p.audios) && p.audios.length
+        ? p.audios
+        : (p.audio_url ? [{ path: p.audio_url, name: 'Audio', size: 0 }] : []),
       isFree,
     })
   }
