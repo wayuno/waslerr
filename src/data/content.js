@@ -177,7 +177,6 @@ export const tickerItems = [
   'Lossless studio masters',
   'Instant access',
   'Headphone-optimized',
-  '50,000+ listeners',
   'New fields monthly',
 ]
 

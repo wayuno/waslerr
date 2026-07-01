@@ -740,7 +740,11 @@ export default function Admin() {
       <div className="wf-form-row">
         <label className="wf-field">
           <span className="wf-field-label">Category</span>
-          <input className="wf-input" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value.toUpperCase() })} />
+          <select className="wf-input" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value.toUpperCase() })}>
+            {[...new Set([...categoryOptions, editForm.category].filter(Boolean))].map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </label>
         {!editForm.isFree && (
           <label className="wf-field">
@@ -1516,19 +1520,16 @@ export default function Admin() {
               </label>
               <div className="wf-form-row">
                 <label className="wf-field">
-                  <span className="wf-field-label">Category (type any)</span>
-                  <input
+                  <span className="wf-field-label">Category</span>
+                  <select
                     className="wf-input"
-                    list="wf-cats"
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value.toUpperCase() })}
-                    placeholder="DESIRE"
-                  />
-                  <datalist id="wf-cats">
+                  >
                     {categoryOptions.map((c) => (
-                      <option key={c} value={c} />
+                      <option key={c} value={c}>{c}</option>
                     ))}
-                  </datalist>
+                  </select>
                 </label>
                 <label className="wf-field">
                   <span className="wf-field-label">Price (0 = free)</span>
