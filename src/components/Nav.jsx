@@ -168,7 +168,7 @@ export default function Nav() {
     <nav className={`wf-nav${scrolled ? ' scrolled' : ''}`}>
       <div className="wf-nav-inner">
         <button className="wf-brand" onClick={() => go({ page: 'home' })} aria-label="Waslerr Fields home">
-          <span className="wf-monogram">W</span>
+          <img className="wf-brandmark" src="/logo-w.png" alt="Waslerr Fields" width="38" height="38" />
           <span className="wf-wordmark">WASLERR&nbsp;FIELDS</span>
         </button>
 
@@ -262,7 +262,7 @@ export default function Nav() {
       >
         <aside className="wf-mm-drawer" role="dialog" aria-label="Menu">
           <div className="wf-mm-head">
-            <span className="wf-monogram">W</span>
+            <img className="wf-brandmark" src="/logo-w.png" alt="Waslerr Fields" width="38" height="38" />
             <button className="wf-mm-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
               <CloseIcon size={18} />
             </button>

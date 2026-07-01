@@ -371,6 +371,14 @@ a {
   cursor: pointer;
   padding: 0;
 }
+/* brand W mark (extracted gold logo) used in the header + menu */
+.wf-brandmark {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  flex: none;
+  filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.35));
+}
 .wf-monogram {
   width: 38px;
   height: 38px;
@@ -1953,6 +1961,7 @@ a {
   .wf-nav.scrolled .wf-nav-inner { padding: 12px 18px; }
   .wf-wordmark { font-size: 12.5px; letter-spacing: 0.2em; }
   .wf-monogram { width: 34px; height: 34px; font-size: 19px; }
+  .wf-brandmark { width: 34px; height: 34px; }
 
   /* hero */
   .wf-hero { padding: 104px 20px 84px; }
