@@ -680,7 +680,9 @@ a {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 120px 28px 60px;
+  /* extra bottom room reserves space for the absolute scroll cue so the
+     centered content (CTAs) never collides with it on shorter viewports */
+  padding: 120px 28px clamp(96px, 13vh, 140px);
 }
 .wf-orbit-wrap {
   position: absolute;
@@ -808,8 +810,9 @@ a {
   display: flex;
   align-items: center;
   gap: 11px;
-  font-family: var(--wf-sans);
-  font-weight: 300;
+  font-family: var(--wf-serif);
+  font-style: italic;
+  font-weight: 400;
   font-size: clamp(15px, 1.5vw, 19px);
   color: #a8a094;
   text-align: left;
@@ -829,7 +832,7 @@ a {
 .wf-trust .sep { width: 1px; height: 14px; background: var(--wf-rule); }
 .wf-scrollcue {
   position: absolute;
-  bottom: 32px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
