@@ -3561,8 +3561,8 @@ a {
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  min-height: 760px;
+  height: 52vh;
+  min-height: 360px;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
@@ -3584,7 +3584,7 @@ a {
   inset: 0;
   background:
     radial-gradient(120% 90% at 18% 0%, rgba(6, 7, 9, 0.25), transparent 55%),
-    linear-gradient(180deg, rgba(6, 7, 9, 0.55) 0%, rgba(6, 7, 9, 0.7) 45%, var(--wf-bg) 92%);
+    linear-gradient(180deg, rgba(6, 7, 9, 0.55) 0%, rgba(6, 7, 9, 0.72) 38%, var(--wf-bg) 70%, var(--wf-bg) 100%);
 }
 @keyframes wf-detail-kenburns {
   from { transform: scale(1.25) translateY(0); }
