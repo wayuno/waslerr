@@ -7404,7 +7404,7 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-ver-choice.add { color: var(--wf-gold); border-style: dashed; border-color: rgba(212, 175, 55, 0.45); }
 
 /* ============================================================
-   The Articles — homepage slideshow
+   The Articles — homepage immersive slideshow
    ============================================================ */
 .wf-arts-head {
   display: flex;
@@ -7419,8 +7419,8 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   gap: 12px;
 }
 .wf-arts-nav {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7448,26 +7448,24 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 }
 .wf-arts-stage {
   position: relative;
-  height: 440px;
-  border-radius: 20px;
+  height: 500px;
+  border-radius: 22px;
   overflow: hidden;
   border: 1px solid var(--wf-rule);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(10, 7, 9, 0.5));
-  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 40px 100px -50px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(212, 175, 55, 0.06) inset;
 }
 .wf-arts-slide {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 1.12fr 1fr;
+  grid-template-columns: 1.3fr 1fr;
   opacity: 0;
-  transform: scale(1.02);
-  transition: opacity 0.7s var(--wf-ease), transform 0.9s var(--wf-ease);
   pointer-events: none;
+  transition: opacity 0.9s var(--wf-ease);
 }
 .wf-arts-slide.active {
   opacity: 1;
-  transform: scale(1);
   pointer-events: auto;
 }
 .wf-arts-media {
@@ -7480,8 +7478,8 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   height: 100%;
   object-fit: cover;
   display: block;
-  transform: scale(1.05);
-  transition: transform 8s ease-out;
+  transform: scale(1.12);
+  transition: transform 8s linear;
 }
 .wf-arts-slide.active .wf-arts-media img {
   transform: scale(1);
@@ -7501,17 +7499,18 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-arts-media-veil {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 55%, rgba(10, 7, 9, 0.85) 100%),
-    linear-gradient(180deg, transparent 60%, rgba(10, 7, 9, 0.35) 100%);
+  background: linear-gradient(90deg, transparent 50%, rgba(10, 7, 9, 0.92) 100%),
+    linear-gradient(180deg, transparent 55%, rgba(10, 7, 9, 0.4) 100%);
   pointer-events: none;
 }
 .wf-arts-body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 14px;
-  padding: 46px 48px;
-  background: linear-gradient(180deg, rgba(10, 7, 9, 0.35), rgba(10, 7, 9, 0.7));
+  gap: 16px;
+  padding: 52px 50px;
+  background: linear-gradient(180deg, rgba(10, 7, 9, 0.4), rgba(10, 7, 9, 0.75));
+  position: relative;
 }
 .wf-arts-date {
   font-family: var(--wf-sans);
@@ -7522,8 +7521,8 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 }
 .wf-arts-title {
   font-family: var(--wf-serif, Georgia, serif);
-  font-size: clamp(24px, 3vw, 38px);
-  line-height: 1.12;
+  font-size: clamp(26px, 3.2vw, 42px);
+  line-height: 1.1;
   color: #f4f1ea;
   margin: 0;
 }
@@ -7538,6 +7537,45 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.wf-arts-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-family: var(--wf-sans);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+  opacity: 0.8;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.wf-arts-view svg {
+  transition: transform 0.3s;
+}
+.wf-arts-slide.active .wf-arts-view {
+  opacity: 1;
+}
+.wf-arts-view:hover svg {
+  transform: scale(1.15);
+}
+/* progress bar */
+.wf-arts-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  z-index: 2;
+}
+.wf-arts-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--wf-gold), var(--wf-gold-2, #f6e7b4));
+  border-radius: 0 3px 3px 0;
+  transition: width 0.1s linear;
 }
 .wf-arts-dots {
   display: flex;
@@ -7557,23 +7595,24 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   transition: width 0.35s var(--wf-ease), background 0.35s;
 }
 .wf-arts-dot.active {
-  width: 26px;
+  width: 28px;
   background: var(--wf-gold);
 }
 @media (max-width: 820px) {
-  .wf-arts-stage { height: 560px; }
+  .wf-arts-stage { height: 580px; }
   .wf-arts-slide {
     grid-template-columns: 1fr;
-    grid-template-rows: 236px 1fr;
+    grid-template-rows: 240px 1fr;
   }
   .wf-arts-media-veil {
-    background: linear-gradient(180deg, transparent 45%, rgba(10, 7, 9, 0.9) 100%);
+    background: linear-gradient(180deg, transparent 40%, rgba(10, 7, 9, 0.92) 100%);
   }
-  .wf-arts-body { padding: 30px 26px; }
+  .wf-arts-body { padding: 32px 28px; }
 }
 @media (max-width: 480px) {
   .wf-arts-head { flex-direction: column; align-items: flex-start; }
-  .wf-arts-stage { height: 540px; }
+  .wf-arts-stage { height: 560px; }
+  .wf-arts-body { padding: 26px 22px; gap: 12px; }
 }
 
 /* admin: article/announcement list thumbnail */
