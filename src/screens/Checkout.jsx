@@ -276,8 +276,8 @@ export default function Checkout() {
     setTimeout(() => {
       persistLocal(confirmedTxid)
       if (cartMode) {
-        goDelivered({ items: cartItems.map((it) => ({ id: it.id, title: it.title })), method: payMethod, amount: payable, ref: reference, txn: confirmedTxid })
         clearCart()
+        navigate('profile')
       } else {
         goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid })
       }
@@ -333,8 +333,8 @@ export default function Checkout() {
       // free fields: deliver immediately, no payment
       persistLocal('')
       if (cartMode) {
-        goDelivered({ items: cartItems.map((it) => ({ id: it.id, title: it.title })), method: payMethod, amount: 0, ref: 'FREE', txn: '' })
         clearCart()
+        navigate('profile')
       } else {
         goDelivered({ fieldId: f.id, method: payMethod, amount: 0, ref: 'FREE', txn: '' })
       }
@@ -349,7 +349,7 @@ export default function Checkout() {
     if (!code) { setCouponMsg('Enter a code to continue.'); return }
     setCouponBusy(true)
     setCouponMsg('')
-    const res = await applyCoupon(code, f.id) // validated against this field server-side
+    const res = await applyCoupon(code, cartMode ? null : f.id) // cart mode: validate generically
     setCouponBusy(false)
     if (res?.error) { setCouponMsg("That code isn't valid. Check and try again."); return }
     setAppliedCoupon({ code, type: res.coupon.type, value: res.coupon.value })
@@ -443,8 +443,8 @@ export default function Checkout() {
     clearInterval(pollRef.current)
     persistLocal(txid)
     if (cartMode) {
-      goDelivered({ items: cartItems.map((it) => ({ id: it.id, title: it.title })), method: payMethod, amount: payable, ref: reference, txn: txid })
       clearCart()
+      navigate('profile')
     } else {
       goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: txid })
     }
@@ -529,8 +529,6 @@ export default function Checkout() {
                   </>
                 )}
 
-                {!cartMode && (
-                <>
                 <div className="wf-field-label" data-reveal style={{ margin: '22px 0 10px' }}>Discount code</div>
 
                 {unlockState === 'idle' && (
@@ -582,8 +580,6 @@ export default function Checkout() {
                     </div>
                   </div>
                 )}
-
-                </>) /* end !cartMode coupon block */}
 
                 {unlockState !== 'unlocked' && (
                   <div className="wf-co-total-row" data-reveal>
