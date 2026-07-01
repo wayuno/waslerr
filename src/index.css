@@ -1956,7 +1956,7 @@ a {
   .wf-brandmark { width: 34px; height: 34px; }
 
   /* hero */
-  .wf-hero { padding: 104px 20px 84px; }
+  .wf-hero { padding: 80px 20px clamp(96px, 13vh, 140px); }
   .wf-hero-sub { font-size: 15.5px; margin-top: 26px; }
   /* headline: bigger and bolder on phones, wraps to balanced lines with room
      to breathe (each phrase gets the width it needs) */
@@ -4235,9 +4235,12 @@ a {
      render cleanly across devices, and it can't be fixed reliably. So it's
      hidden on phones entirely; the hero keeps a soft, static glow + clean copy.
      Desktop still shows the full animated planet. */
-  .wf-orbit-wrap { display: none !important; }
-  .wf-hero-glow-warm,
-  .wf-hero-glow-gold { filter: none !important; animation: none !important; }
+  /* Same orbit as desktop (exact copy), scaled to fit a phone so it fills the
+     hero background the same way it does on laptop. The starfield canvas +
+     resonance rings stay off on touch (they're the glitchy ones); the orbit
+     planet stays. The parallax JS bails on (pointer: coarse) so the scale
+     below is never clobbered. */
+  .wf-orbit-wrap { transform: scale(0.5); }
 
   /* Hero entrance must never leave content hidden on touch. The fade-up adds
      `.in` from a rAF/timeout that in-app browsers can throttle, so on any touch
