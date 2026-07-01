@@ -5969,6 +5969,71 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-pf-order-name { font-size: 15px; color: #eef0f4; font-weight: 500; }
 .wf-pf-order-meta { font-family: var(--wf-mono); font-size: 11.5px; color: var(--wf-mute); word-break: break-all; }
 .wf-pf-order-amt { flex: none; font-family: var(--wf-serif); font-size: 22px; font-weight: 600; background: var(--wf-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wf-pf-order-btn { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+
+/* library: owned-field download expander */
+.wf-pf-libitem { display: flex; flex-direction: column; gap: 0; animation: wf-pf-fadeup 0.6s var(--wf-ease) both; animation-delay: var(--d, 0s); }
+.wf-pf-libitem .wf-pf-libcard { width: 100%; cursor: default; animation: none; }
+.wf-pf-thumbbtn { flex: none; padding: 0; border: none; background: none; cursor: pointer; border-radius: 12px; }
+.wf-pf-dl.on { filter: brightness(1.05); }
+.wf-pf-dllist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px 4px;
+  margin: 2px 0 0;
+  animation: wf-pf-fadeup 0.35s var(--wf-ease) both;
+}
+.wf-pf-dlnote { font-size: 12.5px; color: var(--wf-mute); font-family: var(--wf-mono); padding: 4px 2px; }
+.wf-pf-dl.ghost {
+  color: var(--wf-gold);
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+}
+.wf-pf-dl.ghost:hover { background: rgba(212, 175, 55, 0.14); filter: none; }
+
+/* ---- Order receipt modal ---- */
+.wf-rcpt {
+  position: relative;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 60px);
+  overflow: auto;
+  background: rgba(16, 15, 20, 0.96);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 20px;
+  padding: 20px 24px 24px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6), 0 0 60px rgba(212, 175, 55, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: wf-pf-fadeup 0.4s var(--wf-ease) both;
+}
+.wf-rcpt-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.wf-rcpt-eyebrow { font-family: var(--wf-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--wf-mute); }
+.wf-rcpt-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.wf-rcpt-mono {
+  flex: none; width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--wf-serif); font-size: 22px; color: var(--wf-gold);
+  background: radial-gradient(circle at 50% 40%, rgba(212, 175, 55, 0.28), rgba(20, 18, 12, 0.9));
+  border: 1px solid rgba(212, 175, 55, 0.32);
+}
+.wf-rcpt-headtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.wf-rcpt-name { font-family: var(--wf-serif); font-size: 19px; font-weight: 500; color: #f1f2f6; margin: 0; line-height: 1.2; }
+.wf-rcpt-status {
+  align-self: flex-start; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 20px; color: #4bc882; background: rgba(75, 200, 130, 0.12); border: 1px solid rgba(75, 200, 130, 0.3);
+}
+.wf-rcpt-total { flex: none; font-family: var(--wf-serif); font-size: 26px; font-weight: 600; background: var(--wf-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wf-rcpt-rows { display: flex; flex-direction: column; gap: 11px; }
+.wf-rcpt-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13.5px; }
+.wf-rcpt-row > span:first-child { color: var(--wf-mute); }
+.wf-rcpt-row > span:last-child { color: #e6e8ee; text-align: right; }
+.wf-rcpt-mono-val { font-family: var(--wf-mono); font-size: 12px; word-break: break-all; }
+.wf-rcpt-row--disc > span:last-child { color: #4bc882; }
+.wf-rcpt-row--total { padding-top: 4px; }
+.wf-rcpt-row--total > span { font-family: var(--wf-serif); font-size: 17px; color: #f1f2f6 !important; font-weight: 600; }
+.wf-rcpt-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.28), transparent); margin: 18px 0; }
+.wf-rcpt-foot { margin: 20px 0 0; font-size: 12px; color: var(--wf-mute); text-align: center; font-family: var(--wf-mono); letter-spacing: 0.04em; }
 
 /* settings */
 .wf-pf-msg { font-size: 13.5px; margin: 0 0 16px; padding: 11px 14px; border-radius: 10px; }
