@@ -158,18 +158,18 @@ export default function Home({ onNavigate }) {
         </h1>
 
         <div className="wf-hero-lines">
-          <div className="wf-hero-line" data-anim>
+          <button className="wf-hero-line" data-anim onClick={() => onNavigate({ page: 'fields', cat: 'akashic' })}>
             <span className="wf-hero-line-dot" aria-hidden="true" />
             <span>
               <span className="wf-hero-line-name">Akashic fields</span> · for shifting consciousness directly
             </span>
-          </div>
-          <div className="wf-hero-line" data-anim>
+          </button>
+          <button className="wf-hero-line" data-anim onClick={() => onNavigate({ page: 'fields', cat: 'desire' })}>
             <span className="wf-hero-line-dot" aria-hidden="true" />
             <span>
               <span className="wf-hero-line-name">Desire code</span> · for imprinting new reality on consciousness
             </span>
-          </div>
+          </button>
         </div>
 
         <div className="wf-hero-cta" data-anim>
@@ -179,13 +179,6 @@ export default function Home({ onNavigate }) {
           <button className="wf-btn wf-btn-glass wf-mag" onClick={() => onNavigate({ page: 'home', section: 'wf-free' })}>
             Tune in
           </button>
-        </div>
-
-        <div className="wf-scrollcue">
-          <label>Scroll</label>
-          <span className="line">
-            <span />
-          </span>
         </div>
       </section>
 
@@ -206,10 +199,10 @@ export default function Home({ onNavigate }) {
         <div className="wf-container">
           <div className="wf-head-block wf-center">
             <div className="wf-eyebrow" data-reveal>
-              01 · Top picks
+              01 · Latest picks
             </div>
             <h2 className="wf-h2" data-reveal>
-              Top picks.
+              Latest picks.
             </h2>
             <p className="wf-lead" data-reveal>
               A glimpse of the library. Pick a line below to browse every field on the dedicated Fields page.

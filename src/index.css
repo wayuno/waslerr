@@ -682,7 +682,7 @@ a {
   text-align: center;
   /* extra bottom room reserves space for the absolute scroll cue so the
      centered content (CTAs) never collides with it on shorter viewports */
-  padding: 120px 28px clamp(96px, 13vh, 140px);
+  padding: 120px 28px 70px;
 }
 .wf-orbit-wrap {
   position: absolute;
@@ -816,7 +816,16 @@ a {
   font-size: clamp(15px, 1.5vw, 19px);
   color: #a8a094;
   text-align: left;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.3s var(--wf-ease), background 0.3s var(--wf-ease);
 }
+button.wf-hero-line:hover { color: #cfc5a8; background: rgba(212, 175, 55, 0.06); }
+button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 .wf-hero-line-dot { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #d4af6a; }
 .wf-hero-line-name { color: #e4ca8c; font-family: var(--wf-serif); font-style: italic; font-size: 1.18em; }
 .wf-trust {
@@ -2020,7 +2029,7 @@ a {
   .wf-brandmark { width: 34px; height: 34px; }
 
   /* hero */
-  .wf-hero { padding: 80px 20px clamp(96px, 13vh, 140px); }
+  .wf-hero { padding: 80px 20px 70px; }
   .wf-hero-sub { font-size: 15.5px; margin-top: 26px; }
   /* headline: bigger and bolder on phones, wraps to balanced lines with room
      to breathe (each phrase gets the width it needs) */
