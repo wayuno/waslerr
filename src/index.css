@@ -1823,6 +1823,70 @@ a {
 .wf-back:hover { color: #eef0f4; }
 .wf-subfoot-note { font-size: 12px; color: #5a5f6b; }
 
+/* ---- Disclaimer (sign-type notice) ---- */
+.wf-disclaimer {
+  max-width: 720px;
+  margin: 0 auto;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.05), rgba(255, 255, 255, 0.012));
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wf-disclaimer-head { display: flex; align-items: center; gap: 10px; }
+.wf-disclaimer-badge {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--wf-serif);
+  font-weight: 600;
+  font-size: 14px;
+  color: #15110a;
+  background: var(--wf-grad);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.35);
+}
+.wf-disclaimer-title {
+  font-family: var(--wf-sans);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wf-gold);
+}
+.wf-disclaimer-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.62;
+  color: #9aa0ad;
+  font-weight: 300;
+}
+.wf-disclaimer-refund {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e4ca8c;
+  font-weight: 500;
+}
+.wf-disclaimer-wrap {
+  position: relative;
+  z-index: 2;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 8px 28px 28px;
+}
+.wf-footer-disclaimer {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 8px 28px 0;
+}
+.wf-footer-disclaimer .wf-disclaimer { margin: 0; max-width: 100%; }
+
 /* ============================================================
    Method timeline
    ============================================================ */
