@@ -71,6 +71,7 @@ export function normalizeProduct(row) {
     image_url: row.image_url || null,
     sold: Number(row.sold_count) || 0,
     hasAudio: !!row.audio_url || (Array.isArray(row.audios) && row.audios.length > 0),
+    audio_url: row.audio_url || null, // legacy single file — kept so the edit form can preserve it
     audios: cleanAudioList(row.audios),
     benefits: Array.isArray(row.benefits) ? row.benefits.filter(Boolean) : [],
     method: row.method && typeof row.method === 'object' ? row.method : null,
