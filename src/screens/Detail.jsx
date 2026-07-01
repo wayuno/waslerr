@@ -49,12 +49,15 @@ export default function Detail() {
     const fld = selectedProduct
     if (!fld) return
     const isFree = priceOf(fld) === 0
+    const selId = selVersion?.id ?? null
     let purchaseRef = ''
     let purchased = false
     try {
-      purchased = localStorage.getItem(`wf_purchased_${fld.id}`) === '1'
       const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-      purchaseRef = (orders.find((o) => o.id === fld.id || o.fieldId === fld.id || o.name === fld.title)?.ref) || ''
+      const mine = orders.filter((o) => o.id === fld.id || o.fieldId === fld.id || o.name === fld.title)
+      const match = mine.find((o) => (o.versionId ?? null) === selId)
+      purchased = !!match || (selId === null && localStorage.getItem(`wf_purchased_${fld.id}`) === '1')
+      purchaseRef = match?.ref || (selId === null ? mine[0]?.ref || '' : '')
     } catch { /* ignore */ }
     if (!((isFree && fld.hasAudio) || purchased)) return
     const u = `/api/fields/${fld.id}/audio?list=1${isFree ? '' : `&ref=${encodeURIComponent(purchaseRef)}`}`
@@ -64,7 +67,7 @@ export default function Detail() {
       .then((d) => { if (!cancel) setTracks(Array.isArray(d.files) ? d.files : []) })
       .catch(() => {})
     return () => { cancel = true }
-  }, [selectedProduct])
+  }, [selectedProduct, selVersion])
 
   if (!selectedProduct) return null
 
@@ -84,13 +87,18 @@ export default function Detail() {
   const sold = Number(f.sold) || 0
   const soldStr = sold.toLocaleString('en-US')
 
-  // has this visitor purchased this field? (localStorage flag + order reference)
+  // has this visitor purchased the CURRENTLY SELECTED version? (per-version, via order history)
+  // buying one cut must not unlock the others — each version keeps its own "Buy now".
+  const selId = selVersion?.id ?? null
   let purchaseRef = ''
   let isPurchased = false
   try {
-    isPurchased = localStorage.getItem(`wf_purchased_${f.id}`) === '1'
     const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-    purchaseRef = (orders.find((o) => o.id === f.id || o.fieldId === f.id || o.name === f.title)?.ref) || ''
+    const mine = orders.filter((o) => o.id === f.id || o.fieldId === f.id || o.name === f.title)
+    const match = mine.find((o) => (o.versionId ?? null) === selId)
+    // legacy per-field flag only counts toward the base ("main") selection
+    isPurchased = !!match || (selId === null && localStorage.getItem(`wf_purchased_${f.id}`) === '1')
+    purchaseRef = match?.ref || (selId === null ? mine[0]?.ref || '' : '')
   } catch {
     /* ignore */
   }
