@@ -7741,3 +7741,108 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
     font-size: 16px;
   }
 }
+
+/* ============================================================
+   Article Detail — full-width hero + centered reading layout
+   ============================================================ */
+.wf-art-hero {
+  position: relative;
+  width: 100%;
+  height: clamp(340px, 52vh, 560px);
+  overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 20%, rgba(212, 175, 55, 0.12), rgba(10, 7, 9, 0.95));
+}
+.wf-art-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wf-art-hero-glyph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--wf-serif, Georgia, serif);
+  font-size: clamp(80px, 14vw, 180px);
+  font-weight: 500;
+  color: rgba(212, 175, 55, 0.2);
+  user-select: none;
+}
+.wf-art-hero-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 7, 9, 0.3) 0%, transparent 30%, transparent 60%, rgba(10, 7, 9, 0.85) 100%);
+  pointer-events: none;
+}
+.wf-art-back {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  z-index: 2;
+  background: rgba(10, 7, 9, 0.6);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 9px 18px;
+}
+.wf-art-body-section {
+  padding: 0 28px 100px;
+}
+.wf-art-body-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-top: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.wf-art-title {
+  font-family: var(--wf-serif, Georgia, serif);
+  font-size: clamp(30px, 4.5vw, 52px);
+  line-height: 1.08;
+  text-align: center;
+  color: #f4f1ea;
+  margin: 0 0 40px;
+  max-width: 620px;
+}
+.wf-art-paragraphs {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.wf-art-paragraphs p {
+  font-family: var(--wf-sans);
+  font-size: 17px;
+  line-height: 1.85;
+  font-weight: 300;
+  color: #c2c8d2;
+  margin: 0;
+  text-align: left;
+}
+.wf-art-paragraphs p:first-letter {
+  font-family: var(--wf-serif, Georgia, serif);
+  font-size: 1.5em;
+  font-weight: 500;
+  color: var(--wf-gold);
+}
+.wf-art-paragraphs-empty {
+  font-family: var(--wf-sans);
+  font-size: 16px;
+  color: var(--wf-mute);
+  text-align: center;
+  margin: 0;
+}
+.wf-art-footer {
+  margin-top: 56px;
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 600px) {
+  .wf-art-hero { height: 300px; }
+  .wf-art-back { top: 16px; left: 16px; }
+  .wf-art-body-wrap { padding-top: 44px; }
+  .wf-art-title { margin-bottom: 30px; }
+  .wf-art-paragraphs p { font-size: 16px; line-height: 1.8; }
+}

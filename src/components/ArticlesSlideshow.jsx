@@ -8,7 +8,7 @@ import { useStore } from '../store/StoreProvider'
 const AUTO_MS = 5000
 
 export default function ArticlesSlideshow() {
-  const { articles } = useStore()
+  const { articles, openArticle } = useStore()
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -88,7 +88,7 @@ export default function ArticlesSlideshow() {
                 <div className="wf-arts-date">{a.date}</div>
                 <h3 className="wf-arts-title">{a.title}</h3>
                 {a.body && <p className="wf-arts-excerpt">{a.body}</p>}
-                <button className="wf-arts-cta">
+                <button className="wf-arts-cta" onClick={() => openArticle(a)}>
                   View article
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
