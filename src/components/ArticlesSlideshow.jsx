@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/StoreProvider'
 
-// Homepage "The Articles" — immersive auto-rotating visual carousel.
-// Full-bleed image with Ken Burns zoom, crossfade transitions, a floating
-// "view" icon, progress bar, and dot navigation. 8 s auto-advance.
+// Homepage "The Articles" — premium hero-banner carousel.
+// Text-left / image-right split inside a single floating rounded card.
+// Auto-rotates every 8 s with a crossfade + Ken Burns zoom. Bottom-center
+// dots only. Pauses on hover.
 const AUTO_MS = 8000
 
 export default function ArticlesSlideshow() {
@@ -12,20 +13,17 @@ export default function ArticlesSlideshow() {
   const [paused, setPaused] = useState(false)
   const [progress, setProgress] = useState(0)
   const count = articles.length
-  const timer = useRef(null)
   const rafRef = useRef(null)
   const startRef = useRef(0)
 
-  // clamp index if the list shrinks
   useEffect(() => {
     if (idx > count - 1) setIdx(Math.max(0, count - 1))
   }, [count, idx])
 
-  // auto-advance with rAF progress bar
+  // auto-advance with rAF progress
   useEffect(() => {
     if (paused || count <= 1) return
     startRef.current = performance.now()
-
     const tick = (now) => {
       const elapsed = now - startRef.current
       const p = Math.min(1, elapsed / AUTO_MS)
@@ -40,7 +38,6 @@ export default function ArticlesSlideshow() {
     return () => cancelAnimationFrame(rafRef.current)
   }, [paused, count, idx])
 
-  // reset progress when slide changes manually
   useEffect(() => {
     setProgress(0)
     startRef.current = performance.now()
@@ -49,8 +46,6 @@ export default function ArticlesSlideshow() {
   if (count === 0) return null
 
   const go = (n) => setIdx(((n % count) + count) % count)
-  const prev = () => go(idx - 1)
-  const next = () => go(idx + 1)
 
   return (
     <section className="wf-section wf-section--rule wf-pad" id="articles">
@@ -62,23 +57,10 @@ export default function ArticlesSlideshow() {
             </div>
             <h2 className="wf-jr-title">Fresh from the lab.</h2>
           </div>
-          {count > 1 && (
-            <div className="wf-arts-controls">
-              <button className="wf-arts-nav" aria-label="Previous article" onClick={prev}>
-                ‹
-              </button>
-              <span className="wf-arts-count">
-                {idx + 1} / {count}
-              </span>
-              <button className="wf-arts-nav" aria-label="Next article" onClick={next}>
-                ›
-              </button>
-            </div>
-          )}
         </div>
 
         <div
-          className="wf-arts-stage"
+          className="wf-arts-card"
           data-reveal
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -89,6 +71,21 @@ export default function ArticlesSlideshow() {
               key={a.id}
               aria-hidden={i !== idx}
             >
+              {/* LEFT — text */}
+              <div className="wf-arts-text">
+                <span className="wf-arts-badge">Article</span>
+                <div className="wf-arts-date">{a.date}</div>
+                <h3 className="wf-arts-title">{a.title}</h3>
+                {a.body && <p className="wf-arts-excerpt">{a.body}</p>}
+                <button className="wf-arts-cta">
+                  View article
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* RIGHT — image */}
               <div className="wf-arts-media">
                 {a.image_url ? (
                   <img src={a.image_url} alt={a.title} loading="lazy" />
@@ -98,18 +95,6 @@ export default function ArticlesSlideshow() {
                   </span>
                 )}
                 <span className="wf-arts-media-veil" aria-hidden="true" />
-              </div>
-              <div className="wf-arts-body">
-                <div className="wf-arts-date">{a.date}</div>
-                <h3 className="wf-arts-title">{a.title}</h3>
-                {a.body && <p className="wf-arts-excerpt">{a.body}</p>}
-                <div className="wf-arts-view" aria-hidden="true">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-                  </svg>
-                  <span>View</span>
-                </div>
               </div>
             </article>
           ))}
