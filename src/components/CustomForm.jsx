@@ -59,8 +59,7 @@ export default function CustomForm() {
         </div>
         <h3 className="wf-custom-h3">A field built for you alone.</h3>
         <p className="wf-custom-p">
-          Tell us the life you&apos;re engineering. We write the affirmation architecture, choose your frequencies,
-          master it for headphones, and deliver a field that exists nowhere else.
+          Tell us exactly what you want. We&apos;ll make the perfect audio for all the benefits you desire.
         </p>
         <ul className="wf-check-list">
           {customBenefits.map((b) => (

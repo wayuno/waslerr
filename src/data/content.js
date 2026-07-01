@@ -110,11 +110,11 @@ export const lines = [
 ]
 
 export const customBenefits = [
-  'Bespoke affirmation script, written for your goal',
-  'Frequencies & brainwave band of your choice',
-  'Studio-mastered, headphone-optimized',
-  'Private revisions until it’s right',
-  'Delivered within 7 days',
+  'Extremely potent, custom-tailored audios',
+  'Akashic Fields and Desire Codes',
+  'Fields with potency ranging from usual v4 to overpowered v100',
+  'Studio-mastered with the song or tune of your choice',
+  'Delivered within 7–14 days',
 ]
 
 export const focusOptions = [
