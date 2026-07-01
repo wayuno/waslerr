@@ -37,17 +37,38 @@ function SoldEditor({ item, isFree, soldEdits, setSoldEdits, saveSold }) {
 }
 // Per-field benefits editor: add (Enter / Add button), click a chip to remove.
 // Used in both the create and edit field forms (free + paid).
+// Per-field benefits editor: add (Enter / Add button), click a benefit's text
+// to edit it inline, ✕ to remove. Used in both the create and edit field forms.
+// Wrapped in a <div> (not a <label>) so chip/button clicks aren't hijacked by
+// the label's control-activation behavior.
 function BenefitsEditor({ list, setList }) {
   const [draft, setDraft] = useState('')
+  const [editIdx, setEditIdx] = useState(-1)
+  const [editVal, setEditVal] = useState('')
   const add = () => {
     const v = draft.trim()
     if (!v) return
     setList([...list, v].slice(0, 30))
     setDraft('')
   }
+  const remove = (i) => {
+    setList(list.filter((_, j) => j !== i))
+    if (editIdx === i) setEditIdx(-1)
+  }
+  const startEdit = (i) => {
+    setEditIdx(i)
+    setEditVal(list[i] || '')
+  }
+  const saveEdit = () => {
+    const v = editVal.trim()
+    if (editIdx < 0) return
+    if (!v) { remove(editIdx); return }
+    setList(list.map((b, j) => (j === editIdx ? v : b)))
+    setEditIdx(-1)
+  }
   return (
-    <label className="wf-field">
-      <span className="wf-field-label">Benefits · {list.length} — what this field rewires</span>
+    <div className="wf-field">
+      <span className="wf-field-label">Benefits · {list.length} — click text to edit, ✕ to remove</span>
       <div className="wf-offer-inc-row">
         <input
           className="wf-input"
@@ -61,13 +82,28 @@ function BenefitsEditor({ list, setList }) {
       {list.length > 0 && (
         <div className="wf-offer-inc-chips">
           {list.map((b, i) => (
-            <span key={i} className="wf-offer-inc-chip" onClick={() => setList(list.filter((_, j) => j !== i))}>
-              {b} ✕
+            <span key={i} className="wf-offer-inc-chip">
+              {editIdx === i ? (
+                <input
+                  className="wf-benefit-edit-input"
+                  autoFocus
+                  value={editVal}
+                  onChange={(e) => setEditVal(e.target.value)}
+                  onBlur={saveEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); saveEdit() }
+                    if (e.key === 'Escape') setEditIdx(-1)
+                  }}
+                />
+              ) : (
+                <span className="wf-benefit-edit-text" onClick={() => startEdit(i)} title="Click to edit">{b}</span>
+              )}
+              <button type="button" className="wf-benefit-del" aria-label="Remove benefit" onClick={() => remove(i)}>✕</button>
             </span>
           ))}
         </div>
       )}
-    </label>
+    </div>
   )
 }
 
