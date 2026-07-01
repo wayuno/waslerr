@@ -3566,6 +3566,10 @@ a {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  /* fade the whole cover (image + scrim) into the page background at the bottom
+     so it blends seamlessly — no hard color line where the photo ends */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
 }
 .wf-detail-cinema img {
   position: absolute;
@@ -3583,8 +3587,8 @@ a {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 90% at 18% 0%, rgba(6, 7, 9, 0.25), transparent 55%),
-    linear-gradient(180deg, rgba(6, 7, 9, 0.55) 0%, rgba(6, 7, 9, 0.72) 38%, var(--wf-bg) 70%, var(--wf-bg) 100%);
+    radial-gradient(120% 90% at 18% 0%, rgba(6, 7, 9, 0.28), transparent 55%),
+    linear-gradient(180deg, rgba(6, 7, 9, 0.5) 0%, rgba(6, 7, 9, 0.55) 100%);
 }
 @keyframes wf-detail-kenburns {
   from { transform: scale(1.25) translateY(0); }
