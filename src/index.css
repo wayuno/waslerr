@@ -4230,17 +4230,12 @@ a {
    so nothing lags or "disappears".
    ================================================================ */
 @media (hover: none), (max-width: 640px) {
-  /* The full hero "planet" glitches on real mobile GPUs — a vertical seam +
-     glow banding from the conic-gradient rays + mask, and jank from the 3D
-     preserve-3d orbit-spin + the blurred blue core. So on phones we keep only
-     the glitch-free slice: the dashed + flat + static rings (clean 2D borders)
-     and the expanding ripples, scaled to fit. The dashed ring's slow spin still
-     reads as the "rotating" backdrop. Desktop keeps the full animated planet.
-     The parallax JS bails on (pointer: coarse), so the scale below is safe. */
-  .wf-orbit-wrap { transform: scale(0.56); }
-  .wf-orbit-conic,
-  .wf-orbit-spin,
-  .wf-orbit-blue { display: none !important; }
+  /* The hero "planet" (conic rays + blurred core + spinning rings) glitches on
+     real mobile GPUs — a vertical seam, glow banding, and ring edges that don't
+     render cleanly across devices, and it can't be fixed reliably. So it's
+     hidden on phones entirely; the hero keeps a soft, static glow + clean copy.
+     Desktop still shows the full animated planet. */
+  .wf-orbit-wrap { display: none !important; }
   .wf-hero-glow-warm,
   .wf-hero-glow-gold { filter: none !important; animation: none !important; }
 
