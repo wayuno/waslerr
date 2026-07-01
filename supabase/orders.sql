@@ -11,6 +11,7 @@ create table if not exists public.orders (
   reference    text unique not null,            -- WF-XXX-XXXXX note-to-payee
   field_id     text not null,                   -- products.id (uuid as text) or seed id
   field_title  text,
+  field_ids    jsonb,                           -- cart orders: list of product ids paid together
   method       text not null,                   -- 'paypal' | 'binance'
   amount       numeric not null,                -- USD, set server-side from the catalog
   currency     text not null default 'USD',
@@ -26,6 +27,9 @@ create table if not exists public.orders (
 
 create index if not exists orders_reference_idx on public.orders (reference);
 create index if not exists orders_status_idx on public.orders (status);
+
+-- existing deployments: add the cart column if missing
+alter table public.orders add column if not exists field_ids jsonb;
 
 alter table public.orders enable row level security;
 

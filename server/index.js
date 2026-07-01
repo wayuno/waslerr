@@ -761,6 +761,18 @@ const insertAnnouncement = async (row) => {
 }
 const removeAnnouncement = async (id) => (await sbRest(`announcements?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
 
+// --- articles (homepage slideshow) ---
+const listArticles = async () => {
+  const r = await sbRest('articles?order=created_at.desc')
+  return r.ok ? r.json() : []
+}
+const insertArticle = async (row) => {
+  const r = await sbRest('articles', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d, detail: !r.ok && d ? d.message || d.code : null }
+}
+const removeArticle = async (id) => (await sbRest(`articles?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+
 // --- reviews wall ---
 const listReviews = async () => {
   const r = await sbRest('reviews?order=created_at.desc&limit=500')
@@ -1190,6 +1202,59 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/checkout/create' && method === 'POST') {
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
     const b = await readBody(req)
+
+    // ---- CART MODE: several fields paid together in a single order ----
+    if (Array.isArray(b.fieldIds) && b.fieldIds.length) {
+      const methodSel = b.method === 'binance' ? 'binance' : 'paypal'
+      const ids = [...new Set(b.fieldIds.map((x) => String(x)))]
+      const items = []
+      let amount = 0
+      for (const id of ids) {
+        const product = await getProductById(id)
+        if (!product) continue
+        const price = Number(product.price) || 0
+        if (price <= 0) continue // free fields need no checkout
+        items.push({ id, title: product.title, price })
+        amount += price
+      }
+      if (!items.length) return sendJson(res, 400, { error: 'empty_cart' })
+      amount = Math.max(0, amount)
+      const reference = genReference(`${items.length} fields`)
+      const orderRow = {
+        reference,
+        field_id: items[0].id,
+        field_ids: items.map((i) => i.id),
+        field_title: items.length === 1 ? items[0].title : `${items.length} fields`,
+        method: methodSel,
+        amount,
+        currency: 'USD',
+        status: 'pending',
+        buyer_email: (b.email || '').toString().toLowerCase() || null,
+        meta: { subtotal: amount, discount: 0, items },
+      }
+      let binanceCart = null
+      if (methodSel === 'binance' && binanceConfigured()) {
+        const created = await binanceCreateOrder({ reference, amount, goodsName: `${items.length} Waslerr fields` })
+        if (created.ok) {
+          orderRow.prepay_id = created.prepayId || null
+          binanceCart = { checkoutUrl: created.checkoutUrl, deeplink: created.deeplink, qrcodeLink: created.qrcodeLink, universalUrl: created.universalUrl }
+        }
+      }
+      const outCart = await insertOrder(orderRow)
+      if (!outCart.ok) return sendJson(res, 502, { error: 'order_failed' })
+      return sendJson(res, 200, {
+        reference,
+        amount,
+        method: methodSel,
+        cart: true,
+        items,
+        fieldTitle: orderRow.field_title,
+        payee: methodSel === 'binance' ? { binanceId: BINANCE_PAY_ID } : { paypalEmail: PAYPAL_EMAIL },
+        binance: binanceCart,
+        providerReady: methodSel === 'binance' ? (binanceConfigured() || binanceApiConfigured()) : paypalConfigured(),
+      })
+    }
+
     const fieldId = (b.fieldId || '').toString()
     const methodSel = b.method === 'binance' ? 'binance' : 'paypal'
     if (!fieldId) return sendJson(res, 400, { error: 'field_required' })
@@ -1407,22 +1472,31 @@ const server = http.createServer(async (req, res) => {
     )
     const rows = r.ok ? await r.json() : []
     return sendJson(res, 200, {
-      orders: rows.map((o) => ({
-        id: o.reference,
-        name: o.field_title,
-        method: o.method,
-        amount: Number(o.amount) || 0,
-        ref: o.reference,
-        txn: o.txid || null,
-        ts: Date.parse(o.created_at) || 0,
-        fieldId: o.field_id,
-        versionId: o.version_id ?? null,
-        coupon: o.coupon || null,
-        currency: o.currency || 'USD',
-        status: o.status,
-        subtotal: o.meta && o.meta.subtotal != null ? Number(o.meta.subtotal) : null,
-        discount: o.meta && o.meta.discount != null ? Number(o.meta.discount) : 0,
-      })),
+      orders: rows.flatMap((o) => {
+        const base = {
+          id: o.reference,
+          name: o.field_title,
+          method: o.method,
+          amount: Number(o.amount) || 0,
+          ref: o.reference,
+          txn: o.txid || null,
+          ts: Date.parse(o.created_at) || 0,
+          versionId: o.version_id ?? null,
+          coupon: o.coupon || null,
+          currency: o.currency || 'USD',
+          status: o.status,
+          subtotal: o.meta && o.meta.subtotal != null ? Number(o.meta.subtotal) : null,
+          discount: o.meta && o.meta.discount != null ? Number(o.meta.discount) : 0,
+        }
+        // cart orders carry meta.items — expand to one entry per field so every
+        // purchased field unlocks. The first line keeps the paid amount so the
+        // receipt total stays correct; the rest are $0 access lines.
+        const items = o.meta && Array.isArray(o.meta.items) ? o.meta.items : null
+        if (items && items.length) {
+          return items.map((it, i) => ({ ...base, fieldId: it.id, name: it.title || o.field_title, amount: i === 0 ? base.amount : 0 }))
+        }
+        return [{ ...base, fieldId: o.field_id }]
+      }),
     })
   }
 
@@ -1955,6 +2029,27 @@ const server = http.createServer(async (req, res) => {
   if (url.startsWith('/api/admin/announcements/') && method === 'DELETE') {
     if (!(await requireAdmin(req, res))) return
     if (!(await removeAnnouncement(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
+    return sendJson(res, 200, { ok: true })
+  }
+
+  // ---- articles (homepage slideshow) ----
+  if (url === '/api/articles' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { articles: [] })
+    const list = await listArticles()
+    return sendJson(res, 200, { articles: list || [] })
+  }
+  if (url === '/api/admin/articles' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const title = (b.title || '').trim()
+    if (!title) return sendJson(res, 400, { error: 'title_required' })
+    const out = await insertArticle({ title, body: (b.body || '').trim(), image_url: b.image_url || null })
+    if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.detail })
+    return sendJson(res, 200, { article: out.data })
+  }
+  if (url.startsWith('/api/admin/articles/') && method === 'DELETE') {
+    if (!(await requireAdmin(req, res))) return
+    if (!(await removeArticle(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
     return sendJson(res, 200, { ok: true })
   }
 

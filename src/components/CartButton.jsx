@@ -5,7 +5,7 @@ import { CartIcon } from './icons'
 // Nav cart button with a count badge that pops when an item is added. Clicking
 // it checks out the most recently added item (single-product demo checkout).
 export default function CartButton() {
-  const { cart, cartCount, goCheckout, navigate } = useStore()
+  const { cartCount, navigate } = useStore()
   const [pop, setPop] = useState(false)
   const prev = useRef(cartCount)
 
@@ -19,10 +19,7 @@ export default function CartButton() {
     prev.current = cartCount
   }, [cartCount])
 
-  const onClick = () => {
-    if (cart.length) goCheckout(cart[cart.length - 1].id)
-    else navigate('fields')
-  }
+  const onClick = () => navigate('cart')
 
   return (
     <button className="wf-cart-btn" aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`} onClick={onClick}>

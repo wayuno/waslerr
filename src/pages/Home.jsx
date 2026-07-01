@@ -3,7 +3,7 @@ import Background from '../components/Background'
 import ProductCard from '../components/ProductCard'
 import ReviewWall from '../components/ReviewWall'
 import CustomForm from '../components/CustomForm'
-import JournalAnnouncements from '../components/JournalAnnouncements'
+import ArticlesSlideshow from '../components/ArticlesSlideshow'
 import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
@@ -152,7 +152,7 @@ export default function Home({ onNavigate }) {
         </div>
 
         <h1 className="wf-hero-h1" data-anim>
-          <DecryptText text="Reprogram your consciousness" order={0} />
+          <DecryptText text="Reprogram consciousness" order={0} />
           <br />
           <DecryptText text="Reshape your reality" order={1} className="accent" />
         </h1>
@@ -198,9 +198,6 @@ export default function Home({ onNavigate }) {
       <section className="wf-section wf-section--rule wf-pad" id="wf-collection">
         <div className="wf-container">
           <div className="wf-head-block wf-center">
-            <div className="wf-eyebrow" data-reveal>
-              01 · Latest picks
-            </div>
             <h2 className="wf-h2" data-reveal>
               Latest picks.
             </h2>
@@ -277,8 +274,8 @@ export default function Home({ onNavigate }) {
         </div>
       </section>
 
-      {/* ===== JOURNAL & ANNOUNCEMENTS ===== */}
-      <JournalAnnouncements onNavigate={onNavigate} />
+      {/* ===== THE ARTICLES (slideshow) ===== */}
+      <ArticlesSlideshow />
 
       <Footer onNavigate={onNavigate} />
     </div>

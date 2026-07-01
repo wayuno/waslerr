@@ -55,6 +55,18 @@ alter table public.announcements enable row level security;
 drop policy if exists "announcements_public_read" on public.announcements;
 create policy "announcements_public_read" on public.announcements for select using (true);
 
+-- ---------- articles (homepage "The Articles" slideshow) ----------
+create table if not exists public.articles (
+  id         uuid primary key default gen_random_uuid(),
+  title      text not null,
+  body       text not null default '',
+  image_url  text,
+  created_at timestamptz not null default now()
+);
+alter table public.articles enable row level security;
+drop policy if exists "articles_public_read" on public.articles;
+create policy "articles_public_read" on public.articles for select using (true);
+
 -- ---------- storage bucket for images ----------
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)
