@@ -11,6 +11,7 @@ import Method from './pages/Method'
 import Community from './pages/Community'
 import Detail from './screens/Detail'
 import Checkout from './screens/Checkout'
+import Cart from './screens/Cart'
 import Delivered from './screens/Delivered'
 import Login from './screens/Login'
 import ResetPassword from './screens/ResetPassword'
@@ -56,6 +57,7 @@ function Shell() {
       {page === 'community' && <Community onNavigate={navigate} />}
       {page === 'detail' && <Detail />}
       {page === 'checkout' && <Checkout />}
+      {page === 'cart' && <Cart />}
       {page === 'delivered' && <Delivered />}
       {page === 'login' && <Login />}
       {page === 'reset' && <ResetPassword />}

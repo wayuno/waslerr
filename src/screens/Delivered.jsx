@@ -19,6 +19,7 @@ export default function Delivered() {
   }, [])
 
   const params = deliveredParams || {}
+  const cartItems = Array.isArray(params.items) ? params.items : null
   const f = findProduct(params.fieldId)
   const isComp = params.method === 'coupon' // unlocked with a full-discount code
   const methodLabel = isComp ? 'Discount code' : params.method === 'binance' ? 'Binance Pay' : 'PayPal'
@@ -26,6 +27,8 @@ export default function Delivered() {
   const ref_ = params.ref || '—'
   const txn = params.txn || '—'
   const fieldName = f?.title || 'your field'
+  const heading = cartItems ? 'Your fields are unlocked.' : 'Your field is unlocked.'
+  const itemCount = cartItems ? cartItems.length : 1
 
   return (
     <div className="wf-app" ref={ref}>
@@ -55,18 +58,27 @@ export default function Delivered() {
         <div className="wf-delivered-body" data-reveal>
           <div className="wf-eyebrow" style={{ marginBottom: 14 }}>{isComp ? 'Access granted' : 'Payment verified'}</div>
           <h1 className="wf-detail-title" style={{ fontStyle: 'italic', marginBottom: 12 }}>
-            Your field is unlocked.
+            {heading}
           </h1>
           <p className="wf-detail-desc" style={{ maxWidth: 440, margin: '0 auto 36px' }}>
-            {isComp ? 'Unlocked with your code · lifetime access granted.' : `${amt} via ${methodLabel} verified · lifetime access granted.`}
+            {isComp ? 'Unlocked with your code · lifetime access granted.' : `${amt} via ${methodLabel} verified · ${itemCount} field${itemCount === 1 ? '' : 's'} unlocked.`}
           </p>
 
           {/* Receipt card */}
           <div className="wf-receipt-card">
-            <div className="wf-receipt-row" style={{ animationDelay: '0.05s' }}>
-              <span>Field</span>
-              <span>{fieldName}</span>
-            </div>
+            {cartItems ? (
+              cartItems.map((it, i) => (
+                <div className="wf-receipt-row" key={it.id} style={{ animationDelay: `${0.05 + i * 0.08}s` }}>
+                  <span>Field {i + 1}</span>
+                  <span>{it.title}</span>
+                </div>
+              ))
+            ) : (
+              <div className="wf-receipt-row" style={{ animationDelay: '0.05s' }}>
+                <span>Field</span>
+                <span>{fieldName}</span>
+              </div>
+            )}
             <div className="wf-receipt-row" style={{ animationDelay: '0.15s' }}>
               <span>{isComp ? 'Price' : 'Paid'}</span>
               <span>{isComp ? 'Free · Discount code' : `${amt} · ${methodLabel}`}</span>
@@ -85,13 +97,13 @@ export default function Delivered() {
           <div className="wf-delivered-ctas">
             <button
               className="wf-btn wf-btn-gold wf-mag"
-              onClick={() => params.fieldId != null ? navigate({ page: 'detail', id: params.fieldId }) : navigate('fields')}
+              onClick={() => cartItems ? navigate('fields') : params.fieldId != null ? navigate({ page: 'detail', id: params.fieldId }) : navigate('fields')}
             >
-              Download your field
+              {cartItems ? 'Browse your fields' : 'Download your field'}
             </button>
             <button
               className="wf-btn wf-mag"
-              onClick={() => openReviews(params.fieldId, true)}
+              onClick={() => openReviews(cartItems ? cartItems[0]?.id : params.fieldId, true)}
             >
               Leave a review
             </button>

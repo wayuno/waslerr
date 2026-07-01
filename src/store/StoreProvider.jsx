@@ -37,6 +37,15 @@ const normalizeAnnouncement = (row) => ({
   ts: Date.parse(row.created_at) || Date.now(),
 })
 
+const normalizeArticle = (row) => ({
+  id: row.id,
+  title: row.title,
+  body: row.body || '',
+  image_url: row.image_url || null,
+  date: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+  ts: Date.parse(row.created_at) || Date.now(),
+})
+
 // map an announcement tag to a notification type + icon
 const tagToType = (tag) => {
   const t = (tag || '').toUpperCase()
@@ -115,9 +124,11 @@ export function StoreProvider({ children }) {
 
   const [selectedId, setSelectedId] = useState(null)
   const [checkoutVersionId, setCheckoutVersionId] = useState(null) // version chosen for the current checkout
+  const [cartCheckout, setCartCheckout] = useState(false) // true = checking out the whole cart together
   const [paidProducts, setPaidProducts] = useState([])
   const [freeFieldsList, setFreeFieldsList] = useState([])
   const [announcements, setAnnouncements] = useState([])
+  const [articles, setArticles] = useState([])
 
   // storefront catalogue = paid products + free fields (merged, memoized)
   const products = useMemo(() => [...paidProducts, ...freeFieldsList], [paidProducts, freeFieldsList])
@@ -186,6 +197,7 @@ export function StoreProvider({ children }) {
     [showToast],
   )
   const removeFromCart = useCallback((id) => setCart((prev) => prev.filter((i) => i.id !== id)), [])
+  const clearCart = useCallback(() => setCart([]), [])
 
   const pendingSection = useRef(null)
   const supabaseRef = useRef(null)
@@ -285,6 +297,13 @@ export function StoreProvider({ children }) {
     if (!error && Array.isArray(data)) setAnnouncements(data.map(normalizeAnnouncement))
   }, [])
 
+  const loadArticles = useCallback(async (client) => {
+    const supabase = client || supabaseRef.current
+    if (!supabase) return
+    const { data, error } = await supabase.from('articles').select('*').order('created_at', { ascending: false })
+    if (!error && Array.isArray(data)) setArticles(data.map(normalizeArticle))
+  }, [])
+
   // reviews wall — Supabase is the permanent source when configured
   const loadReviews = useCallback(async (client) => {
     const supabase = client || supabaseRef.current
@@ -323,11 +342,28 @@ export function StoreProvider({ children }) {
       }
       setPayDone(false)
       setAppliedCoupon(null)
+      setCartCheckout(false)
       setCheckoutVersionId(versionId != null ? versionId : null)
       navigate({ page: 'checkout', ...(id != null ? { id } : {}) })
     },
     [navigate, loggedIn, showToast],
   )
+  const goCartCheckout = useCallback(() => {
+    if (!loggedIn) {
+      showToast('Please sign in to check out')
+      navigate('login')
+      return
+    }
+    if (!cart.length) {
+      navigate('fields')
+      return
+    }
+    setPayDone(false)
+    setAppliedCoupon(null)
+    setCheckoutVersionId(null)
+    setCartCheckout(true)
+    navigate({ page: 'checkout' })
+  }, [navigate, loggedIn, showToast, cart.length])
   const pay = useCallback(() => {
     setOrderId('WF-' + (1000 + Math.floor(Math.random() * 9000)))
     setPayDone(true)
@@ -406,6 +442,7 @@ export function StoreProvider({ children }) {
       reloadProducts(supabase)
       loadFreeFields(supabase)
       loadAnnouncements(supabase)
+      loadArticles(supabase)
       loadReviews(supabase)
       loadSettings(supabase)
     })()
@@ -413,7 +450,7 @@ export function StoreProvider({ children }) {
       cancelled = true
       sub?.unsubscribe?.()
     }
-  }, [applySession, reloadProducts, loadFreeFields, loadAnnouncements, loadReviews, loadSettings])
+  }, [applySession, reloadProducts, loadFreeFields, loadAnnouncements, loadArticles, loadReviews, loadSettings])
 
   const getToken = useCallback(async () => {
     const supabase = supabaseRef.current
@@ -767,6 +804,44 @@ export function StoreProvider({ children }) {
       }
     },
     [authedFetch, loadAnnouncements],
+  )
+
+  const addArticle = useCallback(
+    async (form, file) => {
+      try {
+        let image_url = form.image_url || null
+        if (file) {
+          const up = await uploadImageViaApi(file, await getToken())
+          if (up.error) return { error: up.error }
+          image_url = up.url
+        }
+        const r = await authedFetch('/api/admin/articles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, image_url }),
+        })
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          return { error: `Publish failed (${r.status})${j.detail ? ': ' + j.detail : j.error ? ': ' + j.error : ''}` }
+        }
+        await loadArticles()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
+    },
+    [authedFetch, getToken, loadArticles],
+  )
+
+  const deleteArticle = useCallback(
+    async (id) => {
+      const r = await authedFetch('/api/admin/articles/' + id, { method: 'DELETE' })
+      if (r.ok) {
+        setArticles((prev) => prev.filter((a) => a.id !== id)) // optimistic
+        await loadArticles()
+      }
+    },
+    [authedFetch, loadArticles],
   )
 
   // admin: delete a whole support conversation (clears its messages)
@@ -1195,6 +1270,9 @@ export function StoreProvider({ children }) {
     announcements,
     addAnnouncement,
     deleteAnnouncement,
+    articles,
+    addArticle,
+    deleteArticle,
     deleteConversation,
     deleteUser,
     setUserRole,
@@ -1254,6 +1332,9 @@ export function StoreProvider({ children }) {
     cartCount: cart.length,
     addToCart,
     removeFromCart,
+    clearCart,
+    cartCheckout,
+    goCartCheckout,
     toast,
     showToast,
     wall,

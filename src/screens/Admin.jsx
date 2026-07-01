@@ -118,6 +118,7 @@ const TABS = [
   { id: 'stats', label: 'Stats' },
   { id: 'fields', label: 'Fields' },
   { id: 'announcements', label: 'Announcements' },
+  { id: 'articles', label: 'Articles' },
   { id: 'reviews', label: 'Reviews' },
   { id: 'coupons', label: 'Coupons' },
   { id: 'users', label: 'Users' },
@@ -150,6 +151,9 @@ export default function Admin() {
     announcements,
     addAnnouncement,
     deleteAnnouncement,
+    articles,
+    addArticle,
+    deleteArticle,
     deleteConversation,
     deleteUser,
     setUserRole,
@@ -209,6 +213,13 @@ export default function Admin() {
   const [aErr, setAErr] = useState('')
   const [aBusy, setABusy] = useState(false)
   const aFileRef = useRef(null)
+
+  // articles (homepage slideshow)
+  const [artForm, setArtForm] = useState({ title: '', body: '' })
+  const [artFile, setArtFile] = useState(null)
+  const [artErr, setArtErr] = useState('')
+  const [artBusy, setArtBusy] = useState(false)
+  const artFileRef = useRef(null)
 
   // users
   const [users, setUsers] = useState([])
@@ -500,6 +511,25 @@ export default function Admin() {
     setAForm({ tag: 'NEW FIELD', title: '', body: '' })
     setAFile(null)
     if (aFileRef.current) aFileRef.current.value = ''
+  }
+
+  const publishArticle = async (e) => {
+    e.preventDefault()
+    setArtErr('')
+    if (!artForm.title.trim()) {
+      setArtErr('Title is required.')
+      return
+    }
+    setArtBusy(true)
+    const res = await addArticle({ title: artForm.title.trim(), body: artForm.body.trim() }, artFile)
+    setArtBusy(false)
+    if (res?.error) {
+      setArtErr(res.error)
+      return
+    }
+    setArtForm({ title: '', body: '' })
+    setArtFile(null)
+    if (artFileRef.current) artFileRef.current.value = ''
   }
 
   const publish = async (e) => {
@@ -1629,6 +1659,57 @@ export default function Admin() {
               {aErr && <p className="wf-auth-error" style={{ margin: 0 }}>{aErr}</p>}
               <button type="submit" className="wf-form-submit wf-mag" disabled={aBusy}>
                 {aBusy ? 'Publishing…' : (<><PlusIcon /> Publish announcement</>)}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {adminTab === 'articles' && (
+          <div className="wf-admin-fields">
+            <div data-reveal>
+              <div className="wf-field-label" style={{ marginBottom: 14 }}>
+                Published articles · {articles.length}
+              </div>
+              <div className="wf-admin-list">
+                {articles.length === 0 && <p className="wf-detail-desc">No articles yet. Write one →</p>}
+                {articles.map((a) => (
+                  <div className="wf-admin-row" key={a.id}>
+                    {a.image_url ? (
+                      <img className="wf-admin-thumb" src={a.image_url} alt="" />
+                    ) : (
+                      <span className="wf-admin-ico wf-ann-ico">✎</span>
+                    )}
+                    <div className="wf-admin-row-text">
+                      <span className="wf-admin-row-title">{a.title}</span>
+                      <span className="wf-admin-row-meta">{a.date}</span>
+                    </div>
+                    <button className="wf-del" aria-label={`Delete ${a.title}`} onClick={() => deleteArticle(a.id)}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form className="wf-form-card wf-admin-add" data-reveal onSubmit={publishArticle}>
+              <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
+                Write an article
+              </div>
+              <label className="wf-field">
+                <span className="wf-field-label">Title</span>
+                <input className="wf-input" value={artForm.title} onChange={(e) => setArtForm({ ...artForm, title: e.target.value })} placeholder="Article headline" />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Description</span>
+                <textarea className="wf-textarea" rows="4" value={artForm.body} onChange={(e) => setArtForm({ ...artForm, body: e.target.value })} placeholder="What's this article about?" />
+              </label>
+              <label className="wf-field">
+                <span className="wf-field-label">Photo {artFile ? `· ${artFile.name}` : '(optional)'}</span>
+                <input ref={artFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setArtFile(e.target.files?.[0] || null)} />
+              </label>
+              {artErr && <p className="wf-auth-error" style={{ margin: 0 }}>{artErr}</p>}
+              <button type="submit" className="wf-form-submit wf-mag" disabled={artBusy}>
+                {artBusy ? 'Publishing…' : (<><PlusIcon /> Publish article</>)}
               </button>
             </form>
           </div>

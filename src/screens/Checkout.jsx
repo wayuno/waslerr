@@ -93,7 +93,7 @@ function CopyRow({ label, value, copyKey, mono, copying, onCopy }) {
 }
 
 export default function Checkout() {
-  const { selectedProduct, checkoutVersionId, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady, openChat } = useStore()
+  const { selectedProduct, checkoutVersionId, payMethod, setPayMethod, navigate, openDetail, goDelivered, applyCoupon, user, loggedIn, authReady, openChat, cart, cartCheckout, clearCart } = useStore()
 
   const [stage, setStage] = useState('method')
 
@@ -129,8 +129,9 @@ export default function Checkout() {
 
   useEffect(() => {
     if (authReady && !loggedIn) navigate('login') // purchasing requires sign-in
-    else if (!selectedProduct) navigate('fields')
-  }, [selectedProduct, navigate, authReady, loggedIn])
+    else if (cartCheckout && cart.length === 0) navigate('fields')
+    else if (!cartCheckout && !selectedProduct) navigate('fields')
+  }, [selectedProduct, navigate, authReady, loggedIn, cartCheckout, cart.length])
 
   // public PayPal SDK client id (for the in-page Smart Buttons)
   useEffect(() => {
@@ -207,13 +208,17 @@ export default function Checkout() {
     return () => cancelAnimationFrame(raf)
   }, [unlockState])
 
-  if (!selectedProduct) return null
+  const cartMode = cartCheckout && cart.length > 0
+
+  if (!cartMode && !selectedProduct) return null
 
   const f = selectedProduct
+  const cartItems = cartMode ? cart : []
+  const cartTotalAmt = cartItems.reduce((s, i) => s + priceOf(i), 0)
   // a chosen version sets the price + which audio is delivered
   const chosenVersion =
-    checkoutVersionId != null && Array.isArray(f.versions) ? f.versions.find((v) => v.id === checkoutVersionId) : null
-  const total = chosenVersion ? Number(chosenVersion.price) || 0 : priceOf(f)
+    !cartMode && checkoutVersionId != null && Array.isArray(f?.versions) ? f.versions.find((v) => v.id === checkoutVersionId) : null
+  const total = cartMode ? cartTotalAmt : chosenVersion ? Number(chosenVersion.price) || 0 : priceOf(f)
   const free = total === 0
   const discount = appliedCoupon
     ? appliedCoupon.type === 'percent'
@@ -238,7 +243,7 @@ export default function Checkout() {
   }
   const animTotal = uT < 560 ? total : uT < 1440 ? Math.round(total + (clientPayable - total) * easeOut((uT - 560) / 880)) : clientPayable
   const methodLabel = payMethod === 'binance' ? 'Binance Pay' : 'PayPal'
-  const cat = CAT[f.line] || { label: 'Field', cls: 'gold' }
+  const cat = cartMode ? { label: 'Fields', cls: 'gold' } : CAT[f.line] || { label: 'Field', cls: 'gold' }
 
   const dotStatus = (i) => {
     if (i < phase) return 'done'
@@ -249,9 +254,14 @@ export default function Checkout() {
 
   const persistLocal = (confirmedTxid) => {
     try {
-      localStorage.setItem(`wf_purchased_${f.id}`, '1')
+      const items = cartMode ? cartItems : [f]
+      items.forEach((it) => localStorage.setItem(`wf_purchased_${it.id}`, '1'))
       const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-      orders.unshift({ id: reference, fieldId: f.id, versionId: checkoutVersionId ?? null, name: f.title, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
+      if (cartMode) {
+        orders.unshift({ id: reference, cart: true, items: cartItems.map((it) => ({ id: it.id, title: it.title })), name: `${cartItems.length} fields`, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
+      } else {
+        orders.unshift({ id: reference, fieldId: f.id, versionId: checkoutVersionId ?? null, name: f.title, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
+      }
       localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
     } catch { /* ignore */ }
   }
@@ -265,7 +275,12 @@ export default function Checkout() {
     setTimeout(() => setPhase(3), 600) // delivered
     setTimeout(() => {
       persistLocal(confirmedTxid)
-      goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid })
+      if (cartMode) {
+        goDelivered({ items: cartItems.map((it) => ({ id: it.id, title: it.title })), method: payMethod, amount: payable, ref: reference, txn: confirmedTxid })
+        clearCart()
+      } else {
+        goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid })
+      }
     }, 1400)
   }
 
@@ -273,10 +288,13 @@ export default function Checkout() {
     setCreating(true)
     setCreateError('')
     try {
+      const payload = cartMode
+        ? { fieldIds: cartItems.map((i) => i.id), method: payMethod, email: user || null }
+        : { fieldId: f.id, versionId: checkoutVersionId ?? null, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }
       const r = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fieldId: f.id, versionId: checkoutVersionId ?? null, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }),
+        body: JSON.stringify(payload),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.reference) {
@@ -314,7 +332,12 @@ export default function Checkout() {
     if (free) {
       // free fields: deliver immediately, no payment
       persistLocal('')
-      goDelivered({ fieldId: f.id, method: payMethod, amount: 0, ref: 'FREE', txn: '' })
+      if (cartMode) {
+        goDelivered({ items: cartItems.map((it) => ({ id: it.id, title: it.title })), method: payMethod, amount: 0, ref: 'FREE', txn: '' })
+        clearCart()
+      } else {
+        goDelivered({ fieldId: f.id, method: payMethod, amount: 0, ref: 'FREE', txn: '' })
+      }
       return
     }
     setStage('verify')
@@ -419,7 +442,12 @@ export default function Checkout() {
     finishRef.current = true
     clearInterval(pollRef.current)
     persistLocal(txid)
-    goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: txid })
+    if (cartMode) {
+      goDelivered({ items: cartItems.map((it) => ({ id: it.id, title: it.title })), method: payMethod, amount: payable, ref: reference, txn: txid })
+      clearCart()
+    } else {
+      goDelivered({ fieldId: f.id, method: payMethod, amount: payable, ref: reference, txn: txid })
+    }
   }
 
   // Couldn't auto-verify in time → hand off to support (admin verifies manually).
@@ -452,11 +480,22 @@ export default function Checkout() {
         {/* ===== STAGE: METHOD SELECT ===== */}
         {stage === 'method' && (
           <>
-            <button className="wf-back" data-reveal onClick={() => openDetail(f.id)} style={{ marginBottom: 24 }}>
-              ← Back to field
+            <button className="wf-back" data-reveal onClick={() => (cartMode ? navigate('cart') : openDetail(f.id))} style={{ marginBottom: 24 }}>
+              ← {cartMode ? 'Back to cart' : 'Back to field'}
             </button>
 
-            <div data-reveal><ProductCard f={f} cat={cat} /></div>
+            {cartMode ? (
+              <div className="wf-co-cart-summary" data-reveal>
+                {cartItems.map((it) => (
+                  <div className="wf-co-cart-row" key={it.id}>
+                    <span className="wf-co-cart-row-name">{it.title}</span>
+                    <span className="wf-co-cart-row-price">${priceOf(it)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div data-reveal><ProductCard f={f} cat={cat} /></div>
+            )}
 
             <div className="wf-eyebrow" data-reveal style={{ marginTop: 30 }}>Checkout</div>
             <h1 className="wf-detail-title" data-reveal style={{ marginBottom: 30 }}>Complete your order.</h1>
@@ -490,6 +529,8 @@ export default function Checkout() {
                   </>
                 )}
 
+                {!cartMode && (
+                <>
                 <div className="wf-field-label" data-reveal style={{ margin: '22px 0 10px' }}>Discount code</div>
 
                 {unlockState === 'idle' && (
@@ -542,6 +583,8 @@ export default function Checkout() {
                   </div>
                 )}
 
+                </>) /* end !cartMode coupon block */}
+
                 {unlockState !== 'unlocked' && (
                   <div className="wf-co-total-row" data-reveal>
                     <span>Total</span>
@@ -586,7 +629,18 @@ export default function Checkout() {
               <span className="wf-co-auto-pill">✓ Automatic verification</span>
             </div>
 
-            {payMethod !== 'paypal' && <div data-reveal><ProductCard f={f} cat={cat} compact /></div>}
+            {payMethod !== 'paypal' && (cartMode ? (
+              <div className="wf-co-cart-summary" data-reveal>
+                {cartItems.map((it) => (
+                  <div className="wf-co-cart-row" key={it.id}>
+                    <span className="wf-co-cart-row-name">{it.title}</span>
+                    <span className="wf-co-cart-row-price">${priceOf(it)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div data-reveal><ProductCard f={f} cat={cat} compact /></div>
+            ))}
 
             {createError ? (
               <div className="wf-co-create-error" data-reveal>
@@ -619,7 +673,18 @@ export default function Checkout() {
                 <div className="wf-pp-grid">
                   {/* LEFT — order, live listening, how it works */}
                   <div className="wf-pp-left">
-                    <div className="wf-pp-anim"><ProductCard f={f} cat={cat} /></div>
+                    <div className="wf-pp-anim">{cartMode ? (
+                      <div className="wf-co-cart-summary">
+                        {cartItems.map((it) => (
+                          <div className="wf-co-cart-row" key={it.id}>
+                            <span className="wf-co-cart-row-name">{it.title}</span>
+                            <span className="wf-co-cart-row-price">${priceOf(it)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <ProductCard f={f} cat={cat} />
+                    )}</div>
 
                     <div className="wf-pp-listen wf-pp-anim">
                       <div className="wf-pp-radar" aria-hidden="true">
