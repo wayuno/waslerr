@@ -8,8 +8,8 @@ import Footer from '../components/Footer'
 import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { useStore } from '../store/StoreProvider'
-import { lines, tickerItems } from '../data/content'
-import { ArrowRight, ArrowDown } from '../components/icons'
+import { tickerItems } from '../data/content'
+import { ArrowRight } from '../components/icons'
 
 const EMBERS = [
   { dx: '22px', left: '13%', bottom: '16%', size: 3, color: '#e0a93b', dur: '10s', delay: '0s' },
@@ -266,51 +266,13 @@ export default function Home({ onNavigate }) {
       {/* ===== REVIEW WALL ===== */}
       <ReviewWall />
 
-      {/* ===== THREE WAYS + CUSTOM ===== */}
+      {/* ===== CUSTOM CODE ===== */}
       <section
         className="wf-section wf-section--rule"
         id="wf-custom"
         style={{ background: 'linear-gradient(180deg,transparent,rgba(10,7,9,.5))' }}
       >
         <div className="wf-container" style={{ maxWidth: 1080, paddingTop: 82, paddingBottom: 82 }}>
-          <div className="wf-head-block wf-center" style={{ marginBottom: 52 }}>
-            <div className="wf-eyebrow" data-reveal>
-              02 · The three fields
-            </div>
-            <h2 className="wf-h2" data-reveal>
-              Three ways into the subconscious.
-            </h2>
-            <p className="wf-lead" data-reveal>
-              Every Waslerr field belongs to one of three lines — and the third is written from scratch, for you alone.
-            </p>
-          </div>
-
-          <div className="wf-lines-grid">
-            {lines.map((l) => (
-              <div className={`wf-line-card${l.featured ? ' featured' : ''}`} data-reveal key={l.title}>
-                <div className="wf-line-idx">{l.idx}</div>
-                <h3 className="wf-line-title">{l.title}</h3>
-                <p className="wf-line-body" style={l.featured ? { color: '#b6bcc8' } : undefined}>
-                  {l.body}
-                </p>
-                {l.featured ? (
-                  <a
-                    href="#wf-custom-form-anchor"
-                    className="wf-line-meta"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      document.getElementById('wf-custom-form-anchor')?.scrollIntoView({ behavior: 'smooth' })
-                    }}
-                  >
-                    {l.meta} <ArrowDown size={13} />
-                  </a>
-                ) : (
-                  <span className="wf-line-meta">{l.meta}</span>
-                )}
-              </div>
-            ))}
-          </div>
-
           <CustomForm />
         </div>
       </section>
