@@ -24,46 +24,42 @@ export default function ArticleDetail() {
     <div className="wf-app" ref={ref}>
       <Background resonanceTop="30%" />
 
-      {/* full-width hero image */}
-      <div className="wf-art-hero" data-reveal>
-        {a.image_url ? (
-          <img src={a.image_url} alt={a.title} />
-        ) : (
-          <div className="wf-art-hero-glyph" aria-hidden="true">
-            {(a.title || 'W').charAt(0)}
-          </div>
-        )}
-        <div className="wf-art-hero-veil" aria-hidden="true" />
-        <button className="wf-back wf-art-back" onClick={() => navigate('home')}>
-          ← Back
+      <section className="wf-art-section">
+        <button className="wf-back wf-art-back" onClick={() => navigate('home')} data-reveal>
+          ← Back to articles
         </button>
-      </div>
 
-      {/* article body */}
-      <section className="wf-art-body-section">
-        <div className="wf-art-body-wrap" data-reveal>
-          <div className="wf-arts-badge" style={{ margin: '0 auto 16px' }}>
-            Article
+        <div className="wf-art-card" data-reveal>
+          {/* medium featured image */}
+          <div className="wf-art-image">
+            {a.image_url ? (
+              <img src={a.image_url} alt={a.title} loading="lazy" />
+            ) : (
+              <div className="wf-art-image-glyph" aria-hidden="true">
+                {(a.title || 'W').charAt(0)}
+              </div>
+            )}
           </div>
-          <div className="wf-arts-date" style={{ textAlign: 'center', marginBottom: 14 }}>
-            {a.date}
-          </div>
-          <h1 className="wf-art-title">{a.title}</h1>
 
-          {paragraphs.length > 0 ? (
-            <div className="wf-art-paragraphs">
-              {paragraphs.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
+          {/* centered article content */}
+          <div className="wf-art-content">
+            <span className="wf-arts-badge" style={{ margin: '0 auto 16px' }}>
+              Article
+            </span>
+            <div className="wf-arts-date" style={{ textAlign: 'center', marginBottom: 14 }}>
+              {a.date}
             </div>
-          ) : (
-            <p className="wf-art-paragraphs-empty">No content yet.</p>
-          )}
+            <h1 className="wf-art-title">{a.title}</h1>
 
-          <div className="wf-art-footer" data-reveal>
-            <button className="wf-btn wf-btn-glass wf-mag" onClick={() => navigate('home')}>
-              ← Back to home
-            </button>
+            {paragraphs.length > 0 ? (
+              <div className="wf-art-paragraphs">
+                {paragraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="wf-art-paragraphs-empty">No content yet.</p>
+            )}
           </div>
         </div>
       </section>
