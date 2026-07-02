@@ -176,7 +176,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
               Can&apos;t find your exact field?
             </h3>
             <p style={{ fontSize: 14.5, color: 'var(--wf-mute)', fontWeight: 300, margin: 0 }}>
-              Have a Custom Code written, voiced and tuned to your intention.
+              Have a custom code tailored for the desires you seek to fulfill.
             </p>
           </div>
           <button

@@ -88,14 +88,19 @@ export default function ProductCard({ field, variant = 'default' }) {
         <h3 className="wf-card-title">{field.title}</h3>
         <span className="wf-card-sub">Waslerr</span>
         <span className={`wf-card-cat ${cat.cls}`}>{cat.label}</span>
-        <p className={`wf-desc${!free && !open ? ' clamp' : ''}`}>{field.desc}</p>
+        {open && <p className="wf-desc">{field.desc}</p>}
         <div className="wf-card-foot">
           {free ? (
             <>
               <span className="wf-price free">Free</span>
-              <button className="wf-getfree wf-mag" onClick={stop(() => openDetail(field.id))}>
-                Get it free <ArrowDown />
-              </button>
+              <div className="wf-card-actions">
+                <button className="wf-readmore" onClick={stop(() => setOpen((o) => !o))}>
+                  {open ? 'Read less' : 'Read more'} <ChevronRight />
+                </button>
+                <button className="wf-getfree wf-mag" onClick={stop(() => openDetail(field.id))}>
+                  Get it free <ArrowDown />
+                </button>
+              </div>
             </>
           ) : (
             <>

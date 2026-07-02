@@ -1149,6 +1149,11 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   align-items: center;
   justify-content: space-between;
 }
+.wf-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .wf-price {
   font-family: var(--wf-serif);
   font-weight: 500;
@@ -2007,8 +2012,9 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   .wf-card-title { font-size: 17px; margin-bottom: 4px; }
   .wf-card-sub { font-size: 11px; margin-bottom: 3px; }
   .wf-card-cat { font-size: 9.5px; letter-spacing: 0.08em; margin-bottom: 9px; }
-  .wf-desc { display: none; }                                  /* Fix 3: hide description on mobile */
+  .wf-desc { display: block; }                                 /* only rendered when Read more is open */
   .wf-card-foot { flex-direction: column; align-items: flex-start; gap: 9px; }
+  .wf-card-actions { gap: 10px; }
   .wf-price { font-size: 21px; }
   .wf-price.free { font-size: 18px; }
   .wf-readmore { font-size: 11.5px; }
