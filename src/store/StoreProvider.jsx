@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getSupabase, loadConfig, normalizeProduct, normalizeReview, cleanAudioList } from '../lib/supabase'
 import { COMMUNITY_LINKS_KEY, loadCommunityLinks, saveCommunityLinks } from '../lib/communityLinks'
 import { WALL_KEY, loadWall, saveWall } from '../lib/wall'
+import { CATEGORIES_KEY, loadCategories, addCategory as addCategoryUtil, removeCategory as removeCategoryUtil } from '../lib/categories'
 
 // Single source of truth for routing, catalogue, auth, payment and the support
 // thread. The catalogue is 100% Supabase-driven — there is no hardcoded seed, so
@@ -174,6 +175,9 @@ export function StoreProvider({ children }) {
   // admin-controlled community links (YouTube / Discord / 1:1). Permanent source
   // is Supabase (settings table); localStorage is an offline cache/fallback.
   const [communityLinks, setCommunityLinksState] = useState(loadCommunityLinks)
+
+  // admin-managed custom product categories (persisted in localStorage)
+  const [customCategories, setCustomCategories] = useState(() => loadCategories())
 
   // cart (lightweight, demo) + global toast + reviews wall
   const [cart, setCart] = useState([])
@@ -891,6 +895,18 @@ export function StoreProvider({ children }) {
     [authedFetch],
   )
 
+  // ---- custom categories ----
+  const addCategory = useCallback((name) => {
+    const next = addCategoryUtil(name)
+    setCustomCategories(next)
+    return next
+  }, [])
+  const removeCategory = useCallback((name) => {
+    const next = removeCategoryUtil(name)
+    setCustomCategories(next)
+    return next
+  }, [])
+
   // ---- reviews wall writes ----
   // anyone may post (public insert via the anon client); offline → localStorage
   const addReview = useCallback(async (entry) => {
@@ -1251,6 +1267,7 @@ export function StoreProvider({ children }) {
       }
       if (e.key === COMMUNITY_LINKS_KEY) setCommunityLinksState(loadCommunityLinks())
       if (e.key === WALL_KEY) setWall(loadWall())
+      if (e.key === CATEGORIES_KEY) setCustomCategories(loadCategories())
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -1340,6 +1357,9 @@ export function StoreProvider({ children }) {
     pushNotification,
     communityLinks,
     setCommunityLinks,
+    customCategories,
+    addCategory,
+    removeCategory,
     cart,
     cartCount: cart.length,
     addToCart,

@@ -1,25 +1,25 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useAudio } from '../audio/AudioProvider'
 import { useStore } from '../store/StoreProvider'
 import { PlayIcon, PauseIcon, ChevronRight, ArrowDown } from './icons'
 
-const CATS = {
-  desire: { label: 'Desire', cls: '' },
-  akashic: { label: 'Akashic', cls: 'akashic' },
-  wealth: { label: 'Wealth', cls: 'wealth' },
-}
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 
 export default function ProductCard({ field, variant = 'default' }) {
   const { activeId, toggle } = useAudio()
-  const { openDetail } = useStore()
+  const { openDetail, customCategories } = useStore()
   const [open, setOpen] = useState(false)
   const cardRef = useRef(null)
   const glowRef = useRef(null)
   const free = variant === 'free' || !field.price
   const img = field.image_url || field.img
   const playing = activeId === field.id
-  const cat = CATS[field.line] || { label: cap(field.line), cls: '' }
+  const catMap = useMemo(() => {
+    const base = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
+    const fromCustom = Object.fromEntries((customCategories || []).map((c) => [c.toLowerCase(), c]))
+    return { ...base, ...fromCustom }
+  }, [customCategories])
+  const cat = { label: catMap[field.line?.toLowerCase()] || cap(field.line), cls: field.line === 'akashic' ? 'akashic' : field.line === 'wealth' ? 'wealth' : '' }
   const phClass = field.line === 'akashic' ? 'wf-card-ph-akashic' : field.line === 'wealth' ? 'wf-card-ph-wealth' : 'wf-card-ph-desire'
 
   const stop = (fn) => (e) => {

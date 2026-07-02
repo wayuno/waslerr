@@ -1575,11 +1575,11 @@ const server = http.createServer(async (req, res) => {
     // yet (drop request_message_id first, then focus/intention).
     let out = await insertOffer(offerRow)
     if (!out.ok && offerRow.request_message_id) {
-      const { request_message_id, ...rest } = offerRow
+      const { request_message_id: _, ...rest } = offerRow
       out = await insertOffer(rest)
     }
     if (!out.ok) {
-      const { request_message_id, focus, intention, ...rest } = offerRow
+      const { request_message_id: _1, focus: _2, intention: _3, ...rest } = offerRow
       out = await insertOffer(rest)
     }
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.status })
@@ -1960,14 +1960,34 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/chat/send' && method === 'POST') {
     const b = await readBody(req)
     const conversationId = (b.conversationId || '').trim()
+    if (!conversationId) return sendJson(res, 400, { error: 'bad_request' })
     const text = (b.text || '').trim()
-    if (!conversationId || !text) return sendJson(res, 400, { error: 'bad_request' })
+    const files = Array.isArray(b.files) && b.files.length ? b.files.filter((f) => f && f.url) : []
+    if (!text && !files.length) return sendJson(res, 400, { error: 'bad_request' })
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
-    const out = await insertMessage({ conversation_id: conversationId, sender: 'user', body: text.slice(0, 2000), email: b.email || null })
+    const kind = files.length ? 'file' : 'text'
+    const meta = files.length ? { files: files.map((f) => ({ url: f.url, name: String(f.name || '').slice(0, 200), size: Number(f.size) || 0 })) } : null
+    const body = text.slice(0, 2000) || (files.length ? 'Sent a file' : '')
+    const out = await insertMessage({ conversation_id: conversationId, sender: 'user', body, kind, meta, email: b.email || null })
     if (!out.ok) return sendJson(res, 502, { error: 'send_failed' })
     // typed messages go to the team (the admin replies); FAQ is answered
     // instantly client-side via quick-reply chips.
     return sendJson(res, 200, { ok: true })
+  }
+  if (url === '/api/chat/attachment' && method === 'POST') {
+    const b = await readBody(req, 14 * 1024 * 1024) // max ~10MB base64 overhead
+    const conversationId = (b.conversationId || '').trim()
+    if (!conversationId || !b.dataBase64) return sendJson(res, 400, { error: 'bad_request' })
+    if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
+    try {
+      const buffer = Buffer.from(b.dataBase64, 'base64')
+      if (buffer.length > 10 * 1024 * 1024) return sendJson(res, 413, { error: 'file_too_large', detail: 'Max 10MB.' })
+      const out = await uploadImage(b.filename || 'attachment', b.contentType || 'application/octet-stream', buffer, 'chat-files')
+      if (!out.ok) return sendJson(res, 502, { error: 'upload_failed', detail: out.detail || 'storage rejected the file' })
+      return sendJson(res, 200, { url: out.publicUrl, filename: b.filename || 'attachment' })
+    } catch {
+      return sendJson(res, 502, { error: 'upload_failed' })
+    }
   }
   if (url === '/api/chat/messages' && method === 'GET') {
     const cid = parsedUrl.searchParams.get('conversationId') || ''
@@ -1975,7 +1995,7 @@ const server = http.createServer(async (req, res) => {
     const msgs = await getMessages(cid)
     const offers = await listOffersForConversation(cid)
     return sendJson(res, 200, {
-      messages: msgs.map((m) => ({ id: m.id, from: m.sender, text: m.body, at: m.created_at, kind: m.kind || 'text', meta: m.meta || null })),
+      messages: msgs.map((m) => ({ id: m.id, from: m.sender, text: m.body, at: m.created_at, kind: m.kind || 'text', meta: m.meta || null, files: (m.meta && m.meta.files) || null })),
       offers: offers.map(publicOffer),
     })
   }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Background from '../components/Background'
 import { useStore } from '../store/StoreProvider'
 import { useReveal } from '../hooks/useReveal'
@@ -7,6 +7,7 @@ import MethodEditor from '../components/MethodEditor'
 import AudioBundleEditor from '../components/AudioBundleEditor'
 import { normalizeMethod, defaultMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
+import { categoryOptions as computeCategoryOptions } from '../lib/categories'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 
 const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('en-US')
@@ -166,6 +167,9 @@ export default function Admin() {
     showToast,
     communityLinks,
     setCommunityLinks,
+    customCategories,
+    addCategory,
+    removeCategory,
     wall,
     reloadReviews,
     featureReview,
@@ -185,6 +189,29 @@ export default function Admin() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const fileInputRef = useRef(null)
+
+  // custom category manager
+  const [newCategory, setNewCategory] = useState('')
+  const BASE_CATS = ['DESIRE', 'AKASHIC', 'WEALTH']
+  const handleAddCategory = (e) => {
+    e.preventDefault()
+    const name = newCategory.trim().toUpperCase()
+    if (!name) return
+    if (BASE_CATS.includes(name)) {
+      showToast('DESIRE, AKASHIC and WEALTH are built-in categories')
+      return
+    }
+    addCategory(name)
+    setNewCategory('')
+  }
+  const handleRemoveCategory = (c) => {
+    if (BASE_CATS.includes(c)) return
+    if (usedCategories.includes(c)) {
+      showToast('Can’t remove a category that is still used by a field')
+      return
+    }
+    removeCategory(c)
+  }
 
   // per-field edit panel
   const [editId, setEditId] = useState(null)
@@ -405,6 +432,12 @@ export default function Admin() {
     // and this gate re-renders as the dashboard or the "restricted" notice.
   }
 
+  const categoryOptions = useMemo(() => computeCategoryOptions(paidProducts, freeFields, customCategories), [paidProducts, freeFields, customCategories])
+  const usedCategories = useMemo(() => {
+    const set = new Set([...paidProducts.map((p) => (p.line || '').toUpperCase()), ...freeFields.map((f) => (f.line || '').toUpperCase())])
+    return Array.from(set).filter(Boolean)
+  }, [paidProducts, freeFields])
+
   if (!loggedIn || !isAdmin) {
     return (
       <div className="wf-app" ref={ref}>
@@ -473,7 +506,6 @@ export default function Admin() {
   const maxBar = Math.max(1, ...monthly.map((b) => b.v))
   const topFields = stats.topFields || []
   const maxUnits = topFields.length ? Math.max(1, topFields[0].units) : 1
-  const categoryOptions = [...new Set([...paidProducts.map((p) => (p.line || '').toUpperCase()), 'DESIRE', 'AKASHIC', 'WEALTH'])].filter(Boolean)
   const allFieldOptions = [...paidProducts, ...freeFields]
   // lookups for rendering thread cards
   const offerById = Object.fromEntries(convOffers.map((o) => [o.id, o]))
@@ -1538,6 +1570,44 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="wf-form-card wf-admin-add" data-reveal>
+              <div className="wf-eyebrow" style={{ marginBottom: 4 }}>Categories</div>
+              <div className="wf-cat-chips">
+                {categoryOptions.map((c) => {
+                  const isBase = BASE_CATS.includes(c)
+                  const isUsed = usedCategories.includes(c)
+                  return (
+                    <span key={c} className={`wf-cat-chip${isBase ? ' base' : ''}`}>
+                      {c}
+                      {!isBase && (
+                        <button
+                          type="button"
+                          className="wf-cat-chip-del"
+                          aria-label={`Remove ${c}`}
+                          disabled={isUsed}
+                          title={isUsed ? 'In use by a field' : 'Remove category'}
+                          onClick={() => handleRemoveCategory(c)}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </span>
+                  )
+                })}
+              </div>
+              <form className="wf-cat-add" onSubmit={handleAddCategory}>
+                <input
+                  className="wf-input"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  placeholder="New category name"
+                />
+                <button type="submit" className="wf-coupon-apply">
+                  <PlusIcon /> Add
+                </button>
+              </form>
             </div>
 
             <form className="wf-form-card wf-admin-add" data-reveal onSubmit={publish}>

@@ -1,14 +1,15 @@
 import { useStore } from '../store/StoreProvider'
 import { resolveCommunityLink } from '../lib/communityLinks'
+import { YouTubeIcon, DiscordIcon, ChatIcon } from './icons'
 
 const COMMUNITY_FOOTER = [
-  { key: 'youtube', label: 'YouTube' },
-  { key: 'discord', label: 'Discord' },
-  { key: 'creator', label: '1:1 with the creator' },
+  { key: 'youtube', label: 'YouTube', icon: YouTubeIcon },
+  { key: 'discord', label: 'Discord', icon: DiscordIcon },
+  { key: 'creator', label: '1:1 with the creator', icon: ChatIcon },
 ]
 
 export default function Footer({ onNavigate }) {
-  const { communityLinks } = useStore()
+  const { communityLinks, openChat } = useStore()
   const goHome = () => onNavigate({ page: 'home' })
 
   return (
@@ -26,7 +27,14 @@ export default function Footer({ onNavigate }) {
         <div>
           <div className="wf-foot-col-h">Community</div>
           <div className="wf-foot-links">
-            {COMMUNITY_FOOTER.map(({ key, label }) => {
+            {COMMUNITY_FOOTER.map(({ key, label, icon: Icon }) => {
+              if (key === 'creator') {
+                return (
+                  <button key={key} className="wf-flink" onClick={() => openChat()}>
+                    <Icon size={16} /> {label}
+                  </button>
+                )
+              }
               const { href, external } = resolveCommunityLink(key, communityLinks[key])
               return (
                 <a
@@ -35,7 +43,7 @@ export default function Footer({ onNavigate }) {
                   href={href}
                   {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                 >
-                  {label}
+                  <Icon size={16} /> {label}
                 </a>
               )
             })}
