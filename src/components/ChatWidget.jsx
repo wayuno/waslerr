@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/StoreProvider'
-import { ChatIconBubble, CloseIcon, SendIcon, CheckIcon, DownloadIcon, PayPalMark, BinanceMark } from './icons'
+import { ChatIconBubble, CloseIcon, SendIcon, CheckIcon, DownloadIcon, AttachmentIcon, PayPalMark, BinanceMark } from './icons'
 
 const FOCUS_LABELS = {
   wealth: 'Wealth & abundance',
@@ -152,9 +152,12 @@ export default function ChatWidget() {
   const [unread, setUnread] = useState(false)
   const [checkout, setCheckout] = useState(null) // { offerId, step, method, reference, amount, payee, binance }
   const [maximized, setMaximized] = useState(false)
+  const [pendingFile, setPendingFile] = useState(null)
+  const [fileUploading, setFileUploading] = useState(false)
   const listRef = useRef(null)
   const timers = useRef([])
   const seen = useRef(new Set())
+  const fileInputRef = useRef(null)
   const greetedRef = useRef(false)
   const offersRef = useRef({})
 
@@ -231,6 +234,12 @@ export default function ChatWidget() {
           } else if (m.kind === 'delivery' && m.meta?.offerId) {
             seen.current.add(m.id)
             addMsg({ from: 'bot', kind: 'delivery', offerId: m.meta.offerId })
+          } else if (m.kind === 'file' && m.from !== 'user' && Array.isArray(m.files)) {
+            seen.current.add(m.id)
+            addMsg({ from: m.from || 'bot', kind: 'file', files: m.files })
+          } else if (m.kind === 'file' && m.from !== 'user' && Array.isArray(m.meta?.files)) {
+            seen.current.add(m.id)
+            addMsg({ from: m.from || 'bot', kind: 'file', files: m.meta.files })
           }
         })
       } catch {
@@ -272,31 +281,88 @@ export default function ChatWidget() {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
   }, [msgs, typing])
 
-  const sendTyped = (e) => {
+  const uploadFile = async (file) => {
+    if (!file || !conversationId) return null
+    if (file.size > 10 * 1024 * 1024) return { error: 'File is too large (max 10MB).' }
+    const dataBase64 = await fileToBase64(file)
+    if (!dataBase64) return null
+    try {
+      const r = await fetch('/api/chat/attachment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type || 'application/octet-stream',
+          dataBase64,
+          conversationId,
+        }),
+      })
+      if (!r.ok) return null
+      return await r.json()
+    } catch {
+      return null
+    }
+  }
+
+  const sendTyped = async (e) => {
     e.preventDefault()
     const t = text.trim()
-    if (!t) return
+    if (!t && !pendingFile) return
+    let files = []
+    if (pendingFile) {
+      setFileUploading(true)
+      const up = await uploadFile(pendingFile)
+      setFileUploading(false)
+      setPendingFile(null)
+      if (up?.url) files.push({ url: up.url, name: up.filename || pendingFile.name, size: pendingFile.size })
+      else if (!t) return // upload failed and no text to send
+    }
     setText('')
-    const uId = addMsg({ from: 'user', text: t, status: 'Sending…' })
+    const isFileMsg = files.length > 0
+    const uId = addMsg({
+      from: 'user',
+      text: t || (isFileMsg ? 'Sent a file' : ''),
+      kind: isFileMsg ? 'file' : 'text',
+      files: isFileMsg ? files : undefined,
+      status: 'Sending…',
+    })
     if (conversationId) {
       fetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId, email: userEmail || null, text: t }),
+        body: JSON.stringify({
+          conversationId,
+          email: userEmail || null,
+          text: t,
+          kind: isFileMsg ? 'file' : 'text',
+          files: isFileMsg ? files : undefined,
+        }),
       }).catch(() => {})
     }
     pushNotification({ type: 'reply', title: 'Support is on it', body: 'Your message reached the team — we’ll reply right here shortly.', href: 'chat' })
     later(() => patchMsg(uId, { status: '✓ Delivered' }), 600)
-    later(() => setTyping(true), 1600)
-    later(() => {
-      setTyping(false)
-      const hId = addMsg({
-        from: 'bot',
-        text: 'Thanks for reaching out — your message is with the team. An admin will reply here soon.',
-      })
-      later(() => removeMsg(hId), 10000)
-    }, 2300)
+    if (!isFileMsg) {
+      later(() => setTyping(true), 1600)
+      later(() => {
+        setTyping(false)
+        const hId = addMsg({
+          from: 'bot',
+          text: 'Thanks for reaching out — your message is with the team. An admin will reply here soon.',
+        })
+        later(() => removeMsg(hId), 10000)
+      }, 2300)
+    }
   }
+
+
+
+  const fileToBase64 = (file) =>
+    new Promise((resolve) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result).split(',')[1])
+      r.onerror = () => resolve(null)
+      r.readAsDataURL(file)
+    })
 
   const downloadOffer = (offer, index = 0) => {
     window.open(`/api/offers/${offer.id}/download?conversationId=${encodeURIComponent(conversationId)}&i=${index}`, '_blank')
@@ -353,6 +419,28 @@ export default function ChatWidget() {
                   </div>
                 )
               }
+              if (m.kind === 'file' && Array.isArray(m.files)) {
+                return (
+                  <div key={m.id} className={`wf-cmsg wf-cmsg--user${m.leaving ? ' leaving' : ''}`}>
+                    <div className="wf-cmsg-row">
+                      <div className="wf-cmsg-bubble wf-cmsg-bubble--file">
+                        {m.files.map((f, i) => (
+                          <a key={i} className="wf-chat-filecard" href={f.url} target="_blank" rel="noopener noreferrer" download={f.name}>
+                            <span className="wf-chat-fileic"><FileGlyph /></span>
+                            <span className="wf-chat-fileinfo">
+                              <span className="wf-chat-filename">{f.name}</span>
+                              <span className="wf-chat-filemeta">{fmtBytes(f.size)}</span>
+                            </span>
+                            <span className="wf-chat-filedl"><DownloadIcon size={14} /></span>
+                          </a>
+                        ))}
+                        {m.text && m.text !== 'Sent a file' && <p className="wf-chat-filetext">{m.text}</p>}
+                      </div>
+                    </div>
+                    <div className="wf-cmsg-meta">{m.status || m.time}</div>
+                  </div>
+                )
+              }
               return (
                 <div key={m.id} className={`wf-cmsg wf-cmsg--${m.from}${m.leaving ? ' leaving' : ''}`}>
                   <div className="wf-cmsg-row">
@@ -381,12 +469,46 @@ export default function ChatWidget() {
             )}
           </div>
 
-          <form className="wf-chat-input" onSubmit={sendTyped}>
-            <input className="wf-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask about a field…" />
-            <button className="wf-chat-send" type="submit" aria-label="Send message">
-              <SendIcon />
-            </button>
-          </form>
+          <div className="wf-chat-input-wrap">
+            {pendingFile && (
+              <div className="wf-chat-pending-file">
+                <span className="wf-chat-pending-name">
+                  <FileGlyph size={14} /> {pendingFile.name}
+                </span>
+                <button type="button" className="wf-chat-pending-clear" aria-label="Remove file" onClick={() => setPendingFile(null)}>
+                  ✕
+                </button>
+              </div>
+            )}
+            <form className="wf-chat-input" onSubmit={sendTyped}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,audio/*,video/*,.zip,.pdf"
+                style={{ display: 'none' }}
+                onChange={(e) => setPendingFile(e.target.files?.[0] || null)}
+              />
+              <input
+                className="wf-input"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={pendingFile ? 'Add a message (optional)…' : 'Ask about a field…'}
+                disabled={fileUploading}
+              />
+              <button
+                type="button"
+                className="wf-chat-attach"
+                aria-label="Attach file"
+                disabled={fileUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <AttachmentIcon />
+              </button>
+              <button className="wf-chat-send" type="submit" aria-label="Send message" disabled={fileUploading || (!text.trim() && !pendingFile)}>
+                {fileUploading ? <span className="wf-chat-sendspin" /> : <SendIcon />}
+              </button>
+            </form>
+          </div>
 
           {checkout && (
             <CheckoutPanel
