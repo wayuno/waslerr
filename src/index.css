@@ -7726,68 +7726,69 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 }
 
 /* ============================================================
-   Article Detail — full-width hero + centered reading layout
+   Article Detail — centered card with medium rounded image
    ============================================================ */
-.wf-art-hero {
-  position: relative;
-  width: 100%;
-  height: clamp(340px, 52vh, 560px);
-  overflow: hidden;
-  background: radial-gradient(120% 120% at 50% 20%, rgba(212, 175, 55, 0.12), rgba(10, 7, 9, 0.95));
+.wf-art-section {
+  padding: 110px 28px 100px;
 }
-.wf-art-hero img {
+.wf-art-back {
+  display: inline-flex;
+  margin-bottom: 30px;
+  background: rgba(10, 7, 9, 0.6);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 9px 18px;
+}
+.wf-art-card {
+  max-width: 820px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+}
+.wf-art-image {
+  width: 100%;
+  max-width: 680px;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--wf-rule);
+  background: radial-gradient(120% 120% at 50% 20%, rgba(212, 175, 55, 0.14), rgba(10, 7, 9, 0.95));
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 175, 55, 0.05) inset;
+}
+.wf-art-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-.wf-art-hero-glyph {
+.wf-art-image-glyph {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--wf-serif, Georgia, serif);
-  font-size: clamp(80px, 14vw, 180px);
+  font-size: clamp(80px, 12vw, 150px);
   font-weight: 500;
   color: rgba(212, 175, 55, 0.2);
   user-select: none;
 }
-.wf-art-hero-veil {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(10, 7, 9, 0.3) 0%, transparent 30%, transparent 60%, rgba(10, 7, 9, 0.85) 100%);
-  pointer-events: none;
-}
-.wf-art-back {
-  position: absolute;
-  top: 24px;
-  left: 28px;
-  z-index: 2;
-  background: rgba(10, 7, 9, 0.6);
-  backdrop-filter: blur(8px);
-  border-radius: 999px;
-  padding: 9px 18px;
-}
-.wf-art-body-section {
-  padding: 0 28px 100px;
-}
-.wf-art-body-wrap {
-  max-width: 720px;
-  margin: 0 auto;
-  padding-top: 64px;
+.wf-art-content {
+  width: 100%;
+  max-width: 680px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
 }
 .wf-art-title {
   font-family: var(--wf-serif, Georgia, serif);
   font-size: clamp(30px, 4.5vw, 52px);
   line-height: 1.08;
-  text-align: center;
   color: #f4f1ea;
-  margin: 0 0 40px;
-  max-width: 620px;
+  margin: 0 0 36px;
 }
 .wf-art-paragraphs {
   width: 100%;
@@ -7802,13 +7803,7 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   font-weight: 300;
   color: #c2c8d2;
   margin: 0;
-  text-align: left;
-}
-.wf-art-paragraphs p:first-letter {
-  font-family: var(--wf-serif, Georgia, serif);
-  font-size: 1.5em;
-  font-weight: 500;
-  color: var(--wf-gold);
+  text-align: center;
 }
 .wf-art-paragraphs-empty {
   font-family: var(--wf-sans);
@@ -7817,15 +7812,11 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   text-align: center;
   margin: 0;
 }
-.wf-art-footer {
-  margin-top: 56px;
-  display: flex;
-  justify-content: center;
-}
 @media (max-width: 600px) {
-  .wf-art-hero { height: 300px; }
-  .wf-art-back { top: 16px; left: 16px; }
-  .wf-art-body-wrap { padding-top: 44px; }
-  .wf-art-title { margin-bottom: 30px; }
+  .wf-art-section { padding: 90px 22px 80px; }
+  .wf-art-back { margin-bottom: 24px; }
+  .wf-art-card { gap: 26px; }
+  .wf-art-image { border-radius: 14px; }
+  .wf-art-title { margin-bottom: 28px; }
   .wf-art-paragraphs p { font-size: 16px; line-height: 1.8; }
 }
