@@ -7547,23 +7547,6 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
     linear-gradient(180deg, transparent 70%, rgba(10, 7, 9, 0.4) 100%);
   pointer-events: none;
 }
-/* progress bar */
-.wf-arts-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  z-index: 2;
-}
-.wf-arts-progress span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--wf-gold), #f6e7b4);
-  border-radius: 0 3px 3px 0;
-  transition: width 0.1s linear;
-}
 /* dots — bottom center, pill-shaped, gray inactive / white active */
 .wf-arts-dots {
   display: flex;

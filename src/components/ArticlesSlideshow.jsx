@@ -11,38 +11,20 @@ export default function ArticlesSlideshow() {
   const { articles, openArticle } = useStore()
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
-  const [progress, setProgress] = useState(0)
   const count = articles.length
-  const rafRef = useRef(null)
-  const startRef = useRef(0)
+  const timer = useRef(null)
   const touchX = useRef(0)
 
   useEffect(() => {
     if (idx > count - 1) setIdx(Math.max(0, count - 1))
   }, [count, idx])
 
-  // auto-advance with rAF progress
+  // auto-advance
   useEffect(() => {
     if (paused || count <= 1) return
-    startRef.current = performance.now()
-    const tick = (now) => {
-      const elapsed = now - startRef.current
-      const p = Math.min(1, elapsed / AUTO_MS)
-      setProgress(p)
-      if (p >= 1) {
-        setIdx((i) => (i + 1) % count)
-        startRef.current = now
-      }
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [paused, count, idx])
-
-  useEffect(() => {
-    setProgress(0)
-    startRef.current = performance.now()
-  }, [idx])
+    timer.current = setInterval(() => setIdx((i) => (i + 1) % count), AUTO_MS)
+    return () => clearInterval(timer.current)
+  }, [paused, count])
 
   if (count === 0) return null
 
@@ -109,13 +91,6 @@ export default function ArticlesSlideshow() {
               </div>
             </article>
           ))}
-
-          {/* progress bar */}
-          {count > 1 && (
-            <div className="wf-arts-progress" aria-hidden="true">
-              <span style={{ width: `${paused ? 0 : progress * 100}%` }} />
-            </div>
-          )}
         </div>
 
         {count > 1 && (
