@@ -7506,14 +7506,12 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid var(--wf-rule);
-  background: linear-gradient(135deg, rgba(20, 14, 10, 0.95), rgba(10, 7, 9, 0.98));
+  background: #070508;
   box-shadow: 0 40px 100px -50px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(212, 175, 55, 0.06) inset;
 }
 .wf-arts-slide {
   position: absolute;
   inset: 0;
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.9s var(--wf-ease);
@@ -7522,15 +7520,17 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   opacity: 1;
   pointer-events: auto;
 }
-/* LEFT — text panel */
+/* LEFT — text, overlaid on the full-bleed image */
 .wf-arts-text {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  max-width: 52%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 14px;
   padding: 56px 54px;
-  position: relative;
-  z-index: 1;
 }
 .wf-arts-badge {
   display: inline-flex;
@@ -7602,18 +7602,21 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-arts-cta:hover svg {
   transform: translateX(4px);
 }
-/* RIGHT — image panel */
+/* IMAGE — full-bleed behind everything */
 .wf-arts-media {
-  position: relative;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   overflow: hidden;
-  background: radial-gradient(120% 120% at 70% 30%, rgba(212, 175, 55, 0.16), rgba(10, 7, 9, 0.9));
+  background: #070508;
 }
 .wf-arts-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 72% 28%;
   display: block;
-  transform: scale(1.12);
+  transform: scale(1.08);
   transition: transform 8s linear;
 }
 .wf-arts-slide.active .wf-arts-media img {
@@ -7634,9 +7637,14 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-arts-media-veil {
   position: absolute;
   inset: 0;
-  background: linear-gradient(270deg, transparent 60%, rgba(10, 7, 9, 0.7) 100%),
-    linear-gradient(180deg, transparent 70%, rgba(10, 7, 9, 0.4) 100%);
+  z-index: 1;
   pointer-events: none;
+  /* strong left scrim for the text, plus every edge fading into pure black */
+  background:
+    linear-gradient(90deg, #070508 0%, rgba(7, 5, 8, 0.92) 30%, rgba(7, 5, 8, 0) 62%),
+    linear-gradient(180deg, #070508 0%, rgba(7, 5, 8, 0) 20%),
+    linear-gradient(0deg, #070508 0%, rgba(7, 5, 8, 0) 22%),
+    linear-gradient(270deg, #070508 0%, rgba(7, 5, 8, 0) 14%);
 }
 /* dots — bottom center, pill-shaped, gray inactive / white active */
 .wf-arts-dots {
@@ -7661,20 +7669,18 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   background: #ffffff;
 }
 @media (max-width: 820px) {
-  .wf-arts-card { height: 560px; }
-  .wf-arts-slide {
-    grid-template-columns: 1fr;
-    grid-template-rows: 220px 1fr;
-  }
+  .wf-arts-card { height: 520px; }
+  .wf-arts-media img { object-position: 70% 20%; }
+  /* mobile: full-bleed image, text overlaid at the bottom over a black fade */
   .wf-arts-media-veil {
-    background: linear-gradient(180deg, transparent 35%, rgba(10, 7, 9, 0.9) 100%);
-  }
-  .wf-arts-text { padding: 34px 28px; }
-  .wf-arts-media {
-    grid-row: 1;
+    background:
+      linear-gradient(0deg, #070508 8%, rgba(7, 5, 8, 0.5) 42%, rgba(7, 5, 8, 0) 72%),
+      linear-gradient(180deg, #070508 0%, rgba(7, 5, 8, 0) 22%);
   }
   .wf-arts-text {
-    grid-row: 2;
+    max-width: 100%;
+    justify-content: flex-end;
+    padding: 34px 28px;
   }
 }
 @media (max-width: 480px) {
