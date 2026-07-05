@@ -760,6 +760,11 @@ const insertAnnouncement = async (row) => {
   return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d, detail: !r.ok && d ? d.message || d.code : null }
 }
 const removeAnnouncement = async (id) => (await sbRest(`announcements?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+const updateAnnouncementRow = async (id, patch) => {
+  const r = await sbRest(`announcements?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d, detail: !r.ok && d ? d.message || d.code : null }
+}
 
 // --- articles (homepage slideshow) ---
 const listArticles = async () => {
@@ -772,6 +777,11 @@ const insertArticle = async (row) => {
   return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d, detail: !r.ok && d ? d.message || d.code : null }
 }
 const removeArticle = async (id) => (await sbRest(`articles?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })).ok
+const updateArticleRow = async (id, patch) => {
+  const r = await sbRest(`articles?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) })
+  const d = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data: Array.isArray(d) ? d[0] : d, detail: !r.ok && d ? d.message || d.code : null }
+}
 
 // --- reviews wall ---
 const listReviews = async () => {
@@ -2046,6 +2056,23 @@ const server = http.createServer(async (req, res) => {
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.detail })
     return sendJson(res, 200, { announcement: out.data })
   }
+  if (url.startsWith('/api/admin/announcements/') && method === 'PATCH') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const patch = {}
+    if (b.tag !== undefined) patch.tag = (b.tag || 'NEW FIELD').toString().trim().toUpperCase().slice(0, 32) || 'NEW FIELD'
+    if (b.title !== undefined) {
+      const title = (b.title || '').trim()
+      if (!title) return sendJson(res, 400, { error: 'title_required' })
+      patch.title = title
+    }
+    if (b.body !== undefined) patch.body = (b.body || '').trim()
+    if (b.image_url !== undefined) patch.image_url = b.image_url || null
+    if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
+    const out = await updateAnnouncementRow(url.split('/').pop(), patch)
+    if (!out.ok) return sendJson(res, 502, { error: 'update_failed', detail: out.detail })
+    return sendJson(res, 200, { announcement: out.data })
+  }
   if (url.startsWith('/api/admin/announcements/') && method === 'DELETE') {
     if (!(await requireAdmin(req, res))) return
     if (!(await removeAnnouncement(url.split('/').pop()))) return sendJson(res, 502, { error: 'delete_failed' })
@@ -2065,6 +2092,22 @@ const server = http.createServer(async (req, res) => {
     if (!title) return sendJson(res, 400, { error: 'title_required' })
     const out = await insertArticle({ title, body: (b.body || '').trim(), image_url: b.image_url || null })
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed', detail: out.detail })
+    return sendJson(res, 200, { article: out.data })
+  }
+  if (url.startsWith('/api/admin/articles/') && method === 'PATCH') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const patch = {}
+    if (b.title !== undefined) {
+      const title = (b.title || '').trim()
+      if (!title) return sendJson(res, 400, { error: 'title_required' })
+      patch.title = title
+    }
+    if (b.body !== undefined) patch.body = (b.body || '').trim()
+    if (b.image_url !== undefined) patch.image_url = b.image_url || null
+    if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
+    const out = await updateArticleRow(url.split('/').pop(), patch)
+    if (!out.ok) return sendJson(res, 502, { error: 'update_failed', detail: out.detail })
     return sendJson(res, 200, { article: out.data })
   }
   if (url.startsWith('/api/admin/articles/') && method === 'DELETE') {

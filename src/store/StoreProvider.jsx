@@ -820,6 +820,33 @@ export function StoreProvider({ children }) {
     [authedFetch, loadAnnouncements],
   )
 
+  const updateAnnouncement = useCallback(
+    async (id, form, file) => {
+      try {
+        const body = { ...form }
+        if (file) {
+          const up = await uploadImageViaApi(file, await getToken())
+          if (up.error) return { error: up.error }
+          body.image_url = up.url
+        }
+        const r = await authedFetch('/api/admin/announcements/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          return { error: `Save failed (${r.status})${j.detail ? ': ' + j.detail : j.error ? ': ' + j.error : ''}` }
+        }
+        await loadAnnouncements()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
+    },
+    [authedFetch, getToken, loadAnnouncements],
+  )
+
   const addArticle = useCallback(
     async (form, file) => {
       try {
@@ -856,6 +883,33 @@ export function StoreProvider({ children }) {
       }
     },
     [authedFetch, loadArticles],
+  )
+
+  const updateArticle = useCallback(
+    async (id, form, file) => {
+      try {
+        const body = { ...form }
+        if (file) {
+          const up = await uploadImageViaApi(file, await getToken())
+          if (up.error) return { error: up.error }
+          body.image_url = up.url
+        }
+        const r = await authedFetch('/api/admin/articles/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          return { error: `Save failed (${r.status})${j.detail ? ': ' + j.detail : j.error ? ': ' + j.error : ''}` }
+        }
+        await loadArticles()
+        return { ok: true }
+      } catch {
+        return { error: 'Network error.' }
+      }
+    },
+    [authedFetch, getToken, loadArticles],
   )
 
   // admin: delete a whole support conversation (clears its messages)
@@ -1297,9 +1351,11 @@ export function StoreProvider({ children }) {
     announcements,
     addAnnouncement,
     deleteAnnouncement,
+    updateAnnouncement,
     articles,
     addArticle,
     deleteArticle,
+    updateArticle,
     selectedArticle,
     openArticle,
     deleteConversation,
