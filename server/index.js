@@ -1269,7 +1269,9 @@ const server = http.createServer(async (req, res) => {
     const methodSel = b.method === 'binance' ? 'binance' : 'paypal'
     if (!fieldId) return sendJson(res, 400, { error: 'field_required' })
 
-    const product = await getProductById(fieldId)
+    // a field lives in `products` (paid) OR `free_fields` (free base) — a free
+    // base can still carry paid version "cuts", so check both tables.
+    const product = (await getProductById(fieldId)) || (await getFreeFieldById(fieldId))
     if (!product) return sendJson(res, 404, { error: 'field_not_found' })
 
     let amount = Number(product.price) || 0
@@ -1858,34 +1860,41 @@ const server = http.createServer(async (req, res) => {
     const ref = parsedUrl.searchParams.get('ref') || ''
     const wantList = parsedUrl.searchParams.get('list') === '1'
     const idx = Math.max(0, parseInt(parsedUrl.searchParams.get('i') || '0', 10) || 0)
+    const vParam = parsedUrl.searchParams.get('v')
     const paid = await getProductById(id)
     const freeF = paid ? null : await getFreeFieldById(id)
     const field = paid || freeF
     if (!field) return sendJson(res, 404, { error: 'field_not_found' })
+    const versions = Array.isArray(field.versions) ? field.versions : []
 
     // a field's bundle = `audios`, falling back to the legacy single `audio_url`
     const bundleOf = (obj, legacy) =>
       Array.isArray(obj && obj.audios) && obj.audios.length
         ? obj.audios
         : (legacy ? [{ path: legacy, name: 'Audio', size: 0 }] : [])
-    let files = bundleOf(field, field.audio_url)
 
-    const isFree = !!freeF || Number(field.price) === 0
-    if (!isFree) {
-      // must prove purchase (paid order ref for this field) — or be admin
-      let allowed = false
-      if (ref) {
-        const order = await getOrderByRef(ref)
-        if (order && order.field_id === id && (order.status === 'paid' || order.status === 'delivered')) {
-          allowed = true
-          // serve the exact version they bought, if it has its own audio bundle
-          if (order.version_id != null && Array.isArray(paid && paid.versions)) {
-            const v = paid.versions.find((x) => Number(x.id) === Number(order.version_id))
-            const vfiles = v ? bundleOf(v, v.audio) : []
-            if (vfiles.length) files = vfiles
-          }
-        }
-      }
+    // Resolve which "cut" is requested. A paid buyer proves it via their order
+    // ref (→ order.version_id); a free listener may pass ?v=<id> to hear a free
+    // version. No target → the base field.
+    let refOrder = null
+    if (ref) refOrder = await getOrderByRef(ref)
+    const refValid = !!refOrder && refOrder.field_id === id && (refOrder.status === 'paid' || refOrder.status === 'delivered')
+    let target = null
+    if (refValid && refOrder.version_id != null) target = versions.find((x) => Number(x.id) === Number(refOrder.version_id)) || null
+    else if (vParam != null) target = versions.find((x) => String(x.id) === String(vParam)) || null
+
+    let files = target ? bundleOf(target, target.audio) : bundleOf(field, field.audio_url)
+    if (!files.length && target) files = bundleOf(field, field.audio_url) // version has no bundle → fall back to base
+
+    // access control: a target is openly playable iff its price is 0 (base free
+    // field, or a 0-priced version). Anything paid needs a matching purchase ref.
+    const baseFree = !!freeF || Number(field.price) === 0
+    const targetPrice = target ? Number(target.price) || 0 : (baseFree ? 0 : Number(field.price) || 0)
+    let allowed = targetPrice <= 0
+    if (!allowed) {
+      const orderVer = refValid && refOrder.version_id != null ? Number(refOrder.version_id) : null
+      const wantVer = target ? Number(target.id) : null
+      if (refValid && orderVer === wantVer) allowed = true
       if (!allowed) {
         const u = await getAuthedUser(req)
         if (u && (u.email === ADMIN_EMAIL || u.role === 'admin')) allowed = true

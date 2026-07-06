@@ -7422,6 +7422,14 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   animation: wf-vp-pop 0.36s var(--wf-ease);
 }
 .wf-vp-chip.active .wf-vp-chip-btn { color: #1a1208; }
+.wf-vp-chip-tag {
+  font-family: var(--wf-mono);
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.72;
+  margin-left: 4px;
+}
 @keyframes wf-vp-pop { 0% { transform: scale(0.9); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .wf-vp-chip-x {
   border: none;

@@ -712,7 +712,7 @@ export default function Admin() {
   const onEditClick = (p, isFree) => {
     setVerEdit(null)
     const vers = Array.isArray(p.versions) ? p.versions : []
-    if (!isFree && vers.length > 0) {
+    if (vers.length > 0) {
       setEditId(null)
       setVerPickId((cur) => (cur === p.id ? null : p.id))
     } else {
@@ -811,7 +811,7 @@ export default function Admin() {
       </label>
       <div className="wf-form-row">
         <label className="wf-field">
-          <span className="wf-field-label">Price ($)</span>
+          <span className="wf-field-label">Price ($) · 0 = free version</span>
           <input className="wf-input" type="number" min="0" value={verEdit.price} onChange={(e) => setVerEdit({ ...verEdit, price: Math.max(0, Number(e.target.value) || 0) })} />
         </label>
         <label className="wf-field">
@@ -1622,11 +1622,14 @@ export default function Admin() {
                         <span className="wf-admin-row-meta">{CAT_LABEL[p.line] || (p.line ? p.line[0].toUpperCase() + p.line.slice(1) : 'Desire')} · Free</span>
                       </div>
                       <SoldEditor item={p} isFree={true} soldEdits={soldEdits} setSoldEdits={setSoldEdits} saveSold={saveSold} />
-                      <button className="wf-edit-btn" aria-label={`Edit ${p.title}`} onClick={() => openEdit(p, true)}>✎</button>
+                      <button className="wf-ver-add" aria-label={`Add version to ${p.title}`} onClick={() => startVersionEdit(p, true, null)}>+ Version</button>
+                      <button className="wf-edit-btn" aria-label={`Edit ${p.title}`} onClick={() => onEditClick(p, true)}>✎</button>
                       <button className="wf-del" aria-label={`Delete ${p.title}`} onClick={() => deleteFreeField(p.id)}>
                         <TrashIcon />
                       </button>
                     </div>
+                    {verPickId === p.id && renderVersionChooser(p, true)}
+                    {verEdit?.fieldId === p.id && renderVersionEditor()}
                     {editId === p.id && renderEditPanel(p)}
                   </div>
                 ))}
