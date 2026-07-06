@@ -50,6 +50,21 @@ export default function Footer({ onNavigate }) {
           </div>
         </div>
 
+        <div>
+          <div className="wf-foot-col-h">Support</div>
+          <div className="wf-foot-links">
+            <button className="wf-flink" onClick={() => openChat()}>
+              <ChatIcon size={16} /> Chat with support
+            </button>
+            <a className="wf-flink" href="mailto:hello@waslerrfields.com?subject=Support">
+              Email us
+            </a>
+            <button className="wf-flink" onClick={() => onNavigate({ page: 'method' })}>
+              How to listen
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <div className="wf-footer-base">
