@@ -684,6 +684,35 @@ a {
      centered content (CTAs) never collides with it on shorter viewports */
   padding: 120px 28px 70px;
 }
+/* ---- cosmic Three.js hero ---- */
+.wf-cosmic { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.wf-cosmic-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: -1; }
+/* foreground canvas paints ABOVE the headline (z-index:2) so asteroids pass in
+   front of the type; pointer-events none keeps CTAs clickable */
+.wf-cosmic-fg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 3; pointer-events: none; }
+.wf-cosmic-fallback {
+  position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity 0.4s ease;
+  background:
+    radial-gradient(60% 45% at 50% 34%, rgba(255, 190, 110, 0.28), transparent 60%),
+    radial-gradient(40% 30% at 50% 34%, rgba(212, 175, 55, 0.35), transparent 62%),
+    radial-gradient(120% 90% at 50% 30%, rgba(20, 24, 40, 0.5), transparent 70%);
+}
+.wf-cosmic-scrim {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(80% 42% at 50% 62%, rgba(6, 5, 8, 0.72), transparent 72%),
+    linear-gradient(180deg, transparent 30%, rgba(6, 5, 8, 0.5) 100%);
+}
+@media (max-width: 767px) {
+  .wf-cosmic-fg { display: none; }
+  .wf-cosmic-scrim { background:
+    radial-gradient(90% 40% at 50% 68%, rgba(6, 5, 8, 0.8), transparent 74%),
+    linear-gradient(180deg, transparent 22%, rgba(6, 5, 8, 0.62) 100%); }
+}
+/* keep the headline / lines / CTAs above the scrim (z:0) but below the
+   foreground asteroid canvas (z:3) */
+.wf-hero-h1, .wf-hero-lines, .wf-hero-cta { position: relative; z-index: 1; }
+
 .wf-orbit-wrap {
   position: absolute;
   top: 50%;
