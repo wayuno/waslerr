@@ -14,6 +14,7 @@ import Checkout from './screens/Checkout'
 import Cart from './screens/Cart'
 import Delivered from './screens/Delivered'
 import ArticleDetail from './screens/ArticleDetail'
+import ArticlesArchive from './screens/ArticlesArchive'
 import Login from './screens/Login'
 import ResetPassword from './screens/ResetPassword'
 import Admin from './screens/Admin'
@@ -61,6 +62,7 @@ function Shell() {
       {page === 'cart' && <Cart />}
       {page === 'delivered' && <Delivered />}
       {page === 'article' && <ArticleDetail />}
+      {page === 'articles' && <ArticlesArchive />}
       {page === 'login' && <Login />}
       {page === 'reset' && <ResetPassword />}
       {page === 'admin' && <Admin />}
