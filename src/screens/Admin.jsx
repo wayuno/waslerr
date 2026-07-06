@@ -5,6 +5,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import MethodEditor from '../components/MethodEditor'
 import AudioBundleEditor from '../components/AudioBundleEditor'
+import ImageCropper from '../components/ImageCropper'
 import { normalizeMethod, defaultMethod } from '../components/methodShared'
 import { TrashIcon, SendIcon, PlusIcon, PencilIcon } from '../components/icons'
 import { categoryOptions as computeCategoryOptions } from '../lib/categories'
@@ -248,6 +249,15 @@ export default function Admin() {
   const [artErr, setArtErr] = useState('')
   const [artBusy, setArtBusy] = useState(false)
   const artFileRef = useRef(null)
+
+  // image crop/reposition modal — every admin photo upload runs through this so
+  // the framing is fixed at upload time (no more top-cropped photos).
+  // crop = { file, aspect, outW, title, apply } | null
+  const [crop, setCrop] = useState(null)
+  const pickImage = (fileObj, opts, apply) => {
+    if (!fileObj) { apply(null); return }
+    setCrop({ ...opts, file: fileObj, apply })
+  }
 
   // inline "edit article" panel (opens in place of the row)
   const [artEditId, setArtEditId] = useState(null)
@@ -868,7 +878,7 @@ export default function Admin() {
           Image {editImg ? `· new: ${editImg.name}` : p.image_url ? '· set ✓ (choose to replace)' : '· none yet'}
         </span>
         {!editImg && p.image_url && <img src={p.image_url} alt="" className="wf-edit-thumb" />}
-        <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setEditImg(e.target.files?.[0] || null)} />
+        <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 1, outW: 1200, title: 'Frame field artwork' }, setEditImg); e.target.value = '' }} />
       </label>
       <AudioBundleEditor
         label="Audio files"
@@ -1448,6 +1458,17 @@ export default function Admin() {
     <div className="wf-app" ref={ref}>
       <Background resonanceTop="50%" />
 
+      {crop && (
+        <ImageCropper
+          file={crop.file}
+          aspect={crop.aspect}
+          outW={crop.outW}
+          title={crop.title}
+          onCancel={() => setCrop(null)}
+          onDone={(cropped) => { crop.apply(cropped); setCrop(null) }}
+        />
+      )}
+
       <section className="wf-section wf-admin-main" style={{ maxWidth: 1080, margin: '0 auto' }}>
         <div className="wf-admin-head" data-reveal>
           <div>
@@ -1684,7 +1705,7 @@ export default function Admin() {
               <MethodEditor value={form.method} onChange={(m) => setForm((f) => ({ ...f, method: m }))} />
               <label className="wf-field">
                 <span className="wf-field-label">Artwork image {file ? `· ${file.name}` : '(optional)'}</span>
-                <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 1, outW: 1200, title: 'Frame field artwork' }, setFile); e.target.value = '' }} />
               </label>
               <AudioBundleEditor
                 label="Audio files (the product — gated)"
@@ -1764,7 +1785,7 @@ export default function Admin() {
               </label>
               <label className="wf-field">
                 <span className="wf-field-label">Photo {aFile ? `· ${aFile.name}` : '(optional)'}</span>
-                <input ref={aFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setAFile(e.target.files?.[0] || null)} />
+                <input ref={aFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 2, outW: 1600, title: 'Frame announcement photo' }, setAFile); e.target.value = '' }} />
               </label>
               {aErr && <p className="wf-auth-error" style={{ margin: 0 }}>{aErr}</p>}
               <button type="submit" className="wf-form-submit wf-mag" disabled={aBusy}>
@@ -1800,7 +1821,7 @@ export default function Admin() {
                         <span className="wf-field-label">
                           {artEditFile ? `Photo · ${artEditFile.name}` : a.image_url ? 'Replace photo (optional)' : 'Photo (optional)'}
                         </span>
-                        <input ref={artEditFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setArtEditFile(e.target.files?.[0] || null)} />
+                        <input ref={artEditFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 2, outW: 1800, title: 'Frame article photo' }, setArtEditFile); e.target.value = '' }} />
                       </label>
                       {artEditErr && <p className="wf-auth-error" style={{ margin: 0 }}>{artEditErr}</p>}
                       <div className="wf-admin-edit-actions">
@@ -1849,7 +1870,7 @@ export default function Admin() {
               </label>
               <label className="wf-field">
                 <span className="wf-field-label">Photo {artFile ? `· ${artFile.name}` : '(optional)'}</span>
-                <input ref={artFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setArtFile(e.target.files?.[0] || null)} />
+                <input ref={artFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 2, outW: 1800, title: 'Frame article photo' }, setArtFile); e.target.value = '' }} />
               </label>
               {artErr && <p className="wf-auth-error" style={{ margin: 0 }}>{artErr}</p>}
               <button type="submit" className="wf-form-submit wf-mag" disabled={artBusy}>
