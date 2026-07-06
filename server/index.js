@@ -2200,6 +2200,23 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true, value })
   }
 
+  // ---- site settings (homepage top picks) ----
+  // { paid: [id, id, id], free: [id, id, id] } — pinned fields shown first on
+  // the homepage sections; anything unpinned falls back to newest-first, so a
+  // fresh upload still surfaces automatically unless the admin overrides.
+  if (url === '/api/settings/top-picks' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { value: null })
+    return sendJson(res, 200, { value: await getSetting('top_picks') })
+  }
+  if (url === '/api/admin/settings/top-picks' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const clean = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x).slice(0, 3) : [])
+    const value = { paid: clean(b.paid), free: clean(b.free) }
+    if (!(await upsertSetting('top_picks', value))) return sendJson(res, 502, { error: 'save_failed' })
+    return sendJson(res, 200, { ok: true, value })
+  }
+
   // set a user's role: customer | admin (admin only; cannot change the owner)
   if (/^\/api\/admin\/users\/[^/]+\/role$/.test(url) && method === 'POST') {
     if (!(await requireAdmin(req, res))) return

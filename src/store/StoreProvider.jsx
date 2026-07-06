@@ -135,6 +135,10 @@ export function StoreProvider({ children }) {
   // storefront catalogue = paid products + free fields (merged, memoized)
   const products = useMemo(() => [...paidProducts, ...freeFieldsList], [paidProducts, freeFieldsList])
 
+  // homepage top picks — admin-pinned field ids per section; unpinned slots
+  // fall back to newest-first so fresh uploads surface automatically
+  const [topPicks, setTopPicksState] = useState({ paid: [], free: [] })
+
   const [payMethod, setPayMethod] = useState('paypal')
   const [payDone, setPayDone] = useState(false)
   const [orderId, setOrderId] = useState(null)
@@ -317,14 +321,23 @@ export function StoreProvider({ children }) {
     if (!error && Array.isArray(data)) setWall(data.map(normalizeReview))
   }, [])
 
-  // community links from the settings table (overrides the localStorage cache)
+  // community links + top picks from the settings table (overrides the cache)
   const loadSettings = useCallback(async (client) => {
     const supabase = client || supabaseRef.current
     if (!supabase) return
-    const { data, error } = await supabase.from('settings').select('value').eq('key', 'community_links').maybeSingle()
-    if (!error && data && data.value) {
-      setCommunityLinksState((prev) => ({ ...prev, ...data.value }))
-      saveCommunityLinks({ ...loadCommunityLinks(), ...data.value })
+    const { data, error } = await supabase.from('settings').select('key, value').in('key', ['community_links', 'top_picks'])
+    if (error || !Array.isArray(data)) return
+    for (const row of data) {
+      if (row.key === 'community_links' && row.value) {
+        setCommunityLinksState((prev) => ({ ...prev, ...row.value }))
+        saveCommunityLinks({ ...loadCommunityLinks(), ...row.value })
+      }
+      if (row.key === 'top_picks' && row.value) {
+        setTopPicksState({
+          paid: Array.isArray(row.value.paid) ? row.value.paid : [],
+          free: Array.isArray(row.value.free) ? row.value.free : [],
+        })
+      }
     }
   }, [])
 
@@ -963,6 +976,28 @@ export function StoreProvider({ children }) {
     [authedFetch],
   )
 
+  // ---- homepage top picks (admin save → Supabase settings) ----
+  const setTopPicks = useCallback(
+    async (next) => {
+      const value = {
+        paid: Array.isArray(next.paid) ? next.paid.filter(Boolean).slice(0, 3) : [],
+        free: Array.isArray(next.free) ? next.free.filter(Boolean).slice(0, 3) : [],
+      }
+      setTopPicksState(value) // optimistic — homepage reorders instantly
+      try {
+        const r = await authedFetch('/api/admin/settings/top-picks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(value),
+        })
+        return r.ok
+      } catch {
+        return false
+      }
+    },
+    [authedFetch],
+  )
+
   // ---- custom categories ----
   const addCategory = useCallback((name) => {
     const next = addCategoryUtil(name)
@@ -1427,6 +1462,8 @@ export function StoreProvider({ children }) {
     pushNotification,
     communityLinks,
     setCommunityLinks,
+    topPicks,
+    setTopPicks,
     customCategories,
     addCategory,
     removeCategory,
