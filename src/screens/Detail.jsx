@@ -116,9 +116,11 @@ export default function Detail() {
   }
   const downloadAudio = () => downloadTrack(0)
 
-  // share this field — native Web Share when available, else copy the link
+  // share this field — native Web Share when available, else copy the link.
+  // /f/<id> is the server-rendered share URL whose og tags carry THIS field's
+  // photo + name + description (link previews show the product, not the site).
   const shareField = async () => {
-    const url = window.location.href
+    const url = `${window.location.origin}/f/${encodeURIComponent(f.id)}`
     const data = { title: f.title || 'Waslerr field', text: f.desc || 'A Waslerr field', url }
     if (navigator.share) {
       try { await navigator.share(data) } catch { /* cancelled */ }

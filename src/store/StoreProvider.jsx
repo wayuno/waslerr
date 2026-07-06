@@ -338,6 +338,20 @@ export function StoreProvider({ children }) {
     },
     [navigate],
   )
+
+  // shared product links: the server serves /f/<id> with product og tags; on
+  // boot we hold the id until the catalog loads, then open that field
+  const [pendingFieldLink, setPendingFieldLink] = useState(() => {
+    const m = typeof window !== 'undefined' ? window.location.pathname.match(/^\/f\/([^/]+)/) : null
+    return m ? decodeURIComponent(m[1]) : null
+  })
+  useEffect(() => {
+    if (!pendingFieldLink || !products.some((p) => p.id === pendingFieldLink)) return
+    const id = pendingFieldLink
+    setPendingFieldLink(null)
+    window.history.replaceState({}, '', '/')
+    openDetail(id)
+  }, [pendingFieldLink, products, openDetail])
   const goCheckout = useCallback(
     (id, versionId = null) => {
       if (!loggedIn) {

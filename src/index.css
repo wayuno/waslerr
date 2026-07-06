@@ -7234,7 +7234,8 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-lm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 130;
+  /* above the nav and every page layer — the modal owns the screen */
+  z-index: 500;
   display: flex;
   justify-content: center;
   padding: 28px;
@@ -7397,8 +7398,18 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 
 @media (max-width: 640px) {
   .wf-lm-overlay { padding: 0; }
-  .wf-lm-panel { border-radius: 0; padding: 16px 18px 36px; min-height: 100%; }
-  .wf-lm-grid { grid-template-columns: 1fr; }
+  .wf-lm-panel { border-radius: 0; padding: 0 18px calc(40px + env(safe-area-inset-bottom, 0px)); min-height: 100%; }
+  /* the close bar stays pinned while the method scrolls — always reachable */
+  .wf-lm-bar {
+    position: sticky; top: 0; z-index: 5;
+    margin: 0 -18px 12px; padding: 12px 18px;
+    background: rgba(14, 12, 8, 0.96);
+    border-bottom: 1px solid var(--wf-rule);
+  }
+  .wf-lm-headline { font-size: 26px; }
+  .wf-lm-intro { font-size: 14px; }
+  .wf-lm-grid { grid-template-columns: 1fr; gap: 12px; }
+  .wf-lm-card { padding: 18px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wf-lm-overlay, .wf-lm-panel, .wf-lm-card { animation: none !important; }

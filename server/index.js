@@ -2265,6 +2265,36 @@ const server = http.createServer(async (req, res) => {
 
   if (url.startsWith('/api/')) return sendJson(res, 404, { error: 'not_found' })
 
+  // ---- shareable field pages: /f/<id> ----
+  // Same SPA, but with the field's own og/twitter tags injected so link
+  // previews (WhatsApp, X, iMessage…) show the product photo + name +
+  // description instead of the generic site card. The SPA reads the path on
+  // boot and opens that field.
+  if (/^\/f\/[^/]+$/.test(url) && method === 'GET') {
+    const indexPath = path.join(DIST, 'index.html')
+    if (fs.existsSync(indexPath)) {
+      const id = decodeURIComponent(url.split('/')[2])
+      const product = sbReady() ? (await getProductById(id)) || (await getFreeFieldById(id)) : null
+      let html = fs.readFileSync(indexPath, 'utf8')
+      if (product) {
+        const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        const title = `${esc(product.title)} — Waslerr Fields`
+        const desc = esc((product.description || 'A Waslerr field.').slice(0, 200))
+        const img = product.image_url ? esc(product.image_url) : 'https://waslerrfields.com/icon-512.png'
+        html = html
+          .replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
+          .replace(/(name="description"[\s\S]*?content=")[^"]*(")/, `$1${desc}$2`)
+          .replace(/(property="og:title" content=")[^"]*(")/, `$1${title}$2`)
+          .replace(/(property="og:description" content=")[^"]*(")/, `$1${desc}$2`)
+          .replace(/(property="og:image" content=")[^"]*(")/, `$1${img}$2`)
+          .replace(/(name="twitter:card" content=")[^"]*(")/, product.image_url ? '$1summary_large_image$2' : '$1summary$2')
+          .replace(/(name="twitter:image" content=")[^"]*(")/, `$1${img}$2`)
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      return res.end(html)
+    }
+  }
+
   return serveStatic(req, res)
 })
 
