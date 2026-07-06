@@ -710,6 +710,16 @@ a {
       linear-gradient(180deg, transparent 50%, rgba(7, 5, 8, 0.5) 82%, rgba(7, 5, 8, 0.75) 100%);
   }
 }
+@media (max-width: 767px) and (orientation: portrait) {
+  /* pin the headline TOP at ~58% of the hero (right where the corona glow
+     fades, ≈40–60px below its visible edge) instead of bottom-anchoring —
+     content height no longer decides where the type starts. The min() guard
+     keeps the whole stack above the fold on short phones (360×640). */
+  .wf-hero {
+    justify-content: flex-start;
+    padding: min(58vh, calc(100vh - 320px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+}
 .wf-hero-h1, .wf-hero-lines, .wf-hero-cta { position: relative; z-index: 1; }
 
 .wf-orbit-wrap {
@@ -2011,12 +2021,12 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   .wf-monogram { width: 34px; height: 34px; font-size: 19px; }
   .wf-brandmark { width: 34px; height: 34px; }
 
-  /* hero — continuous composition: sun centre ~30% (canvas), headline pulled
-     UP to ~52–55% height (big bottom padding lifts the stack), tight spacing */
-  .wf-hero { padding: 80px 16px calc(clamp(48px, 12vh, 108px) + env(safe-area-inset-bottom, 0px)); }
+  /* hero — the top anchor (headline pinned at ~58% hero height) lives in the
+     max-767 portrait block by the cosmic styles; no padding override here or
+     it would clobber that rule (this block comes later in the cascade) */
   .wf-hero-sub { font-size: 15.5px; margin-top: 22px; }
   .wf-hero-h1 { font-size: clamp(36px, 9.6vw, 50px); line-height: 1.1; max-width: 18ch; margin-top: 0; }
-  .wf-hero-lines { margin-top: 18px; gap: 7px; }
+  .wf-hero-lines { margin-top: 24px; gap: 7px; }
   .wf-hero-line { font-size: 12.5px; gap: 8px; padding: 2px 6px; }
   .wf-hero-cta { width: 100%; margin-top: 20px; }
   .wf-hero-cta .wf-btn { flex: 1 1 auto; justify-content: center; padding: 13px 18px; min-height: 48px; }
