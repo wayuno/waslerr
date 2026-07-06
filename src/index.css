@@ -682,7 +682,7 @@ a {
      the headline + CTAs sit below it (artifact composition) */
   justify-content: flex-end;
   text-align: center;
-  padding: 120px 28px calc(clamp(56px, 9vh, 110px) + env(safe-area-inset-bottom, 0px));
+  padding: 120px 28px calc(clamp(40px, 6.5vh, 84px) + env(safe-area-inset-bottom, 0px));
 }
 /* ---- cosmic Three.js hero ---- */
 .wf-cosmic { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -774,11 +774,12 @@ a {
 .wf-hero-h1 {
   font-family: var(--wf-serif);
   font-weight: 400;
-  /* sized so each phrase holds ONE line on desktop, below the sun */
-  font-size: clamp(40px, 5.4vw, 86px);
-  line-height: 1.06;
+  /* sized so each phrase holds ONE line on desktop, starting ~62% viewport
+     height — inside the corona's fading glow, clear of the solid sun disc */
+  font-size: clamp(38px, 4.6vw, 72px);
+  line-height: 1.08;
   letter-spacing: -0.02em;
-  margin: 30px 0 0;
+  margin: 0;
   color: #f3f4f7;
   text-wrap: balance;
   max-width: 26ch;
@@ -814,16 +815,16 @@ a {
   display: flex;
   gap: 16px;
   justify-content: center;
-  margin-top: clamp(36px, 5.5vh, 56px);
+  margin-top: clamp(26px, 4vh, 44px);
   flex-wrap: wrap;
 }
 /* the two field lines between the headline and the CTAs */
 .wf-hero-lines {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 10px;
   align-items: center;
-  margin-top: clamp(28px, 4.5vh, 46px);
+  margin-top: clamp(22px, 3.2vh, 34px);
 }
 .wf-hero-line {
   display: flex;
@@ -2000,14 +2001,15 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   .wf-monogram { width: 34px; height: 34px; font-size: 19px; }
   .wf-brandmark { width: 34px; height: 34px; }
 
-  /* hero */
-  .wf-hero { padding: 80px 20px calc(clamp(48px, 8vh, 90px) + env(safe-area-inset-bottom, 0px)); }
-  .wf-hero-sub { font-size: 15.5px; margin-top: 26px; }
-  /* headline: bigger and bolder on phones, wraps to balanced lines with room
-     to breathe (each phrase gets the width it needs) */
-  .wf-hero-h1 { font-size: clamp(40px, 10.5vw, 58px); line-height: 1.08; max-width: 18ch; margin-top: 22px; }
-  .wf-hero-cta { width: 100%; margin-top: 36px; }
-  .wf-hero-cta .wf-btn { flex: 1 1 auto; justify-content: center; padding: 14px 18px; }
+  /* hero — continuous composition: big sun up top (~28% centre, drawn by the
+     canvas), headline pulled UP to ~55% height, tight lines + full-width CTAs */
+  .wf-hero { padding: 80px 16px calc(clamp(36px, 5.5vh, 56px) + env(safe-area-inset-bottom, 0px)); }
+  .wf-hero-sub { font-size: 15.5px; margin-top: 22px; }
+  .wf-hero-h1 { font-size: clamp(36px, 9.6vw, 50px); line-height: 1.1; max-width: 18ch; margin-top: 0; }
+  .wf-hero-lines { margin-top: 18px; gap: 7px; }
+  .wf-hero-line { font-size: 13px; gap: 8px; padding: 2px 6px; }
+  .wf-hero-cta { width: 100%; margin-top: 22px; }
+  .wf-hero-cta .wf-btn { flex: 1 1 auto; justify-content: center; padding: 13px 18px; min-height: 48px; }
   .wf-trust { gap: 12px; flex-wrap: wrap; justify-content: center; text-align: center; font-size: 12px; margin-top: 38px; }
 
   /* section rhythm + body sizes */
