@@ -8,7 +8,7 @@ import { useStore } from '../store/StoreProvider'
 const AUTO_MS = 5000
 
 export default function ArticlesSlideshow() {
-  const { articles, openArticle } = useStore()
+  const { articles, openArticle, navigate } = useStore()
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const count = articles.length
@@ -48,6 +48,9 @@ export default function ArticlesSlideshow() {
             </div>
             <h2 className="wf-jr-title">Fresh from the lab.</h2>
           </div>
+          <button className="wf-arts-all" onClick={() => navigate('articles')}>
+            All articles →
+          </button>
         </div>
 
         <div

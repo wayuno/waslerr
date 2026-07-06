@@ -7607,7 +7607,22 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
    ============================================================ */
 .wf-arts-head {
   margin-bottom: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
 }
+/* glass link to the archive page, next to the section heading */
+.wf-arts-all {
+  display: inline-flex; align-items: center;
+  font-family: var(--wf-sans); font-size: 13.5px; color: #c9cdd6;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px; padding: 10px 18px; cursor: pointer;
+  transition: border-color 0.3s, color 0.3s;
+}
+.wf-arts-all:hover { border-color: rgba(212, 175, 55, 0.45); color: #f2f3f6; }
 .wf-arts-card {
   position: relative;
   height: 460px;
@@ -8086,4 +8101,126 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   .wf-artd-body p.wf-artd-lead::first-letter { font-size: 64px; }
   .wf-artd-body h2 { font-size: 26px; }
   .wf-artd-foot { margin-top: 56px; }
+}
+
+/* ============================================================
+   Articles archive — "The Archive" listing page
+   ============================================================ */
+.wf-arch-title {
+  font-family: var(--wf-serif); font-weight: 400;
+  font-size: clamp(44px, 6.6vw, 82px); line-height: 1.06;
+  color: #f2f3f6; margin: 26px 0 0;
+}
+.wf-arch-subline {
+  font-family: var(--wf-serif); font-style: italic; font-size: 20px;
+  color: #a9adba; max-width: 620px; margin: 20px auto 0;
+}
+.wf-arch-empty {
+  font-family: var(--wf-serif); font-style: italic; font-size: 20px;
+  color: var(--wf-mute); text-align: center; margin: 70px 0 0;
+}
+.wf-arch-pill {
+  display: inline-flex; align-items: center; width: fit-content;
+  font-family: var(--wf-mono); font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--wf-gold);
+  background: rgba(5, 3, 2, 0.55); backdrop-filter: blur(6px);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 999px; padding: 5px 13px;
+}
+.wf-arch-date {
+  font-family: var(--wf-mono); font-size: 11px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: #c9cdd6;
+}
+.wf-arch-cover-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(130% 90% at 50% -5%, #1e150b 0%, #100c07 40%, #050302 100%);
+}
+.wf-arch-cover-fallback img { opacity: 0.26; object-fit: contain; }
+
+/* featured (latest) card */
+.wf-arch-featured {
+  position: relative; max-width: 1160px; margin: 64px auto 0;
+  height: clamp(340px, 40vw, 520px);
+  border-radius: 24px; overflow: hidden; cursor: pointer;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
+  background: #070508;
+  transition: border-color 0.35s;
+}
+.wf-arch-featured:hover { border-color: rgba(212, 175, 55, 0.45); }
+.wf-arch-featured-media, .wf-arch-featured-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-arch-featured-veil {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(75deg, rgba(5, 3, 2, 0.92), rgba(5, 3, 2, 0.55) 42%, rgba(5, 3, 2, 0.08) 75%);
+}
+.wf-arch-featured-info {
+  position: absolute; left: 0; bottom: 0; z-index: 2;
+  max-width: 560px; padding: 44px 46px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+}
+.wf-arch-featured-meta { display: flex; align-items: center; gap: 14px; }
+.wf-arch-featured-title {
+  font-family: var(--wf-serif); font-weight: 400;
+  font-size: clamp(30px, 3.8vw, 54px); line-height: 1.1;
+  color: #f6f3ea; margin: 0;
+}
+.wf-arch-featured-excerpt {
+  font-family: var(--wf-serif); font-style: italic; font-size: 17px;
+  line-height: 1.6; color: #b9bdc9; margin: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wf-arch-featured .wf-arts-cta { margin-top: 6px; }
+
+/* grid of the rest */
+.wf-arch-grid {
+  max-width: 1160px; margin: 26px auto 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;
+}
+.wf-arch-card {
+  border-radius: 18px; overflow: hidden; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  transition: transform 0.35s var(--wf-ease), border-color 0.35s, box-shadow 0.35s;
+}
+.wf-arch-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 24px 70px -30px rgba(212, 175, 55, 0.25), 0 30px 80px -40px rgba(0, 0, 0, 0.8);
+}
+.wf-arch-card-media { position: relative; height: 200px; }
+.wf-arch-card-cover, .wf-arch-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-arch-card-fade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(0deg, rgba(5, 3, 2, 0.7), transparent 46%);
+}
+.wf-arch-card-tag { position: absolute; top: 14px; left: 14px; z-index: 2; }
+.wf-arch-card-body { padding: 22px 24px 24px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.wf-arch-card-meta {
+  font-family: var(--wf-mono); font-size: 10.5px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--wf-mute);
+}
+.wf-arch-card-title {
+  font-family: var(--wf-serif); font-weight: 400; font-size: 26px;
+  line-height: 1.15; color: #eef0f4; margin: 0;
+}
+.wf-arch-card-excerpt {
+  font-family: var(--wf-sans); font-size: 14px; line-height: 1.6;
+  font-weight: 300; color: #8d93a1; margin: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wf-arch-card-read {
+  font-family: var(--wf-sans); font-size: 13px; font-weight: 600;
+  color: var(--wf-gold); margin-top: 4px;
+}
+.wf-arch-more { display: flex; justify-content: center; margin-top: 44px; }
+.wf-arch-more .wf-artd-back { min-height: 48px; padding: 12px 26px; }
+
+@media (max-width: 767px) {
+  .wf-arch-title { font-size: clamp(38px, 10.4vw, 50px); }
+  .wf-arch-subline { font-size: 17px; }
+  .wf-arch-featured { margin-top: 44px; height: auto; min-height: 340px; }
+  .wf-arch-featured-info { padding: 26px; }
+  .wf-arch-featured-title { font-size: 30px; }
+  .wf-arch-grid { grid-template-columns: 1fr; margin-top: 22px; }
 }
