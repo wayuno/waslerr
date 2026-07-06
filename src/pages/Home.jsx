@@ -55,14 +55,22 @@ function DecryptText({ text, order = 0, className, style }) {
   )
 }
 
+// admin-pinned ids float to the front (in pin order); everything else keeps
+// its newest-first order, so fresh uploads still surface automatically
+const orderByPicks = (list, pins) => {
+  if (!pins?.length) return list
+  const pinned = pins.map((id) => list.find((p) => p.id === id)).filter(Boolean)
+  return [...pinned, ...list.filter((p) => !pins.includes(p.id))]
+}
+
 export default function Home({ onNavigate }) {
-  const { products } = useStore()
+  const { products, topPicks: pinned } = useStore()
   const ref = useRef(null)
   useReveal(ref)
   useMagnetic(ref)
 
-  const topPicks = products.filter((p) => p.priceNum > 0).slice(0, 3)
-  const freeFields = products.filter((p) => p.priceNum === 0).slice(0, 6)
+  const topPicks = orderByPicks(products.filter((p) => p.priceNum > 0), pinned.paid).slice(0, 3)
+  const freeFields = orderByPicks(products.filter((p) => p.priceNum === 0), pinned.free).slice(0, 6)
 
   return (
     <div className="wf-app" ref={ref}>

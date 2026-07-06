@@ -169,6 +169,8 @@ export default function Admin() {
     showToast,
     communityLinks,
     setCommunityLinks,
+    topPicks,
+    setTopPicks,
     customCategories,
     addCategory,
     removeCategory,
@@ -191,6 +193,23 @@ export default function Admin() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const fileInputRef = useRef(null)
+
+  // homepage top picks — 3 slots per section; '' = auto (newest first)
+  const slot3 = (arr) => [arr?.[0] || '', arr?.[1] || '', arr?.[2] || '']
+  const [tpForm, setTpForm] = useState({ paid: slot3(topPicks.paid), free: slot3(topPicks.free) })
+  const [tpBusy, setTpBusy] = useState(false)
+  useEffect(() => {
+    setTpForm({ paid: slot3(topPicks.paid), free: slot3(topPicks.free) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topPicks])
+  const setTpSlot = (kind, i, v) =>
+    setTpForm((f) => ({ ...f, [kind]: f[kind].map((x, j) => (j === i ? v : x)) }))
+  const saveTopPicks = async () => {
+    setTpBusy(true)
+    const ok = await setTopPicks({ paid: tpForm.paid.filter(Boolean), free: tpForm.free.filter(Boolean) })
+    setTpBusy(false)
+    showToast(ok ? 'Top picks saved' : 'Save failed — try again')
+  }
 
   // custom category manager
   const [newCategory, setNewCategory] = useState('')
@@ -1672,6 +1691,43 @@ export default function Admin() {
                   <PlusIcon /> Add
                 </button>
               </form>
+            </div>
+
+            <div className="wf-form-card wf-admin-add" data-reveal>
+              <div className="wf-eyebrow" style={{ marginBottom: 4 }}>Homepage top picks</div>
+              <p className="wf-detail-desc" style={{ margin: 0, fontSize: 13 }}>
+                Pin which fields lead each homepage section. Empty slots stay automatic — the newest upload shows first.
+              </p>
+              {[
+                { kind: 'paid', label: 'Paid · Latest picks', list: paidProducts },
+                { kind: 'free', label: 'Free fields', list: freeFields },
+              ].map(({ kind, label, list }) => (
+                <div key={kind}>
+                  <span className="wf-field-label" style={{ display: 'block', marginBottom: 8 }}>{label}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {tpForm[kind].map((val, i) => (
+                      <label key={i} className="wf-field" style={{ margin: 0 }}>
+                        <select
+                          className="wf-input"
+                          value={val}
+                          onChange={(e) => setTpSlot(kind, i, e.target.value)}
+                          aria-label={`${label} — top ${i + 1}`}
+                        >
+                          <option value="">Top {i + 1} · Auto (newest)</option>
+                          {list.map((p) => (
+                            <option key={p.id} value={p.id} disabled={tpForm[kind].includes(p.id) && val !== p.id}>
+                              {p.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="wf-form-submit wf-mag" onClick={saveTopPicks} disabled={tpBusy}>
+                {tpBusy ? 'Saving…' : 'Save top picks'}
+              </button>
             </div>
 
             <form className="wf-form-card wf-admin-add" data-reveal onSubmit={publish}>
