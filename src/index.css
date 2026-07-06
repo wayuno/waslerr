@@ -717,7 +717,10 @@ a {
      keeps the whole stack above the fold on short phones (360×640). */
   .wf-hero {
     justify-content: flex-start;
-    padding: min(58vh, calc(100vh - 320px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
+    padding: min(50vh, calc(100vh - 340px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
+    /* svh = the viewport the user actually sees (mobile vh ignores browser
+       chrome and lands the text too low) — wins where supported */
+    padding-top: min(50svh, calc(100svh - 340px));
   }
 }
 .wf-hero-h1, .wf-hero-lines, .wf-hero-cta { position: relative; z-index: 1; }
