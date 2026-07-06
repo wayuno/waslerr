@@ -202,7 +202,7 @@ export default function Detail() {
               </div>
             )}
 
-            <VersionPicker field={f} baseFree={baseFree} onSelect={setSelVersion} />
+            <VersionPicker field={f} onSelect={setSelVersion} />
 
             <p className="wf-detail-desc" data-reveal>
               {selVersion?.tagline || f.desc}

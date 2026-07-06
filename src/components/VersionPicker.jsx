@@ -18,7 +18,7 @@ const normVersions = (raw) =>
 // (or offers a free listen) and the buyer receives that version's audio. Works
 // for paid fields AND free fields that carry versions (free base + paid cuts).
 // Admins manage versions from the Field control panel, not here.
-export default function VersionPicker({ field, baseFree, onSelect }) {
+export default function VersionPicker({ field, onSelect }) {
   const versions = useMemo(() => normVersions(field.versions), [field.versions])
   const [sel, setSel] = useState('main') // 'main' = the base field, else a version id
 
@@ -32,8 +32,6 @@ export default function VersionPicker({ field, baseFree, onSelect }) {
 
   if (versions.length === 0) return null
 
-  const tag = (price) => (Number(price) > 0 ? `$${price}` : 'Free')
-
   return (
     <div className="wf-vp" data-reveal>
       <div className="wf-vp-head">
@@ -43,13 +41,13 @@ export default function VersionPicker({ field, baseFree, onSelect }) {
       <div className="wf-vp-chips">
         <span className={`wf-vp-chip${sel === 'main' ? ' active' : ''}`}>
           <button className="wf-vp-chip-btn" onClick={() => setSel('main')}>
-            {field.title || 'Main'} <em className="wf-vp-chip-tag">{tag(baseFree ? 0 : field.priceNum)}</em>
+            {field.title || 'Main'}
           </button>
         </span>
         {versions.map((v) => (
           <span key={v.id} className={`wf-vp-chip${v.id === sel ? ' active' : ''}`}>
             <button className="wf-vp-chip-btn" onClick={() => setSel(v.id)}>
-              {v.name || 'Untitled'} <em className="wf-vp-chip-tag">{tag(v.price)}</em>
+              {v.name || 'Untitled'}
             </button>
           </span>
         ))}
