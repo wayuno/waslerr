@@ -8022,16 +8022,19 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 }
 .wf-artd-byline i { width: 4px; height: 4px; border-radius: 50%; background: var(--wf-gold); }
 
-/* cover image */
+/* cover image — a FIXED frame below the header: whatever the uploaded image's
+   dimensions (portrait, ultra-wide, huge), it crops into this frame via
+   object-fit cover and never exceeds ~45% of the viewport height */
 .wf-artd-cover {
   position: relative; max-width: 1060px; margin: 54px auto 0;
-  height: clamp(260px, 46vw, 520px);
+  height: clamp(260px, 38vw, 460px);
+  max-height: 45vh;
   border-radius: 22px; overflow: hidden;
   border: 1px solid rgba(212, 175, 55, 0.18);
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
   background: radial-gradient(130% 90% at 50% -5%, #1e150b 0%, #100c07 40%, #050302 100%);
 }
-.wf-artd-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-artd-cover img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .wf-artd-cover-veil {
   position: absolute; inset: 0; pointer-events: none;
   background:
@@ -8138,10 +8141,11 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 }
 .wf-arch-cover-fallback img { opacity: 0.26; object-fit: contain; }
 
-/* featured (latest) card */
+/* featured (latest) card — FIXED-height frame; tall/wide uploads crop via
+   object-fit cover, the card never grows to fit the image */
 .wf-arch-featured {
   position: relative; max-width: 1160px; margin: 64px auto 0;
-  height: clamp(340px, 40vw, 520px);
+  height: clamp(300px, 34vw, 440px);
   border-radius: 24px; overflow: hidden; cursor: pointer;
   border: 1px solid rgba(212, 175, 55, 0.2);
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
@@ -8149,7 +8153,7 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   transition: border-color 0.35s;
 }
 .wf-arch-featured:hover { border-color: rgba(212, 175, 55, 0.45); }
-.wf-arch-featured-media, .wf-arch-featured-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-arch-featured-media, .wf-arch-featured-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .wf-arch-featured-veil {
   position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(75deg, rgba(5, 3, 2, 0.92), rgba(5, 3, 2, 0.55) 42%, rgba(5, 3, 2, 0.08) 75%);
@@ -8188,8 +8192,10 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
   border-color: rgba(212, 175, 55, 0.4);
   box-shadow: 0 24px 70px -30px rgba(212, 175, 55, 0.25), 0 30px 80px -40px rgba(0, 0, 0, 0.8);
 }
-.wf-arch-card-media { position: relative; height: 200px; }
-.wf-arch-card-cover, .wf-arch-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* fixed 200px cover (180px on mobile) — uniform card heights whatever the
+   uploaded image's aspect ratio */
+.wf-arch-card-media { position: relative; height: 200px; overflow: hidden; }
+.wf-arch-card-cover, .wf-arch-card-cover img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .wf-arch-card-fade {
   position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(0deg, rgba(5, 3, 2, 0.7), transparent 46%);
@@ -8219,8 +8225,11 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 @media (max-width: 767px) {
   .wf-arch-title { font-size: clamp(38px, 10.4vw, 50px); }
   .wf-arch-subline { font-size: 17px; }
-  .wf-arch-featured { margin-top: 44px; height: auto; min-height: 340px; }
-  .wf-arch-featured-info { padding: 26px; }
+  /* fixed height on mobile too — the image crops, the card never grows */
+  .wf-arch-featured { margin-top: 44px; height: 340px; }
+  .wf-arch-featured-info { padding: 26px; max-width: 100%; }
   .wf-arch-featured-title { font-size: 30px; }
+  .wf-arch-featured-excerpt { -webkit-line-clamp: 1; }
   .wf-arch-grid { grid-template-columns: 1fr; margin-top: 22px; }
+  .wf-arch-card-media { height: 180px; }
 }
