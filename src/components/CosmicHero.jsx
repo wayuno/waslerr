@@ -2,34 +2,42 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 /*
-  CosmicHero — cinematic Three.js hero backdrop (matches the approved artifact):
-  a large glowing lava sun in the upper-centre with a wide soft gold halo, and
-  a field of SMALL gold-lit asteroids scattered around it on slow Keplerian
-  orbits (inner faster, 1/r^1.5) with per-axis tumbling. The DOM headline sits
-  BELOW the sun (hero content is bottom-anchored in CSS), so nothing ever
-  overlaps the type.
+  CosmicHero — cinematic Three.js hero backdrop.
+
+  Composition: a large golden-amber sun (procedural fbm noise + golden fresnel
+  rim + double halo) centred at ~35% viewport height on desktop (~28% on
+  portrait), with an elliptical debris belt (1.6–3.2× sun radius, tilted ~20°,
+  density falling outward) of small gold-lit rocks on Keplerian orbits. The DOM
+  headline sits below, inside the corona's fading glow but never overlapped by
+  the solid disc.
 
   Robustness: WebGL try/catch + static CSS fallback, context-loss recovery,
-  reduced motion (single static frame), ResizeObserver + orientationchange
-  reshape, DPR caps (1.5 mobile / 2 desktop), reduced counts on coarse
-  pointers, IntersectionObserver/visibility pause, ref-only frame loop (no
-  React state), full disposal on unmount.
+  reduced-motion static frame, ResizeObserver + orientationchange refit, DPR
+  caps (1.5 mobile / 2 desktop), reduced counts on coarse pointers,
+  IntersectionObserver/visibility pause, frame-delta motion, ref-only loop
+  (no React state), full disposal on unmount.
 */
+
+const SUN_RADIUS = 6.1 // world units — belt + layout derive from this
 
 // ------- procedural sun: Ashima 3D simplex noise + fbm ---------------------
 const SUN_VERT = /* glsl */ `
   varying vec3 vPos;
+  varying vec3 vNormal;
+  varying vec3 vWorldPos;
   void main() {
     vPos = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vNormal = normalize(normalMatrix * normal);
+    vec4 wp = modelViewMatrix * vec4(position, 1.0);
+    vWorldPos = wp.xyz;
+    gl_Position = projectionMatrix * wp;
   }
 `
 const SUN_FRAG = /* glsl */ `
   varying vec3 vPos;
+  varying vec3 vNormal;
+  varying vec3 vWorldPos;
   uniform float uTime;
-  uniform vec3 uHot;
-  uniform vec3 uCold;
-  uniform vec3 uDark;
 
   vec4 permute(vec4 x){ return mod(((x*34.0)+1.0)*x, 289.0); }
   vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
@@ -82,14 +90,26 @@ const SUN_FRAG = /* glsl */ `
   }
   void main(){
     vec3 p = normalize(vPos);
-    float t = uTime * 0.10;
+    float t = uTime * 0.12; // slow continuous churn
     float n = fbm(p * 2.1 + vec3(t, t * 0.7, -t));
     float veins = fbm(p * 5.0 - vec3(t * 1.3));
-    float heat = clamp(0.52 + 0.5 * n + 0.3 * veins, 0.0, 1.0);
-    // dark sunspot patches carved into a lava-orange surface with hot rims
-    vec3 col = mix(uDark, uCold, smoothstep(0.18, 0.5, heat));
-    col = mix(col, uHot, pow(smoothstep(0.45, 1.0, heat), 1.4));
-    col += pow(heat, 7.0) * 0.55;
+    // raised threshold → hot golden areas cover most of the surface
+    float heat = clamp(0.62 + 0.45 * n + 0.25 * veins, 0.0, 1.0);
+
+    // golden-amber palette (site gold #d4af37 family — never tomato red):
+    // deep ember → warm orange → pale gold highlights
+    vec3 ember  = vec3(0.20, 0.07, 0.02);
+    vec3 orange = vec3(0.80, 0.38, 0.07);
+    vec3 gold   = vec3(1.00, 0.86, 0.52);
+    vec3 col = mix(ember, orange, smoothstep(0.10, 0.48, heat));
+    col = mix(col, gold, pow(smoothstep(0.40, 0.95, heat), 1.25));
+    col += pow(heat, 7.0) * vec3(0.35, 0.30, 0.18);
+
+    // golden fresnel rim so the limb glows into the halo
+    vec3 V = normalize(-vWorldPos);
+    float fres = pow(1.0 - max(dot(normalize(vNormal), V), 0.0), 3.0);
+    col += fres * vec3(1.0, 0.72, 0.38) * 0.85;
+
     gl_FragColor = vec4(col, 1.0);
   }
 `
@@ -130,7 +150,7 @@ export default function CosmicHero() {
     const coarse = mql('(pointer: coarse)').matches
     const reduce = mql('(prefers-reduced-motion: reduce)').matches
     const DPR_CAP = coarse ? 1.5 : 2
-    const N_ASTEROIDS = coarse ? 70 : 150
+    const N_ASTEROIDS = coarse ? 60 : 130
     const N_STARS = coarse ? 300 : 800
     const SEG = coarse ? 48 : 96
 
@@ -141,7 +161,7 @@ export default function CosmicHero() {
     const disposables = []
     const track = (o) => { if (o) disposables.push(o); return o }
     const clock = new THREE.Clock()
-    const layout = { portrait: false, radiusScale: 1, groupY: 0 }
+    const layout = { portrait: false, radiusScale: 1, groupY: 0, sunScale: 1 }
     const pointer = { x: 0, y: 0 }
     const cam = { x: 0, y: 0 }
     const flags = { onScreen: true, visible: true, built: false, running: false }
@@ -151,6 +171,7 @@ export default function CosmicHero() {
     let scene = null
     let camera = null
     let sunGroup = null
+    let beltGroup = null
     let asteroids = null
     let sunMat = null
     let rafId = 0
@@ -168,20 +189,21 @@ export default function CosmicHero() {
     const tmpP = new THREE.Vector3()
     const tmpS = new THREE.Vector3()
 
-    function makeBelt(mesh, list, count, rMin, rMax, sizeMin, sizeMax) {
+    // elliptical debris disc: 1.6–3.2× sun radius, density falling outward
+    function makeBelt(mesh, list, count) {
+      const rMin = SUN_RADIUS * 1.6
+      const rMax = SUN_RADIUS * 3.2
       for (let i = 0; i < count; i++) {
-        const r = rMin + Math.random() * (rMax - rMin)
-        // mostly tiny specks, a few larger rocks (matches the reference look)
-        const big = Math.random() > 0.85
-        const size = big ? sizeMax * (0.7 + Math.random() * 0.3) : sizeMin + Math.random() * (sizeMax * 0.55 - sizeMin)
+        const r = rMin + (rMax - rMin) * Math.pow(Math.random(), 1.6) // denser inward
+        const big = Math.random() > 0.86
+        const size = big ? 1.0 + Math.random() * 0.5 : 0.25 + Math.random() * 0.5
         list.push({
           r,
           a: Math.random() * Math.PI * 2,
-          speed: 0.55 / Math.pow(r, 1.5),          // Keplerian: inner faster
-          yAmp: (Math.random() - 0.5) * r * 0.55,  // wide vertical scatter, not a flat band
-          yPhase: Math.random() * Math.PI * 2,
+          speed: 9 / Math.pow(r, 1.5),            // Keplerian: inner visibly faster
+          yOff: (Math.random() - 0.5) * r * 0.16, // thin disc, not a sphere
           size,
-          tumble: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(1.2),
+          tumble: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(1.3),
           rot: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
         })
       }
@@ -196,7 +218,7 @@ export default function CosmicHero() {
         o.rot.y += o.tumble.y * dt
         o.rot.z += o.tumble.z * dt
         const r = o.r * rScale
-        tmpP.set(Math.cos(o.a) * r, o.yAmp * rScale * Math.sin(o.a * 0.7 + o.yPhase), Math.sin(o.a) * r)
+        tmpP.set(Math.cos(o.a) * r, o.yOff * rScale, Math.sin(o.a) * r)
         tmpE.copy(o.rot)
         tmpQ.setFromEuler(tmpE)
         tmpS.setScalar(o.size)
@@ -228,48 +250,50 @@ export default function CosmicHero() {
       const world = new THREE.Group()
       scene.add(world)
 
-      // lighting: bright gold core (decay 0 → far rocks stay visible but are
-      // still lit only sun-side) + faint ambient so the dark side isn't void
-      const pl = new THREE.PointLight(0xffc46a, 3.2, 0, 0)
+      // Warm PointLight at the sun's core, SAME scene as the rocks.
+      // three r155+ physical lighting: with decay 1.6 the belt sits 10–20 units
+      // out, so intensity is scaled (≈ i/r^1.6) to land ~1.0 at the belt — the
+      // "2.5 at 1 unit" classic-units intent. Rocks get a lit golden rim and
+      // dim naturally with distance.
+      const pl = new THREE.PointLight(0xffa550, 60, 0, 1.6)
       world.add(pl)
-      scene.add(new THREE.AmbientLight(0x2a2318, 0.55))
+      // faint warm ambient: shadow sides read dark brown, never pure black
+      scene.add(new THREE.AmbientLight(0x1a120a, 0.7))
 
-      // ---- sun (large, lava-orange, dark sunspot patches) ----
+      // ---- sun (golden-amber, fresnel rim) ----
       sunGroup = new THREE.Group()
-      const sunGeo = track(new THREE.SphereGeometry(6.1, SEG, SEG))
+      const sunGeo = track(new THREE.SphereGeometry(SUN_RADIUS, SEG, SEG))
       sunMat = track(new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uHot: { value: new THREE.Color(0xffd08a) },
-          uCold: { value: new THREE.Color(0xe0621e) },
-          uDark: { value: new THREE.Color(0x2a1006) },
-        },
+        uniforms: { uTime: { value: 0 } },
         vertexShader: SUN_VERT,
         fragmentShader: SUN_FRAG,
       }))
       sunGroup.add(new THREE.Mesh(sunGeo, sunMat))
 
-      // wide soft halo: a tight bright corona + a huge dim outer glow
-      const coronaTex = track(radialTexture([[0, 'rgba(255,196,110,0.9)'], [0.35, 'rgba(230,120,40,0.42)'], [1, 'rgba(0,0,0,0)']]))
+      // halo: tight bright corona + huge dim outer glow (golden, not red)
+      const coronaTex = track(radialTexture([[0, 'rgba(255,200,120,0.9)'], [0.35, 'rgba(224,150,60,0.4)'], [1, 'rgba(0,0,0,0)']]))
       const coronaMat = track(new THREE.SpriteMaterial({ map: coronaTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.95 }))
       const corona = new THREE.Sprite(coronaMat)
-      corona.scale.setScalar(24)
+      corona.scale.setScalar(SUN_RADIUS * 3.9)
       sunGroup.add(corona)
-      const glowTex = track(radialTexture([[0, 'rgba(255,180,90,0.5)'], [0.45, 'rgba(200,120,50,0.16)'], [1, 'rgba(0,0,0,0)']]))
+      const glowTex = track(radialTexture([[0, 'rgba(255,190,110,0.45)'], [0.45, 'rgba(212,150,60,0.14)'], [1, 'rgba(0,0,0,0)']]))
       const glowMat = track(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.8 }))
       const glow = new THREE.Sprite(glowMat)
-      glow.scale.setScalar(52)
+      glow.scale.setScalar(SUN_RADIUS * 8.5)
       sunGroup.add(glow)
       world.add(sunGroup)
 
-      // ---- asteroid field: small gold-lit rocks scattered around the sun ----
+      // ---- debris belt: elliptical disc tilted ~20°, gold-lit rocks ----
+      beltGroup = new THREE.Group()
+      beltGroup.rotation.x = THREE.MathUtils.degToRad(20)
       const rockGeo = track(new THREE.DodecahedronGeometry(0.3, 0))
-      const rockMat = track(new THREE.MeshStandardMaterial({ color: 0x8a7a62, roughness: 0.95, metalness: 0.15, flatShading: true }))
+      const rockMat = track(new THREE.MeshStandardMaterial({ color: 0x8a7a66, roughness: 0.95, metalness: 0.1, flatShading: true }))
       asteroids = new THREE.InstancedMesh(rockGeo, rockMat, N_ASTEROIDS)
-      makeBelt(asteroids, belt, N_ASTEROIDS, 8.5, 20, 0.28, 1.5)
-      world.add(asteroids)
+      makeBelt(asteroids, belt, N_ASTEROIDS)
+      beltGroup.add(asteroids)
+      world.add(beltGroup)
 
-      // ---- gold starfield ----
+      // ---- gold starfield (the far tiny specks live here, not in the belt) ----
       const starGeo = track(new THREE.BufferGeometry())
       const starPos = new Float32Array(N_STARS * 3)
       for (let i = 0; i < N_STARS; i++) {
@@ -307,13 +331,22 @@ export default function CosmicHero() {
       camera.position.z = dist
       camera.updateProjectionMatrix()
 
-      // sun in the upper-centre; the DOM headline is bottom-anchored in CSS so
-      // the composition reads sun-above / type-below exactly like the artifact
-      const sunScale = portrait ? 0.62 : 1
-      layout.radiusScale = portrait ? 0.66 : 1
-      if (sunGroup) sunGroup.scale.setScalar(sunScale)
       const halfH = Math.tan((fov * Math.PI) / 360) * dist
-      layout.groupY = (portrait ? 0.42 : 0.24) * halfH
+      const halfW = halfH * aspect
+
+      if (portrait) {
+        // sun ≈ 45% of viewport width, centre at ~28% height; belt pulled tight
+        layout.sunScale = (0.45 * halfW) / SUN_RADIUS
+        layout.radiusScale = layout.sunScale * 0.92
+        layout.groupY = 0.44 * halfH // 0.5 - 0.28 = 0.22 → ×2 = 0.44
+      } else {
+        // sun centre at ~35% height; solid disc ends ~55%, headline starts
+        // ~62% → min 60px breathing room between disc edge and cap-height
+        layout.sunScale = 0.95
+        layout.radiusScale = 1
+        layout.groupY = 0.3 * halfH // 0.5 - 0.35 = 0.15 → ×2 = 0.30
+      }
+      if (sunGroup) sunGroup.scale.setScalar(layout.sunScale)
       if (scene) scene.position.y = layout.groupY
 
       bgR.setSize(w, h, false)
@@ -323,11 +356,15 @@ export default function CosmicHero() {
     function renderFrame(dt) {
       const t = clock.elapsedTime
       if (sunMat) sunMat.uniforms.uTime.value = t
-      if (sunGroup) sunGroup.rotation.y += dt * 0.03
+      if (sunGroup) {
+        sunGroup.rotation.y += dt * 0.03
+        // subtle breathing: ±1.2% scale
+        sunGroup.scale.setScalar(layout.sunScale * (1 + 0.012 * Math.sin(t * 0.8)))
+      }
       if (scene?.userData.stars) scene.userData.stars.rotation.y += dt * 0.005
       if (asteroids) updateBelt(asteroids, belt, dt, layout.radiusScale)
 
-      // parallax: pointer on desktop + gentle autonomous drift everywhere
+      // camera: slow autonomous drift everywhere + mouse parallax (desktop only)
       const driftX = Math.sin(t * 0.12) * (layout.portrait ? 0.12 : 0.35)
       const driftY = Math.cos(t * 0.1) * (layout.portrait ? 0.08 : 0.22)
       cam.x += (pointer.x * 1.6 + driftX - cam.x) * Math.min(1, dt * 2.4)
@@ -343,7 +380,7 @@ export default function CosmicHero() {
 
     function frame() {
       if (!flags.running) return
-      const dt = Math.min(0.05, clock.getDelta())
+      const dt = Math.min(0.05, clock.getDelta()) // delta-based: stable on 120Hz + low-end
       renderFrame(dt)
       rafId = requestAnimationFrame(frame)
     }
@@ -406,6 +443,7 @@ export default function CosmicHero() {
       disposables.length = 0
       bgR?.dispose?.(); bgR = null
       asteroids = null
+      beltGroup = null
       build()
     }
     bgCanvas.addEventListener('webglcontextlost', onLost, false)
