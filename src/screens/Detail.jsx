@@ -48,8 +48,9 @@ export default function Detail() {
     setTracks([])
     const fld = selectedProduct
     if (!fld) return
-    const isFree = priceOf(fld) === 0
     const selId = selVersion?.id ?? null
+    // per-cut: a 0-priced version (or free base) lists freely; a paid cut needs proof
+    const isFree = selVersion ? Number(selVersion.price) === 0 : priceOf(fld) === 0
     let purchaseRef = ''
     let purchased = false
     try {
@@ -60,7 +61,7 @@ export default function Detail() {
       purchaseRef = match?.ref || (selId === null ? mine[0]?.ref || '' : '')
     } catch { /* ignore */ }
     if (!((isFree && fld.hasAudio) || purchased)) return
-    const u = `/api/fields/${fld.id}/audio?list=1${isFree ? '' : `&ref=${encodeURIComponent(purchaseRef)}`}`
+    const u = `/api/fields/${fld.id}/audio?list=1${isFree ? (selId != null ? `&v=${selId}` : '') : `&ref=${encodeURIComponent(purchaseRef)}`}`
     let cancel = false
     fetch(u)
       .then((r) => (r.ok ? r.json() : { files: [] }))
@@ -74,7 +75,10 @@ export default function Detail() {
   const f = selectedProduct
   const cat = CATS[f.line] || { label: cap(f.line), cls: '', ph: 'wf-card-ph-desire' }
   const total = priceOf(f)
-  const free = total === 0
+  const baseFree = total === 0
+  // free/paid is per selected cut: a 0-priced version listens free; a paid cut
+  // (even on a free base field) shows a photo + Buy now.
+  const free = selVersion ? Number(selVersion.price) === 0 : baseFree
   const img = f.image_url || f.img
   // per-field benefits set in admin win; otherwise fall back to the static lists
   const benefits = f.benefits?.length
@@ -106,6 +110,7 @@ export default function Detail() {
     const base = `/api/fields/${f.id}/audio`
     const q = []
     if (!free) q.push(`ref=${encodeURIComponent(purchaseRef)}`)
+    else if (selVersion) q.push(`v=${selVersion.id}`) // a free (0-priced) cut
     if (i != null) q.push(`i=${i}`)
     window.open(q.length ? `${base}?${q.join('&')}` : base, '_blank')
   }
@@ -152,7 +157,7 @@ export default function Detail() {
         {/* ===== HERO ===== */}
         <div className="wf-detail-grid">
           <div data-reveal>
-            {free && (img || f.hasAudio) ? (
+            {free && !selVersion && (img || f.hasAudio) ? (
               <PosterPlayer field={f} saved={saved} onDownload={() => { setSaved(true); downloadAudio() }} />
             ) : img ? (
               <figure className="wf-poster-frame">
@@ -197,7 +202,7 @@ export default function Detail() {
               </div>
             )}
 
-            <VersionPicker field={f} isFree={free} onSelect={setSelVersion} />
+            <VersionPicker field={f} baseFree={baseFree} onSelect={setSelVersion} />
 
             <p className="wf-detail-desc" data-reveal>
               {selVersion?.tagline || f.desc}
