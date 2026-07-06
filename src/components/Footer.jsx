@@ -17,7 +17,7 @@ export default function Footer({ onNavigate }) {
       <div className="wf-footer-grid">
         <div>
           <button className="wf-brand" onClick={goHome} style={{ marginBottom: 18 }}>
-            <img className="wf-brandmark" src="/logo-w.png" alt="Waslerr Fields" width="34" height="34" />
+            <img className="wf-brandmark" src="/logo-w-blade.svg" alt="Waslerr Fields" width="34" height="34" />
             <span className="wf-wordmark" style={{ fontSize: 13.5, letterSpacing: '0.26em' }}>
               WASLERR&nbsp;FIELDS
             </span>

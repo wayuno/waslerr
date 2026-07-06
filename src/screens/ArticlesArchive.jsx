@@ -31,7 +31,7 @@ function Cover({ article, height, className }) {
         <img src={article.image_url} alt={article.title} loading="lazy" style={height ? { height } : undefined} />
       ) : (
         <div className="wf-arch-cover-fallback" aria-hidden="true">
-          <img src="/logo-w.png" alt="" width="64" height="64" loading="lazy" />
+          <img src="/logo-w-blade.svg" alt="" width="64" height="64" loading="lazy" />
         </div>
       )}
     </div>

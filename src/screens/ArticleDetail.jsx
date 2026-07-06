@@ -135,7 +135,7 @@ export default function ArticleDetail() {
             </>
           ) : (
             <div className="wf-artd-cover-fallback" aria-hidden="true">
-              <img src="/logo-w.png" alt="" width="88" height="88" />
+              <img src="/logo-w-blade.svg" alt="" width="88" height="88" />
             </div>
           )}
         </figure>
@@ -171,7 +171,7 @@ export default function ArticleDetail() {
         <footer className="wf-artd-foot">
           <div className="wf-artd-ornament" aria-hidden="true">
             <span className="wf-artd-hairline" />
-            <img src="/logo-w.png" alt="" width="22" height="22" style={{ opacity: 0.75 }} />
+            <img src="/logo-w-blade.svg" alt="" width="22" height="22" style={{ opacity: 0.75 }} />
             <span className="wf-artd-hairline flip" />
           </div>
           <p className="wf-artd-foot-line">Ready to go deeper than reading?</p>
