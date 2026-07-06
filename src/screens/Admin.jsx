@@ -6,7 +6,7 @@ import { useMagnetic } from '../hooks/useMagnetic'
 import MethodEditor from '../components/MethodEditor'
 import AudioBundleEditor from '../components/AudioBundleEditor'
 import { normalizeMethod, defaultMethod } from '../components/methodShared'
-import { TrashIcon, SendIcon, PlusIcon } from '../components/icons'
+import { TrashIcon, SendIcon, PlusIcon, PencilIcon } from '../components/icons'
 import { categoryOptions as computeCategoryOptions } from '../lib/categories'
 import { benefitsById, genericBenefits, freeBenefits } from '../data/content'
 
@@ -155,6 +155,7 @@ export default function Admin() {
     articles,
     addArticle,
     deleteArticle,
+    updateArticle,
     deleteConversation,
     deleteUser,
     setUserRole,
@@ -247,6 +248,14 @@ export default function Admin() {
   const [artErr, setArtErr] = useState('')
   const [artBusy, setArtBusy] = useState(false)
   const artFileRef = useRef(null)
+
+  // inline "edit article" panel (opens in place of the row)
+  const [artEditId, setArtEditId] = useState(null)
+  const [artEditForm, setArtEditForm] = useState({ title: '', body: '' })
+  const [artEditFile, setArtEditFile] = useState(null)
+  const [artEditErr, setArtEditErr] = useState('')
+  const [artEditBusy, setArtEditBusy] = useState(false)
+  const artEditFileRef = useRef(null)
 
   // users
   const [users, setUsers] = useState([])
@@ -562,6 +571,37 @@ export default function Admin() {
     setArtForm({ title: '', body: '' })
     setArtFile(null)
     if (artFileRef.current) artFileRef.current.value = ''
+  }
+
+  const startEditArticle = (a) => {
+    setArtEditId(a.id)
+    setArtEditForm({ title: a.title || '', body: a.body || '' })
+    setArtEditFile(null)
+    setArtEditErr('')
+    if (artEditFileRef.current) artEditFileRef.current.value = ''
+  }
+
+  const cancelEditArticle = () => {
+    setArtEditId(null)
+    setArtEditErr('')
+    setArtEditFile(null)
+  }
+
+  const saveEditArticle = async (e) => {
+    e.preventDefault()
+    setArtEditErr('')
+    if (!artEditForm.title.trim()) {
+      setArtEditErr('Title is required.')
+      return
+    }
+    setArtEditBusy(true)
+    const res = await updateArticle(artEditId, { title: artEditForm.title.trim(), body: artEditForm.body.trim() }, artEditFile)
+    setArtEditBusy(false)
+    if (res?.error) {
+      setArtEditErr(res.error)
+      return
+    }
+    cancelEditArticle()
   }
 
   const publish = async (e) => {
@@ -1742,22 +1782,56 @@ export default function Admin() {
               </div>
               <div className="wf-admin-list">
                 {articles.length === 0 && <p className="wf-detail-desc">No articles yet. Write one →</p>}
-                {articles.map((a) => (
-                  <div className="wf-admin-row" key={a.id}>
-                    {a.image_url ? (
-                      <img className="wf-admin-thumb" src={a.image_url} alt="" />
-                    ) : (
-                      <span className="wf-admin-ico wf-ann-ico">✎</span>
-                    )}
-                    <div className="wf-admin-row-text">
-                      <span className="wf-admin-row-title">{a.title}</span>
-                      <span className="wf-admin-row-meta">{a.date}</span>
+                {articles.map((a) =>
+                  artEditId === a.id ? (
+                    <form className="wf-form-card wf-admin-edit" key={a.id} onSubmit={saveEditArticle}>
+                      <div className="wf-eyebrow" style={{ marginBottom: 4 }}>
+                        Edit article
+                      </div>
+                      <label className="wf-field">
+                        <span className="wf-field-label">Title</span>
+                        <input className="wf-input" value={artEditForm.title} onChange={(e) => setArtEditForm({ ...artEditForm, title: e.target.value })} placeholder="Article headline" />
+                      </label>
+                      <label className="wf-field">
+                        <span className="wf-field-label">Description</span>
+                        <textarea className="wf-textarea" rows="4" value={artEditForm.body} onChange={(e) => setArtEditForm({ ...artEditForm, body: e.target.value })} placeholder="What's this article about?" />
+                      </label>
+                      <label className="wf-field">
+                        <span className="wf-field-label">
+                          {artEditFile ? `Photo · ${artEditFile.name}` : a.image_url ? 'Replace photo (optional)' : 'Photo (optional)'}
+                        </span>
+                        <input ref={artEditFileRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => setArtEditFile(e.target.files?.[0] || null)} />
+                      </label>
+                      {artEditErr && <p className="wf-auth-error" style={{ margin: 0 }}>{artEditErr}</p>}
+                      <div className="wf-admin-edit-actions">
+                        <button type="button" className="wf-btn wf-btn-glass" onClick={cancelEditArticle} disabled={artEditBusy}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="wf-form-submit wf-mag" disabled={artEditBusy}>
+                          {artEditBusy ? 'Saving…' : 'Save changes'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="wf-admin-row" key={a.id}>
+                      {a.image_url ? (
+                        <img className="wf-admin-thumb" src={a.image_url} alt="" />
+                      ) : (
+                        <span className="wf-admin-ico wf-ann-ico">✎</span>
+                      )}
+                      <div className="wf-admin-row-text">
+                        <span className="wf-admin-row-title">{a.title}</span>
+                        <span className="wf-admin-row-meta">{a.date}</span>
+                      </div>
+                      <button className="wf-edit" aria-label={`Edit ${a.title}`} onClick={() => startEditArticle(a)}>
+                        <PencilIcon />
+                      </button>
+                      <button className="wf-del" aria-label={`Delete ${a.title}`} onClick={() => deleteArticle(a.id)}>
+                        <TrashIcon />
+                      </button>
                     </div>
-                    <button className="wf-del" aria-label={`Delete ${a.title}`} onClick={() => deleteArticle(a.id)}>
-                      <TrashIcon />
-                    </button>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             </div>
 

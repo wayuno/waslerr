@@ -2401,7 +2401,13 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 .wf-admin-row-meta { font-family: var(--wf-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--wf-mute); margin-top: 2px; }
 .wf-del { flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid rgba(142, 42, 12, 0.3); background: rgba(142, 42, 12, 0.18); color: #e08a6a; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s, transform 0.2s; }
 .wf-del:hover { background: rgba(142, 42, 12, 0.32); transform: translateY(-1px); }
+.wf-edit { flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid rgba(212, 175, 55, 0.3); background: rgba(212, 175, 55, 0.12); color: var(--wf-gold-2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s, transform 0.2s; }
+.wf-edit:hover { background: rgba(212, 175, 55, 0.22); transform: translateY(-1px); }
 .wf-admin-add { display: flex; flex-direction: column; gap: 16px; }
+.wf-admin-edit { display: flex; flex-direction: column; gap: 14px; }
+.wf-admin-edit-actions { display: flex; gap: 10px; }
+.wf-admin-edit-actions .wf-btn-glass { flex: none; }
+.wf-admin-edit-actions .wf-form-submit { flex: 1; }
 .wf-cat-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .wf-cat-chip {
   display: inline-flex;
