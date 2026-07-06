@@ -2,19 +2,18 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 /*
-  CosmicHero — a cinematic, production-ready Three.js hero backdrop.
+  CosmicHero — cinematic Three.js hero backdrop (matches the approved artifact):
+  a large glowing lava sun in the upper-centre with a wide soft gold halo, and
+  a field of SMALL gold-lit asteroids scattered around it on slow Keplerian
+  orbits (inner faster, 1/r^1.5) with per-axis tumbling. The DOM headline sits
+  BELOW the sun (hero content is bottom-anchored in CSS), so nothing ever
+  overlaps the type.
 
-  • Procedural sun (fbm simplex-noise shader) + additive corona sprite
-  • Instanced asteroid belt with Keplerian speeds (inner faster, 1/r^1.5) and
-    per-axis tumbling, lit only sun-side by a PointLight at the core
-  • Gold starfield
-  • Optional desktop-only foreground canvas so a few asteroids pass IN FRONT of
-    the DOM headline (dropped on mobile — everything renders in one canvas)
-
-  Robustness: WebGL try/catch + CSS fallback, context-loss recovery, reduced
-  motion (single static frame), ResizeObserver + orientationchange reshape,
-  DPR caps, coarse-pointer count reduction, IntersectionObserver/visibility
-  pause, ref-only frame loop (no React state), full disposal on unmount.
+  Robustness: WebGL try/catch + static CSS fallback, context-loss recovery,
+  reduced motion (single static frame), ResizeObserver + orientationchange
+  reshape, DPR caps (1.5 mobile / 2 desktop), reduced counts on coarse
+  pointers, IntersectionObserver/visibility pause, ref-only frame loop (no
+  React state), full disposal on unmount.
 */
 
 // ------- procedural sun: Ashima 3D simplex noise + fbm ---------------------
@@ -30,6 +29,7 @@ const SUN_FRAG = /* glsl */ `
   uniform float uTime;
   uniform vec3 uHot;
   uniform vec3 uCold;
+  uniform vec3 uDark;
 
   vec4 permute(vec4 x){ return mod(((x*34.0)+1.0)*x, 289.0); }
   vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
@@ -82,17 +82,19 @@ const SUN_FRAG = /* glsl */ `
   }
   void main(){
     vec3 p = normalize(vPos);
-    float t = uTime * 0.12;
-    float n = fbm(p * 2.4 + vec3(t, t * 0.7, -t));
-    float veins = fbm(p * 5.5 - vec3(t * 1.4));
-    float heat = clamp(0.5 + 0.5 * n + 0.28 * veins, 0.0, 1.0);
-    vec3 col = mix(uCold, uHot, pow(heat, 1.5));
-    col += pow(heat, 6.0) * 0.6;               // bright flare cores
+    float t = uTime * 0.10;
+    float n = fbm(p * 2.1 + vec3(t, t * 0.7, -t));
+    float veins = fbm(p * 5.0 - vec3(t * 1.3));
+    float heat = clamp(0.52 + 0.5 * n + 0.3 * veins, 0.0, 1.0);
+    // dark sunspot patches carved into a lava-orange surface with hot rims
+    vec3 col = mix(uDark, uCold, smoothstep(0.18, 0.5, heat));
+    col = mix(col, uHot, pow(smoothstep(0.45, 1.0, heat), 1.4));
+    col += pow(heat, 7.0) * 0.55;
     gl_FragColor = vec4(col, 1.0);
   }
 `
 
-const mql = (q) => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(q) : { matches: false, addEventListener() {}, removeEventListener() {} })
+const mql = (q) => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(q) : { matches: false })
 const hasWebGL = () => {
   try {
     const c = document.createElement('canvas')
@@ -100,16 +102,14 @@ const hasWebGL = () => {
   } catch { return false }
 }
 
-// radial gradient sprite texture (corona) — CORS-free, generated on a canvas
-function radialTexture(inner, outer) {
+// radial gradient sprite texture (halo/star) — CORS-free canvas texture
+function radialTexture(stops) {
   const s = 256
   const c = document.createElement('canvas')
   c.width = c.height = s
   const ctx = c.getContext('2d')
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2)
-  g.addColorStop(0, inner)
-  g.addColorStop(0.4, outer)
-  g.addColorStop(1, 'rgba(0,0,0,0)')
+  stops.forEach(([at, col]) => g.addColorStop(at, col))
   ctx.fillStyle = g
   ctx.fillRect(0, 0, s, s)
   const tex = new THREE.CanvasTexture(c)
@@ -120,7 +120,6 @@ function radialTexture(inner, outer) {
 export default function CosmicHero() {
   const mountRef = useRef(null)
   const bgRef = useRef(null)
-  const fgRef = useRef(null)
   const fallbackRef = useRef(null)
 
   useEffect(() => {
@@ -130,11 +129,9 @@ export default function CosmicHero() {
 
     const coarse = mql('(pointer: coarse)').matches
     const reduce = mql('(prefers-reduced-motion: reduce)').matches
-    const wantFg = !coarse && !!fgRef.current
     const DPR_CAP = coarse ? 1.5 : 2
-    const N_ASTEROIDS = coarse ? 60 : 150
-    const N_FG = 12
-    const N_STARS = coarse ? 300 : 900
+    const N_ASTEROIDS = coarse ? 70 : 150
+    const N_STARS = coarse ? 300 : 800
     const SEG = coarse ? 48 : 96
 
     const showFallback = () => { if (fallbackRef.current) fallbackRef.current.style.opacity = '1' }
@@ -149,16 +146,12 @@ export default function CosmicHero() {
     const cam = { x: 0, y: 0 }
     const flags = { onScreen: true, visible: true, built: false, running: false }
     const belt = [] // per-instance orbital params
-    const fgBelt = []
 
     let bgR = null
-    let fgR = null
     let scene = null
-    let fgScene = null
     let camera = null
     let sunGroup = null
     let asteroids = null
-    let fgAsteroids = null
     let sunMat = null
     let rafId = 0
     let ro = null
@@ -178,14 +171,17 @@ export default function CosmicHero() {
     function makeBelt(mesh, list, count, rMin, rMax, sizeMin, sizeMax) {
       for (let i = 0; i < count; i++) {
         const r = rMin + Math.random() * (rMax - rMin)
+        // mostly tiny specks, a few larger rocks (matches the reference look)
+        const big = Math.random() > 0.85
+        const size = big ? sizeMax * (0.7 + Math.random() * 0.3) : sizeMin + Math.random() * (sizeMax * 0.55 - sizeMin)
         list.push({
           r,
           a: Math.random() * Math.PI * 2,
-          speed: 0.9 / Math.pow(r, 1.5),           // Keplerian: inner faster
-          inc: (Math.random() - 0.5) * 0.5,        // orbital inclination
-          phase: Math.random() * Math.PI * 2,
-          size: sizeMin + Math.random() * (sizeMax - sizeMin),
-          tumble: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(1.4),
+          speed: 0.55 / Math.pow(r, 1.5),          // Keplerian: inner faster
+          yAmp: (Math.random() - 0.5) * r * 0.55,  // wide vertical scatter, not a flat band
+          yPhase: Math.random() * Math.PI * 2,
+          size,
+          tumble: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(1.2),
           rot: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
         })
       }
@@ -200,7 +196,7 @@ export default function CosmicHero() {
         o.rot.y += o.tumble.y * dt
         o.rot.z += o.tumble.z * dt
         const r = o.r * rScale
-        tmpP.set(Math.cos(o.a) * r, Math.sin(o.a * 0.9 + o.phase) * o.inc * r * 0.5, Math.sin(o.a) * r)
+        tmpP.set(Math.cos(o.a) * r, o.yAmp * rScale * Math.sin(o.a * 0.7 + o.yPhase), Math.sin(o.a) * r)
         tmpE.copy(o.rot)
         tmpQ.setFromEuler(tmpE)
         tmpS.setScalar(o.size)
@@ -213,7 +209,7 @@ export default function CosmicHero() {
     function build() {
       if (flags.built) return
       const { w, h } = dims()
-      if (w < 2 || h < 2) return // wait for a real size (avoids 0×0 setSize)
+      if (w < 2 || h < 2) return // wait for a real size (never setSize 0×0)
 
       try {
         bgR = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: !coarse, alpha: true, powerPreference: 'high-performance' })
@@ -232,41 +228,48 @@ export default function CosmicHero() {
       const world = new THREE.Group()
       scene.add(world)
 
-      // lighting: bright core (decay 0 → no distance dimming, so far rocks stay
-      // visible but each is still lit only on its sun-facing side) + low ambient
-      const pl = new THREE.PointLight(0xffd27a, 2.6, 0, 0)
+      // lighting: bright gold core (decay 0 → far rocks stay visible but are
+      // still lit only sun-side) + faint ambient so the dark side isn't void
+      const pl = new THREE.PointLight(0xffc46a, 3.2, 0, 0)
       world.add(pl)
-      scene.add(new THREE.AmbientLight(0x33406a, 0.28))
+      scene.add(new THREE.AmbientLight(0x2a2318, 0.55))
 
-      // ---- sun ----
+      // ---- sun (large, lava-orange, dark sunspot patches) ----
       sunGroup = new THREE.Group()
-      const sunGeo = track(new THREE.SphereGeometry(3.4, SEG, SEG))
+      const sunGeo = track(new THREE.SphereGeometry(6.1, SEG, SEG))
       sunMat = track(new THREE.ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
-          uHot: { value: new THREE.Color(0xffe6a3) },
-          uCold: { value: new THREE.Color(0xc8541b) },
+          uHot: { value: new THREE.Color(0xffd08a) },
+          uCold: { value: new THREE.Color(0xe0621e) },
+          uDark: { value: new THREE.Color(0x2a1006) },
         },
         vertexShader: SUN_VERT,
         fragmentShader: SUN_FRAG,
       }))
       sunGroup.add(new THREE.Mesh(sunGeo, sunMat))
 
-      const coronaTex = track(radialTexture('rgba(255,214,140,0.95)', 'rgba(210,120,40,0.35)'))
-      const coronaMat = track(new THREE.SpriteMaterial({ map: coronaTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.9 }))
+      // wide soft halo: a tight bright corona + a huge dim outer glow
+      const coronaTex = track(radialTexture([[0, 'rgba(255,196,110,0.9)'], [0.35, 'rgba(230,120,40,0.42)'], [1, 'rgba(0,0,0,0)']]))
+      const coronaMat = track(new THREE.SpriteMaterial({ map: coronaTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.95 }))
       const corona = new THREE.Sprite(coronaMat)
-      corona.scale.setScalar(13)
+      corona.scale.setScalar(24)
       sunGroup.add(corona)
+      const glowTex = track(radialTexture([[0, 'rgba(255,180,90,0.5)'], [0.45, 'rgba(200,120,50,0.16)'], [1, 'rgba(0,0,0,0)']]))
+      const glowMat = track(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.8 }))
+      const glow = new THREE.Sprite(glowMat)
+      glow.scale.setScalar(52)
+      sunGroup.add(glow)
       world.add(sunGroup)
 
-      // ---- asteroid belt ----
-      const rockGeo = track(new THREE.DodecahedronGeometry(0.34, 0))
-      const rockMat = track(new THREE.MeshStandardMaterial({ color: 0x9a8f80, roughness: 1, metalness: 0.05, flatShading: true }))
+      // ---- asteroid field: small gold-lit rocks scattered around the sun ----
+      const rockGeo = track(new THREE.DodecahedronGeometry(0.3, 0))
+      const rockMat = track(new THREE.MeshStandardMaterial({ color: 0x8a7a62, roughness: 0.95, metalness: 0.15, flatShading: true }))
       asteroids = new THREE.InstancedMesh(rockGeo, rockMat, N_ASTEROIDS)
-      makeBelt(asteroids, belt, N_ASTEROIDS, 6.5, 13, 0.5, 1.5)
+      makeBelt(asteroids, belt, N_ASTEROIDS, 8.5, 20, 0.28, 1.5)
       world.add(asteroids)
 
-      // ---- starfield (gold points) ----
+      // ---- gold starfield ----
       const starGeo = track(new THREE.BufferGeometry())
       const starPos = new Float32Array(N_STARS * 3)
       for (let i = 0; i < N_STARS; i++) {
@@ -278,37 +281,15 @@ export default function CosmicHero() {
         starPos[i * 3 + 2] = rr * Math.cos(ph)
       }
       starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3))
-      const starTex = track(radialTexture('rgba(255,240,200,1)', 'rgba(212,175,55,0.5)'))
-      const starMat = track(new THREE.PointsMaterial({ size: 1.5, map: starTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xf0dca0, sizeAttenuation: true }))
+      const starTex = track(radialTexture([[0, 'rgba(255,240,200,1)'], [0.4, 'rgba(212,175,55,0.5)'], [1, 'rgba(0,0,0,0)']]))
+      const starMat = track(new THREE.PointsMaterial({ size: 1.4, map: starTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xf0dca0, sizeAttenuation: true }))
       const stars = new THREE.Points(starGeo, starMat)
       scene.add(stars)
       scene.userData.stars = stars
 
-      // ---- foreground scene (desktop only) ----
-      if (wantFg) {
-        try {
-          fgR = new THREE.WebGLRenderer({ canvas: fgRef.current, antialias: true, alpha: true, powerPreference: 'high-performance' })
-          fgR.setPixelRatio(Math.min(window.devicePixelRatio || 1, DPR_CAP))
-          fgR.setSize(w, h, false)
-          fgR.setClearColor(0x000000, 0)
-          fgScene = new THREE.Scene()
-          fgScene.add(new THREE.AmbientLight(0x33406a, 0.45))
-          const fpl = new THREE.PointLight(0xffd27a, 2.4, 0, 0)
-          fgScene.add(fpl)
-          const fgMat = track(new THREE.MeshStandardMaterial({ color: 0xb0a595, roughness: 1, metalness: 0.05, flatShading: true, transparent: true, opacity: 0.96, depthWrite: false }))
-          fgAsteroids = new THREE.InstancedMesh(rockGeo, fgMat, N_FG)
-          makeBelt(fgAsteroids, fgBelt, N_FG, 7, 12, 1.4, 2.8)
-          fgScene.add(fgAsteroids)
-        } catch {
-          fgR = null
-          fgScene = null
-        }
-      }
-
       flags.built = true
       applyLayout()
 
-      // render one frame now; start the loop unless reduced-motion
       renderFrame(0)
       if (!reduce) start()
     }
@@ -320,57 +301,44 @@ export default function CosmicHero() {
       const portrait = aspect < 0.9
       layout.portrait = portrait
       const fov = portrait ? 64 : 46
-      const dist = portrait ? 50 : 34
+      const dist = portrait ? 52 : 34
       camera.fov = fov
       camera.aspect = aspect
       camera.position.z = dist
       camera.updateProjectionMatrix()
 
-      // shrink sun + tighten belt in portrait; lift the composition so the sun
-      // sits in the upper third and the DOM headline owns the lower half
-      const sunScale = portrait ? 0.72 : 1
-      layout.radiusScale = portrait ? 0.72 : 1
+      // sun in the upper-centre; the DOM headline is bottom-anchored in CSS so
+      // the composition reads sun-above / type-below exactly like the artifact
+      const sunScale = portrait ? 0.62 : 1
+      layout.radiusScale = portrait ? 0.66 : 1
       if (sunGroup) sunGroup.scale.setScalar(sunScale)
-      // lift the whole composition so the sun sits in the upper third and the
-      // DOM headline (centred) owns clear space below it
       const halfH = Math.tan((fov * Math.PI) / 360) * dist
-      layout.groupY = (portrait ? 0.4 : 0.32) * halfH
+      layout.groupY = (portrait ? 0.42 : 0.24) * halfH
       if (scene) scene.position.y = layout.groupY
 
       bgR.setSize(w, h, false)
       bgR.setPixelRatio(Math.min(window.devicePixelRatio || 1, DPR_CAP))
-      if (fgR) {
-        fgR.setSize(w, h, false)
-        fgR.setPixelRatio(Math.min(window.devicePixelRatio || 1, DPR_CAP))
-      }
     }
 
     function renderFrame(dt) {
       const t = clock.elapsedTime
       if (sunMat) sunMat.uniforms.uTime.value = t
-      if (sunGroup) sunGroup.rotation.y += dt * 0.04
-      if (scene?.userData.stars) scene.userData.stars.rotation.y += dt * 0.006
+      if (sunGroup) sunGroup.rotation.y += dt * 0.03
+      if (scene?.userData.stars) scene.userData.stars.rotation.y += dt * 0.005
       if (asteroids) updateBelt(asteroids, belt, dt, layout.radiusScale)
-      if (fgAsteroids) updateBelt(fgAsteroids, fgBelt, dt, layout.radiusScale)
 
-      // parallax: pointer on desktop, gentle autonomous drift always
-      const driftX = Math.sin(t * 0.13) * (layout.portrait ? 0.15 : 0.4)
-      const driftY = Math.cos(t * 0.11) * (layout.portrait ? 0.1 : 0.28)
-      cam.x += (pointer.x * 2.2 + driftX - cam.x) * Math.min(1, dt * 2.4)
-      cam.y += (pointer.y * 1.4 + driftY - cam.y) * Math.min(1, dt * 2.4)
+      // parallax: pointer on desktop + gentle autonomous drift everywhere
+      const driftX = Math.sin(t * 0.12) * (layout.portrait ? 0.12 : 0.35)
+      const driftY = Math.cos(t * 0.1) * (layout.portrait ? 0.08 : 0.22)
+      cam.x += (pointer.x * 1.6 + driftX - cam.x) * Math.min(1, dt * 2.4)
+      cam.y += (pointer.y * 1.0 + driftY - cam.y) * Math.min(1, dt * 2.4)
       if (camera) {
         camera.position.x = cam.x
         camera.position.y = cam.y
-        // look at world origin — the scene is shifted up by groupY, so the sun
-        // renders in the upper third while screen-centre stays clear for type
         camera.lookAt(0, 0, 0)
       }
 
       bgR.render(scene, camera)
-      if (fgR && fgScene) {
-        fgScene.position.y = layout.groupY
-        fgR.render(fgScene, camera)
-      }
     }
 
     function frame() {
@@ -394,8 +362,7 @@ export default function CosmicHero() {
     }
 
     // ---- inputs ----
-    // listen on window: the mount is pointer-events:none (so CTAs stay clickable)
-    // and would never receive pointer events itself
+    // listen on window: the mount is pointer-events:none (CTAs stay clickable)
     const onPointerMove = (e) => {
       const r = mount.getBoundingClientRect()
       if (!r.width || !r.height) return
@@ -408,7 +375,7 @@ export default function CosmicHero() {
     const onResize = () => {
       if (!flags.built) { build(); return }
       applyLayout()
-      if (reduce) renderFrame(0) // reduced-motion: repaint the single static frame
+      if (reduce) renderFrame(0) // reduced-motion: repaint the static frame
     }
     ro = new ResizeObserver(onResize)
     ro.observe(mount)
@@ -434,20 +401,17 @@ export default function CosmicHero() {
       // tear down GL objects and rebuild cleanly on the restored context
       flags.built = false
       belt.length = 0
-      fgBelt.length = 0
       asteroids?.dispose?.()
-      fgAsteroids?.dispose?.()
       disposables.forEach((o) => o.dispose?.())
       disposables.length = 0
       bgR?.dispose?.(); bgR = null
-      fgR?.dispose?.(); fgR = null
-      asteroids = fgAsteroids = null
+      asteroids = null
       build()
     }
     bgCanvas.addEventListener('webglcontextlost', onLost, false)
     bgCanvas.addEventListener('webglcontextrestored', onRestored, false)
 
-    // kick off (build waits for a non-zero size internally)
+    // kick off (build waits internally for a non-zero size)
     build()
 
     return () => {
@@ -460,23 +424,19 @@ export default function CosmicHero() {
       bgCanvas.removeEventListener('webglcontextlost', onLost)
       bgCanvas.removeEventListener('webglcontextrestored', onRestored)
       asteroids?.dispose?.()
-      fgAsteroids?.dispose?.()
       disposables.forEach((o) => o.dispose?.())
       bgR?.dispose?.()
-      fgR?.dispose?.()
       bgR?.forceContextLoss?.()
-      fgR?.forceContextLoss?.()
     }
   }, [])
 
   return (
     <div className="wf-cosmic" ref={mountRef} aria-hidden="true">
-      {/* static radial-gradient fallback (WebGL unavailable / not yet built) */}
+      {/* static radial-gradient fallback (WebGL unavailable) */}
       <div className="wf-cosmic-fallback" ref={fallbackRef} />
       <canvas className="wf-cosmic-bg" ref={bgRef} />
-      {/* legibility scrim: darkens screen-centre behind the headline */}
+      {/* soft bottom fade so the headline stays legible over the glow */}
       <div className="wf-cosmic-scrim" />
-      <canvas className="wf-cosmic-fg" ref={fgRef} />
     </div>
   )
 }
