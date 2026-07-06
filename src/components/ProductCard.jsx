@@ -1,19 +1,16 @@
 import { useMemo, useRef, useState } from 'react'
-import { useAudio } from '../audio/AudioProvider'
 import { useStore } from '../store/StoreProvider'
-import { PlayIcon, PauseIcon, ChevronRight, ArrowDown } from './icons'
+import { ChevronRight, ArrowDown } from './icons'
 
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 
 export default function ProductCard({ field, variant = 'default' }) {
-  const { activeId, toggle } = useAudio()
   const { openDetail, customCategories } = useStore()
   const [open, setOpen] = useState(false)
   const cardRef = useRef(null)
   const glowRef = useRef(null)
   const free = variant === 'free' || !field.price
   const img = field.image_url || field.img
-  const playing = activeId === field.id
   const catMap = useMemo(() => {
     const base = { desire: 'Desire', akashic: 'Akashic', wealth: 'Wealth' }
     const fromCustom = Object.fromEntries((customCategories || []).map((c) => [c.toLowerCase(), c]))
@@ -75,13 +72,6 @@ export default function ProductCard({ field, variant = 'default' }) {
         )}
         <div className="wf-card-scrim" />
         <span className={`wf-badge${free ? ' wf-badge--free' : ''}`}>{free ? 'Free' : 'New release'}</span>
-        <button
-          className={`wf-play${playing ? ' playing' : ''}`}
-          aria-label={playing ? 'Pause preview' : 'Preview audio'}
-          onClick={stop(() => toggle(field.id, field.freq))}
-        >
-          {playing ? <PauseIcon /> : <PlayIcon />}
-        </button>
       </div>
 
       <div className="wf-card-body">
