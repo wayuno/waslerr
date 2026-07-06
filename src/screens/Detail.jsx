@@ -191,16 +191,20 @@ export default function Detail() {
                 )}
             </div>
 
-            {free ? (
-              <div className="wf-free-priceline" data-reveal>
-                <span className="wf-free-pill">Free field</span>
-                <span className="wf-free-price">$0</span>
-              </div>
-            ) : (
-              <div className="wf-detail-price" data-reveal>
-                {selVersion ? `$${selVersion.price}` : f.price || `$${total}`}
-              </div>
-            )}
+            {/* one stable data-reveal node so switching free↔paid cuts never
+                remounts a fresh (invisible) element that misses the reveal */}
+            <div className="wf-detail-priceline" data-reveal>
+              {free ? (
+                <div className="wf-free-priceline">
+                  <span className="wf-free-pill">Free field</span>
+                  <span className="wf-free-price">$0</span>
+                </div>
+              ) : (
+                <div className="wf-detail-price">
+                  {selVersion ? `$${selVersion.price}` : f.price || `$${total}`}
+                </div>
+              )}
+            </div>
 
             <VersionPicker field={f} onSelect={setSelVersion} />
 
