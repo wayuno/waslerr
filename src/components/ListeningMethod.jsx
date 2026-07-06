@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CloseIcon } from './icons'
 import { useStore } from '../store/StoreProvider'
 import { ICON_KEYS, Glyph, uid, normalizeMethod } from './methodShared'
 
 // The Listening Method modal: the written ritual for a field, with an
 // admin-only block editor (add / edit / delete) that auto-saves per product.
+// Rendered through a portal on <body> so no page stacking context (nav,
+// transformed ancestors) can ever paint above it.
 export default function ListeningMethod({ field, isFree, onClose, method, editable = true }) {
   const { isAdmin, updateProduct } = useStore()
   // when showing a specific version's method, it's display-only here — the admin
@@ -13,19 +16,32 @@ export default function ListeningMethod({ field, isFree, onClose, method, editab
   const [edit, setEdit] = useState(false)
   const [data, setData] = useState(() => normalizeMethod(method ?? field.method, field.title))
   const saveTimer = useRef()
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // the hardware/browser back button closes the modal instead of leaving the
+  // site: push a history entry on open, close on popstate; ✕ / Esc / backdrop
+  // route through history.back() so the entry is consumed either way
+  const requestClose = () => window.history.back()
+  useEffect(() => {
+    window.history.pushState({ wfModal: 'listening-method' }, '')
+    const onPop = () => onCloseRef.current()
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   // lock scroll + close on Esc
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKey = (e) => e.key === 'Escape' && onClose()
+    const onKey = (e) => e.key === 'Escape' && requestClose()
     document.addEventListener('keydown', onKey)
     return () => {
       document.body.style.overflow = prev
       document.removeEventListener('keydown', onKey)
       clearTimeout(saveTimer.current)
     }
-  }, [onClose])
+  }, [])
 
   // edit + debounce-save to the product's `method` column
   const update = (next) => {
@@ -51,8 +67,8 @@ export default function ListeningMethod({ field, isFree, onClose, method, editab
 
   const num = (i) => String(i + 1).padStart(2, '0')
 
-  return (
-    <div className="wf-lm-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+  return createPortal(
+    <div className="wf-lm-overlay" onClick={(e) => e.target === e.currentTarget && requestClose()}>
       <div className={`wf-lm-panel${edit ? ' editing' : ''}`} role="dialog" aria-label="The listening method">
         <div className="wf-lm-bar">
           {canEdit ? (
@@ -64,7 +80,7 @@ export default function ListeningMethod({ field, isFree, onClose, method, editab
           )}
           <div className="wf-lm-bar-right">
             {edit && <span className="wf-lm-saved">● Auto-saved</span>}
-            <button className="wf-lm-close" onClick={onClose} aria-label="Close">
+            <button className="wf-lm-close" onClick={requestClose} aria-label="Close">
               <CloseIcon size={18} />
             </button>
           </div>
@@ -145,6 +161,7 @@ export default function ListeningMethod({ field, isFree, onClose, method, editab
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
