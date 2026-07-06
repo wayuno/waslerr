@@ -161,7 +161,7 @@ export default function CosmicHero() {
     const disposables = []
     const track = (o) => { if (o) disposables.push(o); return o }
     const clock = new THREE.Clock()
-    const layout = { portrait: false, radiusScale: 1, groupY: 0, sunScale: 1 }
+    const layout = { portrait: false, radiusScale: 1, groupY: 0, sunScale: 1, beltThick: 1 }
     const pointer = { x: 0, y: 0 }
     const cam = { x: 0, y: 0 }
     const flags = { onScreen: true, visible: true, built: false, running: false }
@@ -211,6 +211,7 @@ export default function CosmicHero() {
     }
 
     function updateBelt(mesh, list, dt, rScale) {
+      const thick = layout.beltThick || 1 // portrait: taller ellipse fills the mid-zone
       for (let i = 0; i < list.length; i++) {
         const o = list[i]
         o.a += o.speed * dt
@@ -218,7 +219,7 @@ export default function CosmicHero() {
         o.rot.y += o.tumble.y * dt
         o.rot.z += o.tumble.z * dt
         const r = o.r * rScale
-        tmpP.set(Math.cos(o.a) * r, o.yOff * rScale, Math.sin(o.a) * r)
+        tmpP.set(Math.cos(o.a) * r, o.yOff * rScale * thick, Math.sin(o.a) * r)
         tmpE.copy(o.rot)
         tmpQ.setFromEuler(tmpE)
         tmpS.setScalar(o.size)
@@ -335,15 +336,19 @@ export default function CosmicHero() {
       const halfW = halfH * aspect
 
       if (portrait) {
-        // sun ≈ 45% of viewport width, centre at ~28% height; belt pulled tight
-        layout.sunScale = (0.45 * halfW) / SUN_RADIUS
+        // sun ≈ 45% of viewport width (height-capped on very narrow screens),
+        // centre at ~30% height; headline starts ~52–55% (CSS), inside the
+        // corona's lower glow — no dead band between them
+        layout.sunScale = Math.min(0.45 * halfW, 0.225 * halfH) / SUN_RADIUS
         layout.radiusScale = layout.sunScale * 0.92
-        layout.groupY = 0.44 * halfH // 0.5 - 0.28 = 0.22 → ×2 = 0.44
+        layout.beltThick = 1.9 // belt ellipse wider vertically → fills the mid-zone
+        layout.groupY = 0.4 * halfH // 0.5 - 0.30 = 0.20 → ×2 = 0.40
       } else {
         // sun centre at ~35% height; solid disc ends ~55%, headline starts
         // ~62% → min 60px breathing room between disc edge and cap-height
         layout.sunScale = 0.95
         layout.radiusScale = 1
+        layout.beltThick = 1
         layout.groupY = 0.3 * halfH // 0.5 - 0.35 = 0.15 → ×2 = 0.30
       }
       if (sunGroup) sunGroup.scale.setScalar(layout.sunScale)
