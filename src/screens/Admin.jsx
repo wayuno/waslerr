@@ -293,6 +293,15 @@ export default function Admin() {
     ids.splice(to, 0, ids.splice(from, 1)[0])
     setFieldOrder(kind, ids)
   }
+  // reliable up/down alternative to dragging (also works on touch)
+  const moveField = (kind, id, dir) => {
+    const ids = (kind === 'paid' ? paidProducts : freeFields).map((p) => p.id)
+    const i = ids.indexOf(id)
+    const j = i + dir
+    if (i === -1 || j < 0 || j >= ids.length) return
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    setFieldOrder(kind, ids)
+  }
   const dragProps = (kind, id) => ({
     onDragOver: (e) => { if (drag?.kind === kind) { e.preventDefault(); if (dragOver !== id) setDragOver(id) } },
     onDrop: (e) => {
@@ -1618,19 +1627,26 @@ export default function Admin() {
         {adminTab === 'fields' && (
           <div className="wf-admin-fields">
             <div data-reveal>
-              <div className="wf-field-label" style={{ marginBottom: 14 }}>
+              <div className="wf-field-label" style={{ marginBottom: 4 }}>
                 Paid fields · {paidProducts.length}
               </div>
+              <p className="wf-detail-desc" style={{ margin: '0 0 14px', fontSize: 12.5 }}>
+                Drag the ⠿ grip — or tap ↑ ↓ — to set the order. This is exactly how fields appear when customers browse all fields.
+              </p>
               <div className="wf-admin-list">
                 {paidProducts.length === 0 && <p className="wf-detail-desc">No paid fields yet. Add one →</p>}
-                {paidProducts.map((p) => (
+                {paidProducts.map((p, i) => (
                   <div key={p.id}>
                     <div
                       className={`wf-admin-row${drag?.kind === 'paid' && drag.id === p.id ? ' dragging' : ''}${dragOver === p.id && drag?.kind === 'paid' ? ' dragover' : ''}`}
                       {...dragProps('paid', p.id)}
                     >
-                      <span className="wf-admin-grip" title="Drag to reorder" aria-label="Drag to reorder" {...gripProps('paid', p.id)}>
-                        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.4" /><circle cx="9" cy="3" r="1.4" /><circle cx="3" cy="8" r="1.4" /><circle cx="9" cy="8" r="1.4" /><circle cx="3" cy="13" r="1.4" /><circle cx="9" cy="13" r="1.4" /></svg>
+                      <span className="wf-admin-reorder">
+                        <span className="wf-admin-grip" title="Drag to reorder" aria-label="Drag to reorder" {...gripProps('paid', p.id)}>
+                          <svg width="14" height="18" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" /><circle cx="3" cy="8" r="1.5" /><circle cx="9" cy="8" r="1.5" /><circle cx="3" cy="13" r="1.5" /><circle cx="9" cy="13" r="1.5" /></svg>
+                        </span>
+                        <button type="button" className="wf-admin-move-btn" aria-label="Move up" title="Move up" disabled={i === 0} onClick={() => moveField('paid', p.id, -1)}>↑</button>
+                        <button type="button" className="wf-admin-move-btn" aria-label="Move down" title="Move down" disabled={i === paidProducts.length - 1} onClick={() => moveField('paid', p.id, 1)}>↓</button>
                       </span>
                       <span
                         className={`wf-admin-ico ${phClass(p.line)}`}
@@ -1663,14 +1679,18 @@ export default function Admin() {
               </div>
               <div className="wf-admin-list">
                 {freeFields.length === 0 && <p className="wf-detail-desc">No free fields yet. Add one with price 0 →</p>}
-                {freeFields.map((p) => (
+                {freeFields.map((p, i) => (
                   <div key={p.id}>
                     <div
                       className={`wf-admin-row${drag?.kind === 'free' && drag.id === p.id ? ' dragging' : ''}${dragOver === p.id && drag?.kind === 'free' ? ' dragover' : ''}`}
                       {...dragProps('free', p.id)}
                     >
-                      <span className="wf-admin-grip" title="Drag to reorder" aria-label="Drag to reorder" {...gripProps('free', p.id)}>
-                        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.4" /><circle cx="9" cy="3" r="1.4" /><circle cx="3" cy="8" r="1.4" /><circle cx="9" cy="8" r="1.4" /><circle cx="3" cy="13" r="1.4" /><circle cx="9" cy="13" r="1.4" /></svg>
+                      <span className="wf-admin-reorder">
+                        <span className="wf-admin-grip" title="Drag to reorder" aria-label="Drag to reorder" {...gripProps('free', p.id)}>
+                          <svg width="14" height="18" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" /><circle cx="3" cy="8" r="1.5" /><circle cx="9" cy="8" r="1.5" /><circle cx="3" cy="13" r="1.5" /><circle cx="9" cy="13" r="1.5" /></svg>
+                        </span>
+                        <button type="button" className="wf-admin-move-btn" aria-label="Move up" title="Move up" disabled={i === 0} onClick={() => moveField('free', p.id, -1)}>↑</button>
+                        <button type="button" className="wf-admin-move-btn" aria-label="Move down" title="Move down" disabled={i === freeFields.length - 1} onClick={() => moveField('free', p.id, 1)}>↓</button>
                       </span>
                       <span
                         className={`wf-admin-ico ${phClass(p.line)}`}
