@@ -5,7 +5,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { useStore } from '../store/StoreProvider'
 import { community } from '../data/content'
-import { YouTubeIcon, DiscordIcon, ChatIcon } from '../components/icons'
+import { YouTubeIcon, DiscordIcon, ChatIcon, SearchIcon, CloseIcon } from '../components/icons'
 
 const KNOWN_LABELS = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'Wealth' }
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
@@ -54,6 +54,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
   const cats = [...new Set(products.map((p) => p.line).filter(Boolean))]
   const CHIPS = [{ cat: 'all', label: 'All fields' }, ...cats.map((c) => ({ cat: c, label: KNOWN_LABELS[c] || cap(c) }))]
   const [cat, setCat] = useState(cats.includes(initialCat) ? initialCat : 'all')
+  const [q, setQ] = useState('') // free-text search across title + description
   const [sort, setSort] = useState('featured') // featured | price-asc | price-desc
   const [count, setCount] = useState(products.length)
   // sort the catalogue by price (featured = original order)
@@ -74,15 +75,19 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
   }, [])
   const showEmpty = settled && count === 0
 
-  // faithful filter: fade + scale out, then hide; reveal shown cards
+  // faithful filter: fade + scale out, then hide; reveal shown cards.
+  // matches on both the category chip and the search box (title + description).
   useEffect(() => {
     const grid = gridRef.current
     if (!grid) return
     const tok = ++tokRef.current
+    const needle = q.trim().toLowerCase()
     const cards = Array.from(grid.querySelectorAll('.wf-card'))
     let shown = 0
     cards.forEach((card) => {
-      const show = cat === 'all' || card.dataset.cat === cat
+      const matchCat = cat === 'all' || card.dataset.cat === cat
+      const matchQ = !needle || (card.dataset.search || '').includes(needle)
+      const show = matchCat && matchQ
       if (show) {
         shown++
         card.style.display = ''
@@ -96,12 +101,12 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
         card.style.opacity = '0'
         card.style.transform = 'scale(.96)'
         setTimeout(() => {
-          if (tokRef.current === tok && cat !== 'all' && card.dataset.cat !== cat) card.style.display = 'none'
+          if (tokRef.current === tok) card.style.display = 'none'
         }, 300)
       }
     })
     setCount(shown)
-  }, [cat, ordered])
+  }, [cat, q, ordered])
 
   return (
     <div className="wf-app" ref={ref}>
@@ -120,7 +125,24 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
           </p>
         </div>
 
-        <div className="wf-chips" data-reveal style={{ margin: '42px 0 16px' }}>
+        <div className="wf-fieldsearch" data-reveal style={{ margin: '34px 0 4px' }}>
+          <SearchIcon size={17} />
+          <input
+            type="search"
+            className="wf-fieldsearch-input"
+            placeholder="Search fields by name…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Search fields"
+          />
+          {q && (
+            <button type="button" className="wf-fieldsearch-clear" onClick={() => setQ('')} aria-label="Clear search">
+              <CloseIcon size={15} />
+            </button>
+          )}
+        </div>
+
+        <div className="wf-chips" data-reveal style={{ margin: '16px 0 16px' }}>
           {CHIPS.map((c) => (
             <button
               key={c.cat}
@@ -148,7 +170,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
           <FieldsEmpty
             filtered={products.length > 0}
             onRequest={() => onNavigate({ page: 'home', section: 'wf-custom' })}
-            onReset={() => setCat('all')}
+            onReset={() => { setCat('all'); setQ('') }}
           />
         )}
         <div className={`wf-grid${products.length < 3 ? ' wf-grid--few' : ''}`} ref={gridRef} style={showEmpty ? { display: 'none' } : undefined}>

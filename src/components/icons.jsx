@@ -89,6 +89,13 @@ export const CloseIcon = ({ size = 18 }) => (
   </svg>
 )
 
+export const SearchIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4.3-4.3" />
+  </svg>
+)
+
 export const SendIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
     <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
