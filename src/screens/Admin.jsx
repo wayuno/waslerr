@@ -171,6 +171,7 @@ export default function Admin() {
     setCommunityLinks,
     topPicks,
     setTopPicks,
+    setFieldOrder,
     customCategories,
     addCategory,
     removeCategory,
@@ -277,6 +278,35 @@ export default function Admin() {
     if (!fileObj) { apply(null); return }
     setCrop({ ...opts, file: fileObj, apply })
   }
+
+  // drag-to-reorder the field lists. Dragging a row's grip and dropping it on
+  // another row rewrites that section's order (paid / free) and persists it, so
+  // the storefront's "browse all fields" shows exactly the admin's arrangement.
+  const [drag, setDrag] = useState(null) // { kind, id } being dragged
+  const [dragOver, setDragOver] = useState(null) // id currently hovered
+  const reorderList = (kind, fromId, toId) => {
+    if (fromId === toId) return
+    const ids = (kind === 'paid' ? paidProducts : freeFields).map((p) => p.id)
+    const from = ids.indexOf(fromId)
+    const to = ids.indexOf(toId)
+    if (from === -1 || to === -1) return
+    ids.splice(to, 0, ids.splice(from, 1)[0])
+    setFieldOrder(kind, ids)
+  }
+  const dragProps = (kind, id) => ({
+    onDragOver: (e) => { if (drag?.kind === kind) { e.preventDefault(); if (dragOver !== id) setDragOver(id) } },
+    onDrop: (e) => {
+      e.preventDefault()
+      if (drag?.kind === kind) reorderList(kind, drag.id, id)
+      setDrag(null)
+      setDragOver(null)
+    },
+  })
+  const gripProps = (kind, id) => ({
+    draggable: true,
+    onDragStart: (e) => { setDrag({ kind, id }); e.dataTransfer.effectAllowed = 'move' },
+    onDragEnd: () => { setDrag(null); setDragOver(null) },
+  })
 
   // inline "edit article" panel (opens in place of the row)
   const [artEditId, setArtEditId] = useState(null)
@@ -1595,7 +1625,13 @@ export default function Admin() {
                 {paidProducts.length === 0 && <p className="wf-detail-desc">No paid fields yet. Add one →</p>}
                 {paidProducts.map((p) => (
                   <div key={p.id}>
-                    <div className="wf-admin-row">
+                    <div
+                      className={`wf-admin-row${drag?.kind === 'paid' && drag.id === p.id ? ' dragging' : ''}${dragOver === p.id && drag?.kind === 'paid' ? ' dragover' : ''}`}
+                      {...dragProps('paid', p.id)}
+                    >
+                      <span className="wf-admin-grip" title="Drag to reorder" aria-label="Drag to reorder" {...gripProps('paid', p.id)}>
+                        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.4" /><circle cx="9" cy="3" r="1.4" /><circle cx="3" cy="8" r="1.4" /><circle cx="9" cy="8" r="1.4" /><circle cx="3" cy="13" r="1.4" /><circle cx="9" cy="13" r="1.4" /></svg>
+                      </span>
                       <span
                         className={`wf-admin-ico ${phClass(p.line)}`}
                         style={p.image_url ? { backgroundImage: `url(${p.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
@@ -1629,7 +1665,13 @@ export default function Admin() {
                 {freeFields.length === 0 && <p className="wf-detail-desc">No free fields yet. Add one with price 0 →</p>}
                 {freeFields.map((p) => (
                   <div key={p.id}>
-                    <div className="wf-admin-row">
+                    <div
+                      className={`wf-admin-row${drag?.kind === 'free' && drag.id === p.id ? ' dragging' : ''}${dragOver === p.id && drag?.kind === 'free' ? ' dragover' : ''}`}
+                      {...dragProps('free', p.id)}
+                    >
+                      <span className="wf-admin-grip" title="Drag to reorder" aria-label="Drag to reorder" {...gripProps('free', p.id)}>
+                        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.4" /><circle cx="9" cy="3" r="1.4" /><circle cx="3" cy="8" r="1.4" /><circle cx="9" cy="8" r="1.4" /><circle cx="3" cy="13" r="1.4" /><circle cx="9" cy="13" r="1.4" /></svg>
+                      </span>
                       <span
                         className={`wf-admin-ico ${phClass(p.line)}`}
                         style={p.image_url ? { backgroundImage: `url(${p.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
