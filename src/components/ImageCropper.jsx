@@ -89,6 +89,19 @@ export default function ImageCropper({ file, aspect = 1, outW = 1200, title = 'A
   const left = (frame.w - dispW) / 2 + off.x
   const top = (frame.h - dispH) / 2 + off.y
 
+  const exportCanvas = (canvas) => {
+    canvas.toBlob(
+      (blob) => {
+        setBusy(false)
+        if (!blob) { onDone(file); return } // fall back to the original on failure
+        const name = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg'
+        onDone(new File([blob], name, { type: 'image/jpeg' }))
+      },
+      'image/jpeg',
+      0.85,
+    )
+  }
+
   const confirm = () => {
     const img = imgRef.current
     if (!img || !nat || !frame.w) return
@@ -105,16 +118,22 @@ export default function ImageCropper({ file, aspect = 1, outW = 1200, title = 'A
     const ctx = canvas.getContext('2d')
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, outW, outH)
-    canvas.toBlob(
-      (blob) => {
-        setBusy(false)
-        if (!blob) { onDone(file); return } // fall back to the original on failure
-        const name = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg'
-        onDone(new File([blob], name, { type: 'image/jpeg' }))
-      },
-      'image/jpeg',
-      0.85,
-    )
+    exportCanvas(canvas)
+  }
+
+  // keep the WHOLE photo at its own aspect ratio — downscale only, no crop
+  const confirmFull = () => {
+    const img = imgRef.current
+    if (!img || !nat) return
+    setBusy(true)
+    const scale = Math.min(1, outW / Math.max(nat.w, nat.h))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(nat.w * scale))
+    canvas.height = Math.max(1, Math.round(nat.h * scale))
+    const ctx = canvas.getContext('2d')
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    exportCanvas(canvas)
   }
 
   return (
@@ -153,10 +172,13 @@ export default function ImageCropper({ file, aspect = 1, outW = 1200, title = 'A
           <input type="range" min="1" max="5" step="0.01" value={zoom} onChange={onZoomInput} aria-label="Zoom" />
           <span aria-hidden="true">+</span>
         </div>
-        <p className="wf-crop-hint">Drag to reposition · scroll or slide to zoom</p>
+        <p className="wf-crop-hint">Drag to reposition · scroll or slide to zoom · or keep the whole photo uncropped</p>
 
         <div className="wf-crop-actions">
           <button type="button" className="wf-btn wf-btn-glass" onClick={onCancel} disabled={busy}>Cancel</button>
+          <button type="button" className="wf-btn wf-btn-glass" onClick={confirmFull} disabled={busy || !nat}>
+            Use full photo
+          </button>
           <button type="button" className="wf-form-submit wf-mag" onClick={confirm} disabled={busy || !nat}>
             {busy ? 'Saving…' : 'Use this photo'}
           </button>

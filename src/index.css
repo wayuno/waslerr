@@ -1082,6 +1082,26 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 }
 .wf-card-media.free { height: 210px; }
 .wf-card:hover .wf-card-media { transform: scale(1.07); }
+/* full-photo frame: the whole artwork is contained (never cut, any aspect
+   ratio), and the leftover frame is filled by a blurred cover of the same
+   photo so odd resolutions still read as a full-bleed card */
+.wf-card-media-full { position: relative; overflow: hidden; }
+.wf-card-media-full .wf-card-media-blur {
+  position: absolute;
+  inset: -24px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(24px) saturate(1.2) brightness(0.7);
+  transform: scale(1.12);
+}
+.wf-card-media-full img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .wf-card-media-ph {
   display: flex;
   align-items: center;
@@ -2501,9 +2521,9 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
   margin: -4px 0 0; text-align: center;
   font-family: var(--wf-mono); font-size: 11px; letter-spacing: 0.05em; color: var(--wf-mute);
 }
-.wf-crop-actions { display: flex; gap: 10px; }
+.wf-crop-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .wf-crop-actions .wf-btn-glass { flex: none; }
-.wf-crop-actions .wf-form-submit { flex: 1; }
+.wf-crop-actions .wf-form-submit { flex: 1; min-width: 160px; }
 .wf-cat-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .wf-cat-chip {
   display: inline-flex;
