@@ -2217,6 +2217,20 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true, value })
   }
 
+  // manual field ordering — full ordered id lists per section (paid / free)
+  if (url === '/api/settings/field-order' && method === 'GET') {
+    if (!sbReady()) return sendJson(res, 200, { value: null })
+    return sendJson(res, 200, { value: await getSetting('field_order') })
+  }
+  if (url === '/api/admin/settings/field-order' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const b = await readBody(req)
+    const clean = (v) => (Array.isArray(v) ? [...new Set(v.filter((x) => typeof x === 'string' && x))].slice(0, 500) : [])
+    const value = { paid: clean(b.paid), free: clean(b.free) }
+    if (!(await upsertSetting('field_order', value))) return sendJson(res, 502, { error: 'save_failed' })
+    return sendJson(res, 200, { ok: true, value })
+  }
+
   // set a user's role: customer | admin (admin only; cannot change the owner)
   if (/^\/api\/admin\/users\/[^/]+\/role$/.test(url) && method === 'POST') {
     if (!(await requireAdmin(req, res))) return

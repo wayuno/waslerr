@@ -2485,7 +2485,24 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 .wf-chart-x { font-family: var(--wf-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--wf-mute); }
 .wf-admin-fields { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); gap: 32px; align-items: start; }
 .wf-admin-list { display: flex; flex-direction: column; gap: 10px; }
-.wf-admin-row { display: flex; align-items: center; gap: 14px; background: var(--wf-glass); border: 1px solid var(--wf-rule); border-radius: 12px; padding: 12px 14px; }
+.wf-admin-row { display: flex; align-items: center; gap: 14px; background: var(--wf-glass); border: 1px solid var(--wf-rule); border-radius: 12px; padding: 12px 14px; transition: border-color 0.18s, opacity 0.18s, transform 0.18s, box-shadow 0.18s; }
+.wf-admin-row.dragging { opacity: 0.45; }
+.wf-admin-row.dragover { border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 -2px 0 rgba(212, 175, 55, 0.6) inset; }
+.wf-admin-grip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 34px;
+  margin: -6px -4px -6px -2px;
+  color: var(--wf-mute);
+  cursor: grab;
+  border-radius: 7px;
+  transition: color 0.18s, background 0.18s;
+}
+.wf-admin-grip:hover { color: var(--wf-gold); background: rgba(212, 175, 55, 0.08); }
+.wf-admin-grip:active { cursor: grabbing; }
 .wf-admin-ico { flex: none; width: 42px; height: 42px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: var(--wf-serif); font-size: 20px; color: rgba(255, 255, 255, 0.5); }
 .wf-admin-row-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .wf-admin-row-title { font-size: 14.5px; color: #eef0f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

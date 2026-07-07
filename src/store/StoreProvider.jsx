@@ -9,6 +9,24 @@ import { CATEGORIES_KEY, loadCategories, addCategory as addCategoryUtil, removeC
 // what the admin publishes/deletes is permanent and nothing reappears on deploy.
 const StoreCtx = createContext(null)
 
+// Apply the admin's manual field order. `order` is an array of ids, top-first.
+// Fields the admin has arranged keep that exact sequence; any field not yet in
+// the order (e.g. a fresh upload) surfaces at the top, newest-first — matching
+// the default "latest picks" behaviour until the admin drags it into place.
+const applyFieldOrder = (list, order) => {
+  if (!Array.isArray(order) || order.length === 0) return list
+  const rank = new Map(order.map((id, i) => [id, i]))
+  return list
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => {
+      const ra = rank.has(a.item.id) ? rank.get(a.item.id) : -1
+      const rb = rank.has(b.item.id) ? rank.get(b.item.id) : -1
+      if (ra !== rb) return ra - rb
+      return a.i - b.i // stable: preserve incoming (created_at desc) order
+    })
+    .map((x) => x.item)
+}
+
 // normalize a free_fields row into the storefront product shape
 const normalizeFreeField = (row) => ({
   id: row.id,
@@ -126,11 +144,21 @@ export function StoreProvider({ children }) {
   const [selectedId, setSelectedId] = useState(null)
   const [checkoutVersionId, setCheckoutVersionId] = useState(null) // version chosen for the current checkout
   const [cartCheckout, setCartCheckout] = useState(false) // true = checking out the whole cart together
-  const [paidProducts, setPaidProducts] = useState([])
-  const [freeFieldsList, setFreeFieldsList] = useState([])
+  const [paidProductsRaw, setPaidProducts] = useState([])
+  const [freeFieldsRaw, setFreeFieldsList] = useState([])
   const [announcements, setAnnouncements] = useState([])
   const [articles, setArticles] = useState([])
   const [selectedArticle, setSelectedArticle] = useState(null)
+
+  // admin-controlled manual ordering of the field lists (Supabase settings).
+  // fieldOrderRef mirrors state so the save callback never reads a stale value.
+  const [fieldOrder, setFieldOrderState] = useState({ paid: [], free: [] })
+  const fieldOrderRef = useRef({ paid: [], free: [] })
+
+  // ordered lists drive BOTH the admin panel and the storefront, so what the
+  // admin arranges is exactly what customers see when browsing all fields.
+  const paidProducts = useMemo(() => applyFieldOrder(paidProductsRaw, fieldOrder.paid), [paidProductsRaw, fieldOrder.paid])
+  const freeFieldsList = useMemo(() => applyFieldOrder(freeFieldsRaw, fieldOrder.free), [freeFieldsRaw, fieldOrder.free])
 
   // storefront catalogue = paid products + free fields (merged, memoized)
   const products = useMemo(() => [...paidProducts, ...freeFieldsList], [paidProducts, freeFieldsList])
@@ -325,7 +353,7 @@ export function StoreProvider({ children }) {
   const loadSettings = useCallback(async (client) => {
     const supabase = client || supabaseRef.current
     if (!supabase) return
-    const { data, error } = await supabase.from('settings').select('key, value').in('key', ['community_links', 'top_picks'])
+    const { data, error } = await supabase.from('settings').select('key, value').in('key', ['community_links', 'top_picks', 'field_order'])
     if (error || !Array.isArray(data)) return
     for (const row of data) {
       if (row.key === 'community_links' && row.value) {
@@ -337,6 +365,14 @@ export function StoreProvider({ children }) {
           paid: Array.isArray(row.value.paid) ? row.value.paid : [],
           free: Array.isArray(row.value.free) ? row.value.free : [],
         })
+      }
+      if (row.key === 'field_order' && row.value) {
+        const next = {
+          paid: Array.isArray(row.value.paid) ? row.value.paid : [],
+          free: Array.isArray(row.value.free) ? row.value.free : [],
+        }
+        fieldOrderRef.current = next
+        setFieldOrderState(next)
       }
     }
   }, [])
@@ -998,6 +1034,27 @@ export function StoreProvider({ children }) {
     [authedFetch],
   )
 
+  // ---- manual field order (admin drag-to-reorder → Supabase settings) ----
+  const setFieldOrder = useCallback(
+    async (kind, orderedIds) => {
+      if (kind !== 'paid' && kind !== 'free') return false
+      const value = { ...fieldOrderRef.current, [kind]: (orderedIds || []).filter(Boolean) }
+      fieldOrderRef.current = value
+      setFieldOrderState(value) // optimistic — lists reorder instantly everywhere
+      try {
+        const r = await authedFetch('/api/admin/settings/field-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(value),
+        })
+        return r.ok
+      } catch {
+        return false
+      }
+    },
+    [authedFetch],
+  )
+
   // ---- custom categories ----
   const addCategory = useCallback((name) => {
     const next = addCategoryUtil(name)
@@ -1464,6 +1521,8 @@ export function StoreProvider({ children }) {
     setCommunityLinks,
     topPicks,
     setTopPicks,
+    fieldOrder,
+    setFieldOrder,
     customCategories,
     addCategory,
     removeCategory,
