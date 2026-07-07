@@ -64,7 +64,10 @@ export default function ProductCard({ field, variant = 'default' }) {
       <div ref={glowRef} className="wf-card-glow" />
       <div className="wf-card-mediawrap">
         {img ? (
-          <img className={`wf-card-media${free ? ' free' : ''}`} src={img} alt={field.title} />
+          <div className={`wf-card-media${free ? ' free' : ''} wf-card-media-full`}>
+            <span className="wf-card-media-blur" style={{ backgroundImage: `url("${img}")` }} aria-hidden="true" />
+            <img src={img} alt={field.title} loading="lazy" />
+          </div>
         ) : (
           <div className={`wf-card-media${free ? ' free' : ''} wf-card-media-ph ${phClass}`} aria-hidden="true">
             W
