@@ -965,6 +965,50 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 /* ============================================================
    Field-link / filter chips
    ============================================================ */
+/* field search box (Fields page) */
+.wf-fieldsearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-rule);
+  color: var(--wf-mute);
+  transition: border-color 0.3s var(--wf-ease), box-shadow 0.3s var(--wf-ease);
+}
+.wf-fieldsearch:focus-within {
+  border-color: rgba(212, 175, 55, 0.45);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+.wf-fieldsearch-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eef0f4;
+  font-family: var(--wf-sans);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+.wf-fieldsearch-input::placeholder { color: var(--wf-mute); }
+.wf-fieldsearch-input::-webkit-search-cancel-button { display: none; }
+.wf-fieldsearch-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--wf-mute);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.wf-fieldsearch-clear:hover { color: #eef0f4; }
 .wf-chips {
   display: flex;
   gap: 10px;
