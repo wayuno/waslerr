@@ -966,13 +966,23 @@ const CONTENT_TYPES = {
   '.woff2': 'font/woff2',
   '.webp': 'image/webp',
 }
+// decodeURIComponent throws URIError on malformed sequences like "/%ZZ" —
+// bots send these constantly; fall back to the raw string instead of crashing.
+const safeDecode = (s) => {
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    return s
+  }
+}
+
 const serveStatic = (req, res) => {
   if (!fs.existsSync(DIST)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' })
     res.end('Frontend not built. Run `npm run build`. (In dev, use the Vite server.)')
     return
   }
-  const urlPath = decodeURIComponent((req.url || '/').split('?')[0])
+  const urlPath = safeDecode((req.url || '/').split('?')[0])
   let filePath = path.join(DIST, urlPath)
   if (!filePath.startsWith(DIST)) filePath = path.join(DIST, 'index.html')
   if (!path.extname(filePath) || !fs.existsSync(filePath)) filePath = path.join(DIST, 'index.html')
@@ -1037,7 +1047,7 @@ const ensureAdminUser = async () => {
   }
 }
 
-const server = http.createServer(async (req, res) => {
+const handleRequest = async (req, res) => {
   const url = (req.url || '').split('?')[0]
   const method = req.method || 'GET'
   const parsedUrl = new URL(req.url || '/', 'http://localhost')
@@ -1155,7 +1165,7 @@ const server = http.createServer(async (req, res) => {
   // ---- coupons ----
   // validate/apply a coupon for a specific field (public; used at checkout)
   if (url.startsWith('/api/coupons/') && method === 'GET') {
-    const code = decodeURIComponent(url.split('/').pop() || '').toUpperCase()
+    const code = safeDecode(url.split('/').pop() || '').toUpperCase()
     if (!sbReady()) return sendJson(res, 503, { error: 'not_configured' })
     const fieldId = parsedUrl.searchParams.get('field') || ''
     const c = await getCoupon(code)
@@ -1545,7 +1555,7 @@ const server = http.createServer(async (req, res) => {
   // 1) admin creates an offer + appends an `offer` card to the thread
   if (/^\/api\/admin\/conversations\/[^/]+\/offers$/.test(url) && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
-    const conversationId = decodeURIComponent(url.split('/')[4] || '')
+    const conversationId = safeDecode(url.split('/')[4] || '')
     const b = await readBody(req)
     const name = (b.name || '').toString().trim()
     const amount = Math.max(0, Number(b.amount) || 0)
@@ -1769,7 +1779,7 @@ const server = http.createServer(async (req, res) => {
   //     shape (incl. internal_note, which never appears in publicOffer).
   if (/^\/api\/admin\/offers\/[^/]+$/.test(url) && method === 'PATCH') {
     if (!(await requireAdmin(req, res))) return
-    const offerId = decodeURIComponent(url.split('/')[4] || '')
+    const offerId = safeDecode(url.split('/')[4] || '')
     const b = await readBody(req)
     const offer = await getOffer(offerId)
     if (!offer) return sendJson(res, 404, { error: 'offer_not_found' })
@@ -1794,7 +1804,7 @@ const server = http.createServer(async (req, res) => {
   //     unpaid linked offer so the customer can't pay a declined request.
   if (/^\/api\/admin\/requests\/[^/]+\/reject$/.test(url) && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
-    const messageId = decodeURIComponent(url.split('/')[4] || '')
+    const messageId = safeDecode(url.split('/')[4] || '')
     const b = await readBody(req)
     const rejected = b.rejected !== false // default true
     const msg = await getMessageById(messageId)
@@ -2030,7 +2040,7 @@ const server = http.createServer(async (req, res) => {
   // one person's full detail: union of their messages + their offers (admin shape)
   if (url.startsWith('/api/admin/people/') && method === 'GET') {
     if (!(await requireAdmin(req, res))) return
-    const key = decodeURIComponent(url.slice('/api/admin/people/'.length))
+    const key = safeDecode(url.slice('/api/admin/people/'.length))
     if (!key) return sendJson(res, 400, { error: 'bad_request' })
     return sendJson(res, 200, { person: await getPersonDetail(key) })
   }
@@ -2043,7 +2053,7 @@ const server = http.createServer(async (req, res) => {
   // admin: delete a whole conversation (clears its messages)
   if (url.startsWith('/api/admin/conversations/') && method === 'DELETE') {
     if (!(await requireAdmin(req, res))) return
-    const cid = decodeURIComponent(url.split('/').pop() || '')
+    const cid = safeDecode(url.split('/').pop() || '')
     if (!cid) return sendJson(res, 400, { error: 'bad_request' })
     if (!(await removeConversation(cid))) return sendJson(res, 502, { error: 'delete_failed' })
     return sendJson(res, 200, { ok: true })
@@ -2304,7 +2314,7 @@ const server = http.createServer(async (req, res) => {
   if (/^\/f\/[^/]+$/.test(url) && method === 'GET') {
     const indexPath = path.join(DIST, 'index.html')
     if (fs.existsSync(indexPath)) {
-      const id = decodeURIComponent(url.split('/')[2])
+      const id = safeDecode(url.split('/')[2])
       const product = sbReady() ? (await getProductById(id)) || (await getFreeFieldById(id)) : null
       let html = fs.readFileSync(indexPath, 'utf8')
       if (product) {
@@ -2327,6 +2337,20 @@ const server = http.createServer(async (req, res) => {
   }
 
   return serveStatic(req, res)
+}
+
+// Any error thrown while handling a request (bad input, upstream failure…)
+// must answer that one request with a 500 — never take the whole process down.
+const server = http.createServer((req, res) => {
+  handleRequest(req, res).catch((e) => {
+    console.error('[waslerr] request error:', req.method, req.url, e)
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'internal_error' }))
+    } else {
+      res.end()
+    }
+  })
 })
 
 server.listen(PORT, () => {
