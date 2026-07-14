@@ -729,11 +729,28 @@ const uploadPrivate = async (filename, contentType, buffer, bucket = 'deliveries
     await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: bucket, name: bucket, public: false, file_size_limit: 104857600 }),
+      body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+    }).catch(() => {})
+    r = await put()
+  }
+  if (!r.ok && r.status === 413) {
+    // bucket-level size cap — remove it (project global limit still applies) and retry
+    await fetch(`${SUPABASE_URL}/storage/v1/bucket/${bucket}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public: false, file_size_limit: null }),
     }).catch(() => {})
     r = await put()
   }
   if (!r.ok) {
+    if (r.status === 413) {
+      // still too big → the PROJECT-wide upload cap (Supabase dashboard setting)
+      const mb = Math.round(buffer.length / 1048576)
+      return {
+        ok: false, status: 413,
+        detail: `file is ${mb}MB, which is over your Supabase project's upload limit. Raise it in Supabase Dashboard → Project Settings → Storage → "Upload file size limit" (Free plan is capped at 50MB — export a smaller MP3 or upgrade).`,
+      }
+    }
     const detail = await r.text().catch(() => '')
     return { ok: false, status: r.status, detail: detail.slice(0, 300) }
   }
