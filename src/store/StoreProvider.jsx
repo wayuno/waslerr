@@ -102,34 +102,68 @@ const uploadImageViaApi = async (file, token) => {
   }
 }
 
-// Upload an audio file through the backend → returns { path } or { error }.
+// Upload a field file (audio, zip, pdf — anything) → returns { path } or { error }.
 // isFree routes it to the free-audio bucket; otherwise the paid field-audio bucket.
+// The file goes DIRECTLY from the browser to Supabase storage via a signed upload
+// URL minted by our backend — it never passes through our server, so multi-GB
+// files work (capped only by the Supabase plan's per-file limit).
 const uploadAudioViaApi = async (file, token, isFree = false) => {
-  // storage bucket caps audio at 100MB; WAV is uncompressed (huge) so guide to MP3
-  if (file && file.size > 95 * 1024 * 1024) {
-    return { error: 'Audio is too large (max ~95MB). WAV files are huge — export as MP3 (much smaller) and re-upload.' }
+  if (!file) return { error: 'No file chosen.' }
+  if (file.size > 4.8 * 1024 * 1024 * 1024) {
+    return { error: 'File is too large (max ~4.8GB per file). Split the archive into parts and upload each.' }
   }
-  if (file && !String(file.type).startsWith('audio/')) return { error: 'Please choose an audio file.' }
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 180000) // never hang forever — fail after 3 min
+  try {
+    const mint = await fetch('/api/admin/upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ filename: file.name, free: !!isFree }),
+    })
+    if (!mint.ok) {
+      // older deployed server without /upload-url → legacy base64 route (small files)
+      if (mint.status === 404) return uploadAudioLegacy(file, token, isFree)
+      const j = await mint.json().catch(() => ({}))
+      return { error: `Upload failed${j.detail ? ': ' + j.detail : ' (' + mint.status + ')'}` }
+    }
+    const { url, path } = await mint.json()
+    const put = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+      body: file,
+    })
+    if (!put.ok) {
+      if (put.status === 413) {
+        const mb = Math.round(file.size / 1048576)
+        return { error: `Upload failed: file is ${mb}MB, over the Supabase project's upload limit. Raise it in Supabase Dashboard → Project Settings → Storage → "Upload file size limit" (Free plan is capped at 50MB).` }
+      }
+      const j = await put.json().catch(() => ({}))
+      return { error: `Upload failed: ${j.message || j.error || 'storage error ' + put.status}` }
+    }
+    return { path }
+  } catch {
+    return { error: 'Upload failed — network error. Check your connection and try again.' }
+  }
+}
+
+// Old path: base64 through our server (~95MB max). Kept only as a fallback while
+// an older server build (without /api/admin/upload-url) is still deployed.
+const uploadAudioLegacy = async (file, token, isFree) => {
+  if (file.size > 95 * 1024 * 1024) {
+    return { error: 'File is too large for the legacy upload route (max ~95MB). Redeploy the server to enable direct multi-GB uploads.' }
+  }
   try {
     const dataBase64 = await fileToBase64(file)
     const up = await fetch('/api/admin/upload-audio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64, free: !!isFree }),
-      signal: ctrl.signal,
     })
     if (!up.ok) {
       const j = await up.json().catch(() => ({}))
-      return { error: `Audio upload failed${j.detail ? ': ' + j.detail : j.status ? ' (' + j.status + ')' : ''}` }
+      return { error: `Upload failed${j.detail ? ': ' + j.detail : j.status ? ' (' + j.status + ')' : ''}` }
     }
     return { path: (await up.json()).path }
-  } catch (e) {
-    if (e?.name === 'AbortError') return { error: 'Audio upload timed out — the file is likely too big. Export as MP3 and try again.' }
-    return { error: 'Audio upload failed — network error. Try a smaller MP3.' }
-  } finally {
-    clearTimeout(timer)
+  } catch {
+    return { error: 'Upload failed — network error. Try a smaller file.' }
   }
 }
 

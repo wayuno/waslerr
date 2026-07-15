@@ -878,8 +878,8 @@ export default function Admin() {
         </label>
       </div>
       <AudioBundleEditor
-        label="Version audio"
-        hint="buyers of this version get all of these"
+        label="Version files"
+        hint="audio, zips, PDFs — buyers of this version get all of these"
         existing={verEdit.audios}
         setExisting={(a) => setVerEdit({ ...verEdit, audios: a })}
         pending={verAudioFiles}
@@ -939,8 +939,8 @@ export default function Admin() {
         <input className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 1, outW: 1200, title: 'Frame field artwork' }, setEditImg); e.target.value = '' }} />
       </label>
       <AudioBundleEditor
-        label="Audio files"
-        hint="buyer gets all of these"
+        label="Files"
+        hint="audio, zips, PDFs — buyer gets all of these"
         existing={editForm.audios}
         setExisting={(a) => setEditForm((f) => ({ ...f, audios: a }))}
         pending={editAudioFiles}
@@ -1829,8 +1829,8 @@ export default function Admin() {
                 <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 1, outW: 1200, title: 'Frame field artwork' }, setFile); e.target.value = '' }} />
               </label>
               <AudioBundleEditor
-                label="Audio files (the product — gated)"
-                hint="add as many as you like; buyer gets all"
+                label="Files (the product — gated)"
+                hint="audio, zips, PDFs — add as many as you like; buyer gets all"
                 pending={audioFiles}
                 setPending={setAudioFiles}
               />

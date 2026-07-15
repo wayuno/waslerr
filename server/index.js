@@ -447,7 +447,7 @@ const cleanAudios = (a) =>
         .slice(0, 30)
         .map((x) => ({
           path: String(x.path).slice(0, 400),
-          name: String(x.name || 'Audio').slice(0, 200),
+          name: String(x.name || 'File').slice(0, 200),
           size: Math.max(0, Number(x.size) || 0),
         }))
     : []
@@ -1089,13 +1089,50 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // upload a field's audio (admin only) → paid audio goes to the private
-  // `field-audio` bucket, free audio goes to its own `free-audio` bucket.
+  // mint a direct-to-storage upload URL (admin only). The browser PUTs the file
+  // straight to Supabase with this URL, so it never passes through this server —
+  // multi-GB zips/audio work, capped only by the Supabase plan's per-file limit.
+  if (url === '/api/admin/upload-url' && method === 'POST') {
+    if (!(await requireAdmin(req, res))) return
+    const { filename, free } = await readBody(req)
+    const bucket = free ? 'free-audio' : 'field-audio'
+    const safe = `${Date.now()}-${String(filename || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    try {
+      const sign = () =>
+        fetch(`${SUPABASE_URL}/storage/v1/object/upload/sign/${bucket}/${encodeURIComponent(safe)}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+          body: '{}',
+        })
+      let r = await sign()
+      if (!r.ok && (r.status === 404 || r.status === 400)) {
+        // bucket missing → create the private bucket then retry
+        await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+        }).catch(() => {})
+        r = await sign()
+      }
+      if (!r.ok) {
+        const detail = await r.text().catch(() => '')
+        return sendJson(res, 502, { error: 'sign_failed', detail: detail.slice(0, 300) })
+      }
+      const d = await r.json().catch(() => null)
+      if (!d || !d.url) return sendJson(res, 502, { error: 'sign_failed', detail: 'storage returned no upload URL' })
+      return sendJson(res, 200, { url: `${SUPABASE_URL}/storage/v1${d.url}`, path: safe })
+    } catch (e) {
+      return sendJson(res, 500, { error: 'sign_error', detail: e?.message })
+    }
+  }
+
+  // upload a field's file (admin only) → paid files go to the private
+  // `field-audio` bucket, free files to `free-audio`. Legacy base64 route —
+  // small files only; big files use /api/admin/upload-url above.
   if (url === '/api/admin/upload-audio' && method === 'POST') {
     if (!(await requireAdmin(req, res))) return
-    const { filename, contentType, dataBase64, free } = await readBody(req, 160e6) // ~120MB audio
-    if (!dataBase64) return sendJson(res, 400, { error: 'no_file', detail: 'No audio received (file may be too large).' })
-    if (!String(contentType || '').startsWith('audio/')) return sendJson(res, 400, { error: 'not_audio', detail: 'Please choose an audio file.' })
+    const { filename, contentType, dataBase64, free } = await readBody(req, 160e6) // ~120MB
+    if (!dataBase64) return sendJson(res, 400, { error: 'no_file', detail: 'No file received (it may be too large).' })
     const bucket = free ? 'free-audio' : 'field-audio'
     try {
       const buffer = Buffer.from(dataBase64, 'base64')
@@ -1876,7 +1913,8 @@ const server = http.createServer(async (req, res) => {
     const id = url.split('/')[3]
     const ref = parsedUrl.searchParams.get('ref') || ''
     const wantList = parsedUrl.searchParams.get('list') === '1'
-    const idx = Math.max(0, parseInt(parsedUrl.searchParams.get('i') || '0', 10) || 0)
+    const iParam = parsedUrl.searchParams.get('i')
+    const idx = Math.max(0, parseInt(iParam || '0', 10) || 0)
     const vParam = parsedUrl.searchParams.get('v')
     const paid = await getProductById(id)
     const freeF = paid ? null : await getFreeFieldById(id)
@@ -1920,8 +1958,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (!files.length) return sendJson(res, 404, { error: 'no_audio' })
     // names + sizes only — downloads go through this same endpoint by index
-    if (wantList) return sendJson(res, 200, { files: files.map((f, i) => ({ name: f.name || `Audio ${i + 1}`, size: f.size || 0, i })) })
-    const pick = files[idx] || files[0]
+    if (wantList) return sendJson(res, 200, { files: files.map((f, i) => ({ name: f.name || `File ${i + 1}`, size: f.size || 0, i })) })
+    // no explicit index = the storefront PLAYER asking for something to stream —
+    // bundles may hold zips/PDFs too, so prefer the first audio-looking file
+    const pick = iParam == null
+      ? (files.find((x) => /\.(mp3|wav|m4a|aac|flac|ogg|opus|aiff?)$/i.test(x.name || '')) || files[0])
+      : (files[idx] || files[0])
     if (!pick || !pick.path) return sendJson(res, 404, { error: 'no_audio' })
     // paid audio lives in field-audio, free audio in its own free-audio bucket
     const bucket = freeF ? 'free-audio' : 'field-audio'
