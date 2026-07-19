@@ -242,8 +242,8 @@ export default function Profile() {
                           {files === 'loading' && <span className="wf-pf-dlnote">Loading your files…</span>}
                           {Array.isArray(files) && files.length === 0 && <span className="wf-pf-dlnote">No audio files on this field yet.</span>}
                           {Array.isArray(files) && files.map((file) => (
-                            <button key={file.i} className="wf-pf-dl ghost wf-mag" onClick={() => downloadOwned(f, file.i)} title={`Download ${file.name}`}>
-                              <DownloadIcon size={14} /> {file.name}
+                            <button key={file.i} className="wf-pf-dl ghost wf-mag" onClick={() => downloadOwned(f, file.i)} title={file.isLink ? `Open ${file.name}` : `Download ${file.name}`}>
+                              {file.isLink ? <span aria-hidden="true">🔗</span> : <DownloadIcon size={14} />} {file.name}
                             </button>
                           ))}
                         </div>

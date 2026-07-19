@@ -56,7 +56,13 @@ export function normalizeReview(row) {
 // existing files; the bucket is private so paths alone aren't downloadable)
 export const cleanAudioList = (a) =>
   Array.isArray(a)
-    ? a.filter((x) => x && x.path).map((x) => ({ path: String(x.path), name: String(x.name || 'Audio'), size: Number(x.size) || 0 }))
+    ? a
+        .filter((x) => x && (x.path || x.url))
+        .map((x) =>
+          x.url
+            ? { url: String(x.url), name: String(x.name || 'Delivery link'), isLink: true }
+            : { path: String(x.path), name: String(x.name || 'Audio'), size: Number(x.size) || 0 },
+        )
     : []
 
 export function normalizeProduct(row) {

@@ -191,6 +191,7 @@ export default function Admin() {
   const [form, setForm] = useState({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [], method: defaultMethod('') })
   const [file, setFile] = useState(null)
   const [audioFiles, setAudioFiles] = useState([]) // new field: bundle of audio files
+  const [formLinks, setFormLinks] = useState([]) // new field: external delivery links (Drive, etc.)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const fileInputRef = useRef(null)
@@ -681,12 +682,13 @@ export default function Admin() {
     }
     setBusy(true)
     const priceNum = parseFloat(String(form.price).replace(/[^0-9.]/g, '')) || 0
-    // upload the audio bundle first (free fields → free bucket)
-    let audios = []
+    // upload the audio bundle first (free fields → free bucket), then append any
+    // external delivery links so both go into the field's bundle together
+    let audios = [...formLinks]
     if (audioFiles.length) {
       const up = await uploadAudios(audioFiles, priceNum === 0)
       if (up?.error) { setBusy(false); return setErr(up.error) }
-      audios = up.audios
+      audios = [...audios, ...up.audios]
     }
     // price 0 → goes to the separate free_fields table; otherwise to products
     const res =
@@ -717,6 +719,7 @@ export default function Admin() {
     setForm({ title: '', category: 'DESIRE', price: '', desc: '', benefits: [], method: defaultMethod('') })
     setFile(null)
     setAudioFiles([])
+    setFormLinks([])
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -1829,8 +1832,10 @@ export default function Admin() {
                 <input ref={fileInputRef} className="wf-input wf-file" type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0] || null, { aspect: 1, outW: 1200, title: 'Frame field artwork' }, setFile); e.target.value = '' }} />
               </label>
               <AudioBundleEditor
-                label="Files (the product — gated)"
-                hint="audio, zips, PDFs — add as many as you like; buyer gets all"
+                label="Files & links (the product — gated)"
+                hint="upload files or paste a link (Drive, etc.); buyer gets all"
+                existing={formLinks}
+                setExisting={setFormLinks}
                 pending={audioFiles}
                 setPending={setAudioFiles}
               />

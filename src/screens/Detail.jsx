@@ -115,6 +115,8 @@ export default function Detail() {
     window.open(q.length ? `${base}?${q.join('&')}` : base, '_blank')
   }
   const downloadAudio = () => downloadTrack(0)
+  // is the entitled deliverable an external link (Drive, etc.) rather than a file?
+  const onlyLinks = tracks.length > 0 && tracks.every((t) => t.isLink)
 
   // share this field — native Web Share when available, else copy the link.
   // /f/<id> is the server-rendered share URL whose og tags carry THIS field's
@@ -221,11 +223,15 @@ export default function Detail() {
                   onClick={() => { setSaved(true); downloadAudio() }}
                   disabled={!f.hasAudio}
                 >
-                  <DownloadIcon /> {f.hasAudio ? (saved ? 'Download again' : 'Download free audio') : 'Audio coming soon'}
+                  <DownloadIcon /> {f.hasAudio
+                    ? onlyLinks
+                      ? (saved ? 'Open your link again' : 'Get your free field')
+                      : (saved ? 'Download again' : 'Download free audio')
+                    : 'Audio coming soon'}
                 </button>
               ) : isPurchased ? (
                 <button className="wf-btn wf-btn-gold wf-mag" onClick={downloadAudio} disabled={!f.hasAudio}>
-                  <DownloadIcon /> {f.hasAudio ? 'Download your audio' : 'Audio coming soon'}
+                  <DownloadIcon /> {f.hasAudio ? (onlyLinks ? 'Open your product link' : 'Download your audio') : 'Audio coming soon'}
                 </button>
               ) : (
                 <>
@@ -259,10 +265,10 @@ export default function Detail() {
 
             {tracks.length > 1 && (
               <div className="wf-tracklist" data-reveal>
-                <span className="wf-tracklist-label">{free ? 'All' : 'Your'} {tracks.length} tracks</span>
+                <span className="wf-tracklist-label">{free ? 'All' : 'Your'} {tracks.length} {onlyLinks ? 'items' : 'tracks'}</span>
                 {tracks.map((t) => (
                   <button key={t.i} className="wf-track" onClick={() => { setSaved(true); downloadTrack(t.i) }}>
-                    <DownloadIcon size={14} /> {t.name}
+                    {t.isLink ? <span aria-hidden="true">🔗</span> : <DownloadIcon size={14} />} {t.name}
                   </button>
                 ))}
               </div>
