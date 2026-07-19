@@ -6,6 +6,18 @@
 // `pending` = File[] chosen now. Buyers get every item in the bundle.
 import { useState } from 'react'
 
+// compact display of a delivery link so a saved link is unmistakable in the chip
+const shortUrl = (url = '') => {
+  try {
+    const u = new URL(url)
+    const tail = (u.pathname + u.search).replace(/\/$/, '')
+    const s = u.hostname.replace(/^www\./, '') + tail
+    return s.length > 42 ? s.slice(0, 41) + '…' : s
+  } catch {
+    return url.length > 42 ? url.slice(0, 41) + '…' : url
+  }
+}
+
 const fileIcon = (item) => {
   if (item && (item.isLink || item.url)) return '🔗'
   const name = (item && item.name) || (typeof item === 'string' ? item : '') || ''
@@ -44,7 +56,8 @@ export default function AudioBundleEditor({ label = 'Files', hint, existing = []
           {existing.map((a, i) => (
             <span className="wf-audio-chip" key={'e' + i} title={a.isLink ? a.url : undefined}>
               {fileIcon(a)} {a.name || (a.isLink ? 'Delivery link' : 'File')}
-              <span className="wf-audio-mini set">{a.isLink ? 'link' : 'set'}</span>
+              {a.isLink && a.url && <span className="wf-audio-url">{shortUrl(a.url)}</span>}
+              <span className="wf-audio-mini set">{a.isLink ? 'link ✓' : 'set'}</span>
               {setExisting && (
                 <button type="button" aria-label="Remove" onClick={() => setExisting(existing.filter((_, j) => j !== i))}>✕</button>
               )}

@@ -5957,6 +5957,7 @@ button.wf-delivery-filecard:hover { border-color: rgba(212, 175, 55, 0.5); backg
 .wf-audio-chip.new { border-color: rgba(212, 175, 55, 0.4); }
 .wf-audio-chip button { margin-left: auto; background: none; border: none; color: var(--wf-mute); cursor: pointer; font-size: 13px; line-height: 1; }
 .wf-audio-chip button:hover { color: #e0432f; }
+.wf-audio-url { font-family: var(--wf-mono); font-size: 11px; color: var(--wf-gold); opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46%; }
 .wf-audio-mini { font-family: var(--wf-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--wf-rule); color: var(--wf-mute); }
 .wf-audio-mini.set { color: #4bc882; border-color: rgba(75, 200, 130, 0.4); }
 .wf-audio-mini.new { color: var(--wf-gold); border-color: rgba(212, 175, 55, 0.45); }
