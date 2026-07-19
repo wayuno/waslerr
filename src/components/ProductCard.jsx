@@ -56,6 +56,7 @@ export default function ProductCard({ field, variant = 'default' }) {
       ref={cardRef}
       className="wf-card"
       data-cat={field.line}
+      data-free={free ? '1' : '0'}
       data-search={`${field.title || ''} ${field.desc || ''} ${cat.label || ''}`.toLowerCase()}
       data-reveal
       onMouseMove={onMove}
