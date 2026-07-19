@@ -254,13 +254,19 @@ export default function Checkout() {
 
   const persistLocal = (confirmedTxid) => {
     try {
-      const items = cartMode ? cartItems : [f]
-      items.forEach((it) => localStorage.setItem(`wf_purchased_${it.id}`, '1'))
       const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
       if (cartMode) {
-        orders.unshift({ id: reference, cart: true, items: cartItems.map((it) => ({ id: it.id, title: it.title })), name: `${cartItems.length} fields`, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
+        // one local record per purchased cut so each version is detected on its
+        // own; the per-field flag unlocks ONLY base ("main") buys, never a version.
+        cartItems.forEach((it) => {
+          const vid = it.versionId ?? null
+          if (vid === null) localStorage.setItem(`wf_purchased_${it.id}`, '1')
+          orders.unshift({ id: `${reference}:${it.id}:${vid ?? 'base'}`, fieldId: it.id, versionId: vid, name: it.title, method: payMethod, amount: 0, ref: reference, txn: confirmedTxid, ts: Date.now() })
+        })
       } else {
-        orders.unshift({ id: reference, fieldId: f.id, versionId: checkoutVersionId ?? null, name: f.title, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
+        const vid = checkoutVersionId ?? null
+        if (vid === null) localStorage.setItem(`wf_purchased_${f.id}`, '1')
+        orders.unshift({ id: reference, fieldId: f.id, versionId: vid, name: f.title, method: payMethod, amount: payable, ref: reference, txn: confirmedTxid, ts: Date.now() })
       }
       localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
     } catch { /* ignore */ }
@@ -289,7 +295,7 @@ export default function Checkout() {
     setCreateError('')
     try {
       const payload = cartMode
-        ? { fieldIds: cartItems.map((i) => i.id), method: payMethod, email: user || null }
+        ? { items: cartItems.map((i) => ({ id: i.id, versionId: i.versionId ?? null })), method: payMethod, email: user || null }
         : { fieldId: f.id, versionId: checkoutVersionId ?? null, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }
       const r = await fetch('/api/checkout/create', {
         method: 'POST',
@@ -391,7 +397,9 @@ export default function Checkout() {
         return
       }
       try {
-        localStorage.setItem(`wf_purchased_${f.id}`, '1')
+        // full-unlock coupon → base only sets the per-field flag; a versioned buy
+        // is recorded by its version so it doesn't unlock the base cut.
+        if ((checkoutVersionId ?? null) === null) localStorage.setItem(`wf_purchased_${f.id}`, '1')
         const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
         orders.unshift({ id: d.reference, fieldId: f.id, versionId: checkoutVersionId ?? null, name: f.title, method: 'coupon', amount: 0, ref: d.reference, txn: 'COUPON', ts: Date.now() })
         localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
@@ -487,7 +495,7 @@ export default function Checkout() {
             {cartMode ? (
               <div className="wf-co-cart-summary" data-reveal>
                 {cartItems.map((it) => (
-                  <div className="wf-co-cart-row" key={it.id}>
+                  <div className="wf-co-cart-row" key={it.cartKey || it.id}>
                     <span className="wf-co-cart-row-name">{it.title}</span>
                     <span className="wf-co-cart-row-price">${priceOf(it)}</span>
                   </div>
@@ -628,7 +636,7 @@ export default function Checkout() {
             {payMethod !== 'paypal' && (cartMode ? (
               <div className="wf-co-cart-summary" data-reveal>
                 {cartItems.map((it) => (
-                  <div className="wf-co-cart-row" key={it.id}>
+                  <div className="wf-co-cart-row" key={it.cartKey || it.id}>
                     <span className="wf-co-cart-row-name">{it.title}</span>
                     <span className="wf-co-cart-row-price">${priceOf(it)}</span>
                   </div>
@@ -672,7 +680,7 @@ export default function Checkout() {
                     <div className="wf-pp-anim">{cartMode ? (
                       <div className="wf-co-cart-summary">
                         {cartItems.map((it) => (
-                          <div className="wf-co-cart-row" key={it.id}>
+                          <div className="wf-co-cart-row" key={it.cartKey || it.id}>
                             <span className="wf-co-cart-row-name">{it.title}</span>
                             <span className="wf-co-cart-row-price">${priceOf(it)}</span>
                           </div>

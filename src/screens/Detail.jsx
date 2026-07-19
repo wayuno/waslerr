@@ -55,10 +55,12 @@ export default function Detail() {
     let purchased = false
     try {
       const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-      const mine = orders.filter((o) => o.id === fld.id || o.fieldId === fld.id || o.name === fld.title)
-      const match = mine.find((o) => (o.versionId ?? null) === selId)
+      const mine = orders.filter((o) => o.fieldId === fld.id || o.id === fld.id || o.name === fld.title)
+      // strictly per-version: only THIS cut's own order counts (buying one cut
+      // must never light up another). The legacy per-field flag unlocks the base only.
+      const match = mine.find((o) => (o.versionId ?? null) === (selId ?? null))
       purchased = !!match || (selId === null && localStorage.getItem(`wf_purchased_${fld.id}`) === '1')
-      purchaseRef = match?.ref || (selId === null ? mine[0]?.ref || '' : '')
+      purchaseRef = match?.ref || ''
     } catch { /* ignore */ }
     if (!((isFree && fld.hasAudio) || purchased)) return
     const u = `/api/fields/${fld.id}/audio?list=1${isFree ? (selId != null ? `&v=${selId}` : '') : `&ref=${encodeURIComponent(purchaseRef)}`}`
@@ -98,11 +100,12 @@ export default function Detail() {
   let isPurchased = false
   try {
     const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
-    const mine = orders.filter((o) => o.id === f.id || o.fieldId === f.id || o.name === f.title)
-    const match = mine.find((o) => (o.versionId ?? null) === selId)
+    const mine = orders.filter((o) => o.fieldId === f.id || o.id === f.id || o.name === f.title)
+    // strictly per-version: each cut only matches its OWN order.
+    const match = mine.find((o) => (o.versionId ?? null) === (selId ?? null))
     // legacy per-field flag only counts toward the base ("main") selection
     isPurchased = !!match || (selId === null && localStorage.getItem(`wf_purchased_${f.id}`) === '1')
-    purchaseRef = match?.ref || (selId === null ? mine[0]?.ref || '' : '')
+    purchaseRef = match?.ref || ''
   } catch {
     /* ignore */
   }
@@ -238,7 +241,23 @@ export default function Detail() {
                   <button className="wf-btn wf-btn-gold wf-mag" onClick={() => goCheckout(f.id, selVersion?.id ?? null)}>
                     Buy now — {selVersion ? `$${selVersion.price}` : f.price || `$${total}`}
                   </button>
-                  <button className="wf-btn wf-btn-glass wf-mag" onClick={() => addToCart(f)}>
+                  <button
+                    className="wf-btn wf-btn-glass wf-mag"
+                    onClick={() =>
+                      addToCart(
+                        selVersion
+                          ? {
+                              ...f,
+                              versionId: selVersion.id,
+                              versionName: selVersion.name,
+                              priceNum: Number(selVersion.price) || 0,
+                              price: `$${Number(selVersion.price) || 0}`,
+                              title: `${f.title} · ${selVersion.name}`,
+                            }
+                          : f,
+                      )
+                    }
+                  >
                     <CartIcon size={16} /> Add to cart
                   </button>
                 </>
