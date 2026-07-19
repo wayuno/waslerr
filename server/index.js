@@ -1292,17 +1292,35 @@ const handleRequest = async (req, res) => {
     const b = await readBody(req)
 
     // ---- CART MODE: several fields paid together in a single order ----
-    if (Array.isArray(b.fieldIds) && b.fieldIds.length) {
+    // Accepts `items` [{ id, versionId }] (version-aware) or legacy `fieldIds`.
+    // Each item is priced by its chosen version so cart totals + delivery match
+    // exactly what the buyer picked — versions are never collapsed to the base.
+    const rawCartItems = Array.isArray(b.items) && b.items.length
+      ? b.items
+      : (Array.isArray(b.fieldIds) && b.fieldIds.length ? b.fieldIds.map((id) => ({ id, versionId: null })) : null)
+    if (rawCartItems) {
       const methodSel = b.method === 'binance' ? 'binance' : 'paypal'
-      const ids = [...new Set(b.fieldIds.map((x) => String(x)))]
+      // dedupe by field + chosen version (same field, different cuts may coexist)
+      const seen = new Set()
       const items = []
       let amount = 0
-      for (const id of ids) {
+      for (const ri of rawCartItems) {
+        const id = String(ri && ri.id != null ? ri.id : ri)
+        const reqVer = ri && ri.versionId != null ? String(ri.versionId) : null
+        const key = `${id}::${reqVer ?? 'base'}`
+        if (seen.has(key)) continue
         const product = await getProductById(id)
         if (!product) continue
-        const price = Number(product.price) || 0
-        if (price <= 0) continue // free fields need no checkout
-        items.push({ id, title: product.title, price })
+        let price = Number(product.price) || 0
+        let versionId = null
+        let versionName = ''
+        if (reqVer != null && Array.isArray(product.versions)) {
+          const v = product.versions.find((x) => String(x.id) === reqVer)
+          if (v) { versionId = Number(v.id); versionName = String(v.name || ''); price = Number(v.price) || price }
+        }
+        if (price <= 0) continue // free fields/cuts need no checkout
+        seen.add(key)
+        items.push({ id, title: versionName ? `${product.title} · ${versionName}` : product.title, price, versionId })
         amount += price
       }
       if (!items.length) return sendJson(res, 400, { error: 'empty_cart' })
@@ -1583,7 +1601,7 @@ const handleRequest = async (req, res) => {
         // receipt total stays correct; the rest are $0 access lines.
         const items = o.meta && Array.isArray(o.meta.items) ? o.meta.items : null
         if (items && items.length) {
-          return items.map((it, i) => ({ ...base, fieldId: it.id, name: it.title || o.field_title, amount: i === 0 ? base.amount : 0 }))
+          return items.map((it, i) => ({ ...base, fieldId: it.id, name: it.title || o.field_title, amount: i === 0 ? base.amount : 0, versionId: it.versionId ?? null }))
         }
         return [{ ...base, fieldId: o.field_id }]
       }),
@@ -1953,13 +1971,32 @@ const handleRequest = async (req, res) => {
         : (legacy ? [{ path: legacy, name: 'Audio', size: 0 }] : [])
 
     // Resolve which "cut" is requested. A paid buyer proves it via their order
-    // ref (→ order.version_id); a free listener may pass ?v=<id> to hear a free
-    // version. No target → the base field.
+    // ref; a free listener may pass ?v=<id> to hear a free version. No target →
+    // the base field. A CART order entitles EVERY field in it, each to its OWN
+    // chosen version (recorded per item in meta.items) — so buying/downloading
+    // one version never unlocks or serves another.
     let refOrder = null
     if (ref) refOrder = await getOrderByRef(ref)
-    const refValid = !!refOrder && refOrder.field_id === id && (refOrder.status === 'paid' || refOrder.status === 'delivered')
+    const orderPaid = !!refOrder && (refOrder.status === 'paid' || refOrder.status === 'delivered')
+    // fields this order entitles: single order = [field_id]; cart = field_ids/meta.items
+    const orderFieldIds = refOrder
+      ? (Array.isArray(refOrder.field_ids) && refOrder.field_ids.length
+          ? refOrder.field_ids.map(String)
+          : (Array.isArray(refOrder.meta?.items) && refOrder.meta.items.length
+              ? refOrder.meta.items.map((x) => String(x.id))
+              : [String(refOrder.field_id)]))
+      : []
+    const refValid = orderPaid && orderFieldIds.includes(id)
+    // the version this order entitles FOR THIS field (per-item in a cart, else the order's)
+    let orderVer = null
+    if (refValid) {
+      const it = Array.isArray(refOrder.meta?.items) ? refOrder.meta.items.find((x) => String(x.id) === id) : null
+      orderVer = it && it.versionId != null
+        ? Number(it.versionId)
+        : (refOrder.version_id != null ? Number(refOrder.version_id) : null)
+    }
     let target = null
-    if (refValid && refOrder.version_id != null) target = versions.find((x) => Number(x.id) === Number(refOrder.version_id)) || null
+    if (refValid && orderVer != null) target = versions.find((x) => Number(x.id) === orderVer) || null
     else if (vParam != null) target = versions.find((x) => String(x.id) === String(vParam)) || null
 
     let files = target ? bundleOf(target, target.audio) : bundleOf(field, field.audio_url)
@@ -1971,7 +2008,6 @@ const handleRequest = async (req, res) => {
     const targetPrice = target ? Number(target.price) || 0 : (baseFree ? 0 : Number(field.price) || 0)
     let allowed = targetPrice <= 0
     if (!allowed) {
-      const orderVer = refValid && refOrder.version_id != null ? Number(refOrder.version_id) : null
       const wantVer = target ? Number(target.id) : null
       if (refValid && orderVer === wantVer) allowed = true
       if (!allowed) {

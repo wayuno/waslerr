@@ -50,7 +50,7 @@ export default function Cart() {
               {cart.map((f) => {
                 const cat = CAT[f.line] || { label: 'Field', cls: 'gold' }
                 return (
-                  <div className="wf-cart-item" key={f.id}>
+                  <div className="wf-cart-item" key={f.cartKey || f.id}>
                     <button className="wf-cart-tile" onClick={() => openDetail(f.id)} aria-label={`Open ${f.title}`}>
                       {f.image_url ? <img src={f.image_url} alt="" /> : <span>W</span>}
                     </button>
@@ -62,7 +62,7 @@ export default function Cart() {
                     </div>
                     <div className="wf-cart-right">
                       <span className="wf-cart-price">${priceOf(f)}</span>
-                      <button className="wf-del" aria-label={`Remove ${f.title}`} onClick={() => removeFromCart(f.id)}>
+                      <button className="wf-del" aria-label={`Remove ${f.title}`} onClick={() => removeFromCart(f.cartKey || f.id)}>
                         <TrashIcon />
                       </button>
                     </div>

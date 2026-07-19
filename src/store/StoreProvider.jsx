@@ -262,12 +262,15 @@ export function StoreProvider({ children }) {
   const addToCart = useCallback(
     (product) => {
       if (!product) return
-      setCart((prev) => (prev.some((i) => i.id === product.id) ? prev : [...prev, product]))
+      // key by field + chosen version so different cuts of the same field are
+      // distinct line items (and buying one never stands in for another)
+      const cartKey = `${product.id}::${product.versionId ?? 'base'}`
+      setCart((prev) => (prev.some((i) => i.cartKey === cartKey) ? prev : [...prev, { ...product, cartKey, versionId: product.versionId ?? null }]))
       showToast(`${product.title} added to cart`)
     },
     [showToast],
   )
-  const removeFromCart = useCallback((id) => setCart((prev) => prev.filter((i) => i.id !== id)), [])
+  const removeFromCart = useCallback((cartKey) => setCart((prev) => prev.filter((i) => i.cartKey !== cartKey)), [])
   const clearCart = useCallback(() => setCart([]), [])
 
   const pendingSection = useRef(null)
