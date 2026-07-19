@@ -377,6 +377,32 @@ export default function Checkout() {
     setCreating(true)
     setCreateError('')
     try {
+      // CART full-unlock: comp EACH item as its own chosen cut, so every version
+      // is recorded correctly (a coupon on a versioned cart must not fall back to
+      // the base cut).
+      if (cartMode) {
+        const orders = JSON.parse(localStorage.getItem('wf_orders') || '[]')
+        let comped = 0
+        for (const it of cartItems) {
+          const vid = it.versionId ?? null
+          const rr = await fetch('/api/checkout/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fieldId: it.id, versionId: vid, method: payMethod, coupon: appliedCoupon?.code || null, email: user || null }),
+          })
+          const dd = await rr.json().catch(() => ({}))
+          if (!rr.ok || !dd.reference || !dd.fullUnlock) continue
+          if (vid === null) localStorage.setItem(`wf_purchased_${it.id}`, '1')
+          orders.unshift({ id: `${dd.reference}:${it.id}:${vid ?? 'base'}`, fieldId: it.id, versionId: vid, name: it.title, method: 'coupon', amount: 0, ref: dd.reference, txn: 'COUPON', ts: Date.now() })
+          comped++
+        }
+        localStorage.setItem('wf_orders', JSON.stringify(orders.slice(0, 50)))
+        setCreating(false)
+        if (!comped) { setCreateError('Could not unlock the cart. Please try again.'); return }
+        clearCart()
+        navigate('profile')
+        return
+      }
       const r = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
