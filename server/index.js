@@ -440,17 +440,31 @@ const cleanMethod = (m) => {
 }
 
 // sanitize a bundle of audio files for the `audios` jsonb column
+// A bundle item is either an uploaded file ({ path, name, size }) or an external
+// delivery link ({ url, name, isLink }) — e.g. a Google Drive share the buyer
+// opens to get the product. Both flow through the same gated endpoint.
 const cleanAudios = (a) =>
   Array.isArray(a)
     ? a
-        .filter((x) => x && x.path)
+        .filter((x) => x && (x.path || x.url))
         .slice(0, 30)
-        .map((x) => ({
-          path: String(x.path).slice(0, 400),
-          name: String(x.name || 'File').slice(0, 200),
-          size: Math.max(0, Number(x.size) || 0),
-        }))
+        .map((x) =>
+          x.url
+            ? {
+                url: String(x.url).slice(0, 1000),
+                name: String(x.name || 'Delivery link').slice(0, 200),
+                isLink: true,
+              }
+            : {
+                path: String(x.path).slice(0, 400),
+                name: String(x.name || 'File').slice(0, 200),
+                size: Math.max(0, Number(x.size) || 0),
+              },
+        )
     : []
+
+// legacy `audio_url` mirror = first UPLOADED file's path (links have no path)
+const firstFilePath = (arr) => (Array.isArray(arr) ? (arr.find((x) => x && x.path) || {}).path || null : null)
 
 // sanitize an incoming versions list for the `versions` jsonb column
 const cleanVersions = (v) =>
@@ -463,7 +477,7 @@ const cleanVersions = (v) =>
           price: Math.max(0, Number(x && x.price) || 0),
           tagline: String(x && x.tagline ? x.tagline : '').slice(0, 160),
           // legacy single path = first file (keeps old downloads working)
-          audio: String(x && x.audio ? x.audio : (audios[0] ? audios[0].path : '')),
+          audio: String(x && x.audio ? x.audio : (firstFilePath(audios) || '')),
           audios, // full bundle — buyers of this version get them all
           method: x && x.method ? cleanMethod(x.method) : null, // each cut can have its own listening method
         }
@@ -1174,7 +1188,7 @@ const handleRequest = async (req, res) => {
     if (b.versions !== undefined) row.versions = cleanVersions(b.versions)
     if (b.audios !== undefined) {
       row.audios = cleanAudios(b.audios)
-      if (!row.audio_url && row.audios[0]) row.audio_url = row.audios[0].path // legacy mirror
+      if (!row.audio_url) row.audio_url = firstFilePath(row.audios) // legacy mirror
     }
     const out = await insertProduct(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
@@ -1199,7 +1213,7 @@ const handleRequest = async (req, res) => {
     if (b.versions !== undefined) patch.versions = cleanVersions(b.versions)
     if (b.audios !== undefined) {
       patch.audios = cleanAudios(b.audios)
-      patch.audio_url = patch.audios[0] ? patch.audios[0].path : (b.audio_url || null) // legacy mirror
+      patch.audio_url = firstFilePath(patch.audios) || (b.audio_url || null) // legacy mirror
     }
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateProductRow(id, patch)
@@ -1967,13 +1981,26 @@ const handleRequest = async (req, res) => {
       if (!allowed) return sendJson(res, 403, { error: 'not_purchased' })
     }
     if (!files.length) return sendJson(res, 404, { error: 'no_audio' })
-    // names + sizes only — downloads go through this same endpoint by index
-    if (wantList) return sendJson(res, 200, { files: files.map((f, i) => ({ name: f.name || `File ${i + 1}`, size: f.size || 0, i })) })
+    // names + sizes only — downloads go through this same endpoint by index.
+    // Link items expose their url here (the list is only served to entitled users).
+    if (wantList)
+      return sendJson(res, 200, {
+        files: files.map((f, i) =>
+          f.isLink
+            ? { name: f.name || `Link ${i + 1}`, i, isLink: true, url: f.url }
+            : { name: f.name || `File ${i + 1}`, size: f.size || 0, i },
+        ),
+      })
     // no explicit index = the storefront PLAYER asking for something to stream —
-    // bundles may hold zips/PDFs too, so prefer the first audio-looking file
+    // bundles may hold zips/PDFs/links too, so prefer the first audio-looking file
     const pick = iParam == null
-      ? (files.find((x) => /\.(mp3|wav|m4a|aac|flac|ogg|opus|aiff?)$/i.test(x.name || '')) || files[0])
+      ? (files.find((x) => !x.isLink && /\.(mp3|wav|m4a|aac|flac|ogg|opus|aiff?)$/i.test(x.name || '')) || files[0])
       : (files[idx] || files[0])
+    // external delivery link → redirect the buyer straight to it (re-accessible)
+    if (pick && pick.isLink && pick.url) {
+      res.writeHead(302, { Location: pick.url, 'Cache-Control': 'no-store' })
+      return res.end()
+    }
     if (!pick || !pick.path) return sendJson(res, 404, { error: 'no_audio' })
     // paid audio lives in field-audio, free audio in its own free-audio bucket
     const bucket = freeF ? 'free-audio' : 'field-audio'
@@ -1999,7 +2026,7 @@ const handleRequest = async (req, res) => {
     if (b.versions !== undefined) row.versions = cleanVersions(b.versions)
     if (b.audios !== undefined) {
       row.audios = cleanAudios(b.audios)
-      if (!row.audio_url && row.audios[0]) row.audio_url = row.audios[0].path // legacy mirror
+      if (!row.audio_url) row.audio_url = firstFilePath(row.audios) // legacy mirror
     }
     const out = await insertFreeField(row)
     if (!out.ok) return sendJson(res, 502, { error: 'insert_failed' })
@@ -2021,7 +2048,7 @@ const handleRequest = async (req, res) => {
     if (b.versions !== undefined) patch.versions = cleanVersions(b.versions)
     if (b.audios !== undefined) {
       patch.audios = cleanAudios(b.audios)
-      patch.audio_url = patch.audios[0] ? patch.audios[0].path : (b.audio_url || null) // legacy mirror
+      patch.audio_url = firstFilePath(patch.audios) || (b.audio_url || null) // legacy mirror
     }
     if (!Object.keys(patch).length) return sendJson(res, 400, { error: 'nothing_to_update' })
     const out = await updateFreeFieldRow(id, patch)

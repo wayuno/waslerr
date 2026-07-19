@@ -98,6 +98,10 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
       if (show) {
         shown++
         card.style.display = ''
+        // Show catalogue cards instantly — don't wait for the scroll-reveal
+        // observer to fire. Otherwise the grid appears blank on load / filter /
+        // Back navigation until each card scrolls into view.
+        card.classList.add('in')
         requestAnimationFrame(() => {
           if (tokRef.current === tok) {
             card.style.opacity = ''
