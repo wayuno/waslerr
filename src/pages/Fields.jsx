@@ -7,7 +7,7 @@ import { useStore } from '../store/StoreProvider'
 import { community } from '../data/content'
 import { YouTubeIcon, DiscordIcon, ChatIcon, SearchIcon, CloseIcon } from '../components/icons'
 
-const KNOWN_LABELS = { all: 'All fields', desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'Wealth' }
+const KNOWN_LABELS = { all: 'All fields', free: 'Free', desire: 'Desire Code', akashic: 'Akashic Field', wealth: 'Wealth' }
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
 
 // Empty state shown when the catalogue is empty or a filter returns 0.
@@ -52,8 +52,15 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
   const gridRef = useRef(null)
   const tokRef = useRef(0)
   const cats = [...new Set(products.map((p) => p.line).filter(Boolean))]
-  const CHIPS = [{ cat: 'all', label: 'All fields' }, ...cats.map((c) => ({ cat: c, label: KNOWN_LABELS[c] || cap(c) }))]
-  const [cat, setCat] = useState(cats.includes(initialCat) ? initialCat : 'all')
+  const hasFree = products.some((p) => p.priceNum === 0)
+  // "Free" sits right after "All fields" so anyone can grab every free field in one tap
+  const CHIPS = [
+    { cat: 'all', label: 'All fields' },
+    ...(hasFree ? [{ cat: 'free', label: 'Free' }] : []),
+    ...cats.map((c) => ({ cat: c, label: KNOWN_LABELS[c] || cap(c) })),
+  ]
+  const isValidCat = (c) => c === 'all' || c === 'free' || cats.includes(c)
+  const [cat, setCat] = useState(isValidCat(initialCat) ? initialCat : 'all')
   const [q, setQ] = useState('') // free-text search across title + description
   const [sort, setSort] = useState('featured') // featured | price-asc | price-desc
   const [count, setCount] = useState(products.length)
@@ -85,7 +92,7 @@ export default function Fields({ onNavigate, initialCat = 'all' }) {
     const cards = Array.from(grid.querySelectorAll('.wf-card'))
     let shown = 0
     cards.forEach((card) => {
-      const matchCat = cat === 'all' || card.dataset.cat === cat
+      const matchCat = cat === 'all' || (cat === 'free' ? card.dataset.free === '1' : card.dataset.cat === cat)
       const matchQ = !needle || (card.dataset.search || '').includes(needle)
       const show = matchCat && matchQ
       if (show) {

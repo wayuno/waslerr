@@ -42,8 +42,27 @@ export function useReveal(ref) {
       node.querySelectorAll?.('[data-reveal]').forEach(reveal)
     }
 
+    // Safety net: [data-reveal]/[data-anim] start at opacity:0 and only become
+    // visible once JS adds `.in`. If the IntersectionObserver's initial callback
+    // is missed (e.g. a screen swaps in after an auth/data race — the "blank
+    // admin panel" bug), content would stay invisible forever. This force-reveals
+    // anything still hidden shortly after it mounts, so a page can never be left
+    // blank. Debounced so it also covers content mounted later (tab switches).
+    let fbTimer
+    const forceRevealAll = () => {
+      root.querySelectorAll('[data-reveal]:not(.in),[data-anim]:not(.in)').forEach((el) => {
+        io?.unobserve(el)
+        el.classList.add('in')
+      })
+    }
+    const scheduleFallback = () => {
+      clearTimeout(fbTimer)
+      fbTimer = setTimeout(forceRevealAll, 1200)
+    }
+
     // initial pass
     Array.from(root.querySelectorAll('[data-reveal]')).forEach(reveal)
+    scheduleFallback()
 
     // hero entrance ([data-anim]) — reveal immediately, staggered
     const anim = Array.from(root.querySelectorAll('[data-anim]'))
@@ -61,6 +80,7 @@ export function useReveal(ref) {
     if ('MutationObserver' in window && root !== document) {
       mo = new MutationObserver((muts) => {
         muts.forEach((m) => m.addedNodes.forEach(scan))
+        scheduleFallback()
       })
       mo.observe(root, { childList: true, subtree: true })
     }
@@ -70,6 +90,7 @@ export function useReveal(ref) {
       mo?.disconnect()
       cancelAnimationFrame(raf)
       clearTimeout(t)
+      clearTimeout(fbTimer)
     }
   }, [ref])
 }

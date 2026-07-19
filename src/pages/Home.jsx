@@ -186,6 +186,12 @@ export default function Home({ onNavigate }) {
               <ProductCard key={f.id} field={f} variant="free" />
             ))}
           </div>
+
+          <div data-reveal style={{ display: 'flex', justifyContent: 'center', marginTop: 46 }}>
+            <button className="wf-btn wf-btn-glass wf-mag" onClick={() => onNavigate({ page: 'fields', cat: 'free' })}>
+              Browse all free fields <ArrowRight />
+            </button>
+          </div>
         </div>
       </section>
 

@@ -919,7 +919,11 @@ button.wf-hero-line:hover .wf-hero-line-name { color: #f0d8a0; }
 /* hero / reveal animation states (driven via .in class) */
 [data-anim] { opacity: 0; transform: translateY(34px); transition: opacity 1.05s var(--wf-ease), transform 1.05s var(--wf-ease); }
 [data-anim].in { opacity: 1; transform: none; }
-[data-reveal] { opacity: 0; transform: translateY(32px); transition: opacity 0.9s var(--wf-ease), transform 0.9s var(--wf-ease); will-change: opacity, transform; }
+[data-reveal] { opacity: 0; transform: translateY(32px); transition: opacity 0.9s var(--wf-ease), transform 0.9s var(--wf-ease); }
+/* Only hint the compositor while the element is still animating in. Keeping
+   will-change on every revealed element permanently pins a GPU layer per node,
+   which is a major scroll-jank source once a page has many revealed sections. */
+[data-reveal]:not(.in) { will-change: opacity, transform; }
 [data-reveal].in { opacity: 1; transform: none; }
 
 /* ============================================================

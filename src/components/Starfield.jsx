@@ -24,7 +24,7 @@ export default function Starfield() {
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const COUNT = 190
 
-    let w, h, dpr, stars, raf
+    let w, h, dpr, stars, raf, glowGrad
 
     const build = () => {
       stars = Array.from({ length: COUNT }, () => ({
@@ -47,13 +47,15 @@ export default function Starfield() {
       canvas.width = w * dpr
       canvas.height = h * dpr
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      // the ambient glow gradient only depends on w/h — build it once per fit,
+      // not every frame (createRadialGradient per frame is needless GC/CPU)
+      glowGrad = ctx.createRadialGradient(w / 2, h * -0.1, 0, w / 2, h * -0.1, Math.max(w, h) * 0.7)
+      glowGrad.addColorStop(0, `rgba(${GOLD},0.08)`)
+      glowGrad.addColorStop(1, `rgba(${GOLD},0)`)
       build()
     }
     const glow = () => {
-      const g = ctx.createRadialGradient(w / 2, h * -0.1, 0, w / 2, h * -0.1, Math.max(w, h) * 0.7)
-      g.addColorStop(0, `rgba(${GOLD},0.08)`)
-      g.addColorStop(1, `rgba(${GOLD},0)`)
-      ctx.fillStyle = g
+      ctx.fillStyle = glowGrad
       ctx.fillRect(0, 0, w, h)
     }
 
@@ -94,11 +96,42 @@ export default function Starfield() {
       if (reduce) still()
     }
     window.addEventListener('resize', onResize)
+
+    // Pause the loop while the tab is hidden and while the user is actively
+    // scrolling. This full-viewport canvas repaints every frame; on low-power
+    // laptops that competes with scroll compositing and makes scrolling feel
+    // slow/janky. Freezing it during scroll (the last frame stays painted) and
+    // resuming ~180ms after scrolling stops keeps scroll smooth.
+    let scrollTimer
+    const resume = () => {
+      if (reduce || raf || document.hidden) return
+      raf = requestAnimationFrame(frame)
+    }
+    const halt = () => {
+      cancelAnimationFrame(raf)
+      raf = 0
+    }
+    const onScroll = () => {
+      if (reduce) return
+      halt() // freeze while scrolling — last frame stays painted
+      clearTimeout(scrollTimer)
+      scrollTimer = setTimeout(resume, 180)
+    }
+    const onVisibility = () => {
+      if (document.hidden) halt()
+      else resume()
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    document.addEventListener('visibilitychange', onVisibility)
+
     if (reduce) still()
     else raf = requestAnimationFrame(frame)
     return () => {
       cancelAnimationFrame(raf)
+      clearTimeout(scrollTimer)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onScroll)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
